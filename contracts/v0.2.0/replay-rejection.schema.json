@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/replay-rejection.schema.json",
+  "title": "AI Decision Firewall Phase 2 Replay Record Rejection",
+  "description": "Quarantined subset of the metadata-only replay qualification ledger.",
+  "allOf": [
+    {
+      "$ref": "replay-qualification.schema.json"
+    },
+    {
+      "properties": {
+        "status": { "const": "QUARANTINED" }
+      },
+      "required": ["status"]
+    }
+  ]
+}

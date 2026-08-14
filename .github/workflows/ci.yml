@@ -31,6 +31,12 @@ jobs:
         run: python run_phase2.py --validate-only
       - name: Run Phase 2 starter read-only replay
         run: python run_phase2.py
+      - name: Verify Phase 2.1 qualification fixture generation
+        run: python scripts/generate_phase2_qualification_fixture.py --check
+      - name: Validate Phase 2.1 qualification inputs
+        run: python run_phase2.py --config config/phase2_qualification.json --validate-only
+      - name: Run Phase 2.1 qualification replay
+        run: python run_phase2.py --config config/phase2_qualification.json
       - name: Validate committed Phase 2 claim evidence
         run: python scripts/validate_claim_evidence.py
       - name: Verify repository manifest

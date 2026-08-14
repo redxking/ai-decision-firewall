@@ -19,6 +19,7 @@ from adf_poc.replay.contracts import (
     ReplayConfigurationError,
     load_and_validate_manifest,
     load_jsonl_objects,
+    resolve_confined_path,
     validate_case_record,
     validate_case_records,
 )
@@ -99,13 +100,39 @@ class ReplayContractTests(unittest.TestCase):
             for mode in ("HISTORICAL_REPLAY", "SHADOW_READ_ONLY"):
                 value = dict(valid, execution_mode=mode)
                 write_json(path, value)
-                self.assertEqual(ReplayConfig.load(path).execution_mode, mode)
+                loaded = ReplayConfig.load(path)
+                self.assertEqual(loaded.execution_mode, mode)
+                self.assertEqual(loaded.record_failure_policy, "FAIL_DATASET")
+            write_json(
+                path,
+                dict(valid, record_failure_policy="QUARANTINE_RECORD"),
+            )
+            self.assertEqual(
+                ReplayConfig.load(path).record_failure_policy,
+                "QUARANTINE_RECORD",
+            )
+            write_json(
+                path,
+                dict(
+                    valid,
+                    execution_mode="SHADOW_READ_ONLY",
+                    record_failure_policy="QUARANTINE_RECORD",
+                ),
+            )
+            with self.assertRaises(ReplayConfigurationError):
+                ReplayConfig.load(path)
+            write_json(path, dict(valid, record_failure_policy="UNREVIEWED_POLICY"))
+            with self.assertRaises(ReplayConfigurationError):
+                ReplayConfig.load(path)
             for mode in ("SYNTHETIC_SIMULATION", "LIVE", "historical_replay"):
                 with self.subTest(mode=mode):
                     write_json(path, dict(valid, execution_mode=mode))
                     with self.assertRaises(ReplayConfigurationError):
                         ReplayConfig.load(path)
             write_json(path, dict(valid, live_actions_enabled=True))
+            with self.assertRaises(ReplayConfigurationError):
+                ReplayConfig.load(path)
+            write_json(path, dict(valid, dataset_manifest=str(path.resolve())))
             with self.assertRaises(ReplayConfigurationError):
                 ReplayConfig.load(path)
 
@@ -262,6 +289,35 @@ class ReplayContractTests(unittest.TestCase):
             )
             with self.assertRaises(ContractValidationError):
                 load_jsonl_objects(path, label="oversized")
+
+    def test_malformed_json_missing_field_and_symlink_escape_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            malformed = root / "malformed.jsonl"
+            malformed.write_text('{"schema_version":"0.2.0"\n', encoding="utf-8")
+            with self.assertRaises(ContractValidationError):
+                load_jsonl_objects(malformed, label="malformed")
+
+            missing = load_jsonl_objects(FIXTURE / "cases.jsonl", label="cases")[0]
+            del missing["subject_id"]
+            with self.assertRaises(ContractValidationError):
+                validate_case_record(missing)
+
+            confined = root / "confined"
+            outside = root / "outside"
+            confined.mkdir()
+            outside.mkdir()
+            outside_file = outside / "cases.jsonl"
+            outside_file.write_text("{}\n", encoding="utf-8")
+            link = confined / "linked.jsonl"
+            link.symlink_to(outside_file)
+            with self.assertRaises(ManifestValidationError):
+                resolve_confined_path(
+                    confined,
+                    "linked.jsonl",
+                    label="linked cases",
+                    must_exist=True,
+                )
 
 
 if __name__ == "__main__":

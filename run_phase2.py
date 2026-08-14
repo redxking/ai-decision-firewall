@@ -45,6 +45,14 @@ def main() -> None:
                     "historical_case_count": manifest.historical_case_count,
                     "execution_mode": manifest.intended_mode,
                     "cases": len(case_batch.records),
+                    "input_records": (
+                        len(case_batch.qualification_records)
+                        if case_batch.qualification_records
+                        else len(case_batch.records)
+                    ),
+                    "accepted_records": len(case_batch.records),
+                    "quarantined_records": len(case_batch.rejection_records),
+                    "record_failure_policy": harness.config.record_failure_policy,
                     "mapping_warnings": len(case_batch.mapping_warnings),
                     "live_actions_enabled": False,
                 },
@@ -56,26 +64,25 @@ def main() -> None:
 
     result = harness.run()
     assurance = result.metrics["read_only_assurance"]
-    print(
-        json.dumps(
-            {
-                "status": "COMPLETE_READ_ONLY",
-                "dataset_id": result.dataset_id,
-                "data_origin": result.data_origin,
-                "historical_case_count": result.historical_case_count,
-                "execution_mode": result.execution_mode,
-                "cases": result.metrics["scope"]["cases_evaluated"],
-                "authorization_tokens_issued": assurance[
-                    "authorization_tokens_issued"
-                ],
-                "broker_invocations": assurance["broker_invocations"],
-                "operational_effects": assurance["operational_effects"],
-                "metrics": str(result.metrics_path),
-            },
-            indent=2,
-            sort_keys=True,
-        )
-    )
+    summary = {
+        "status": "COMPLETE_READ_ONLY",
+        "dataset_id": result.dataset_id,
+        "data_origin": result.data_origin,
+        "historical_case_count": result.historical_case_count,
+        "execution_mode": result.execution_mode,
+        "cases": result.metrics["scope"]["cases_evaluated"],
+        "authorization_tokens_issued": assurance["authorization_tokens_issued"],
+        "broker_invocations": assurance["broker_invocations"],
+        "operational_effects": assurance["operational_effects"],
+        "metrics": str(result.metrics_path),
+    }
+    if "record_qualification" in result.metrics:
+        qualification = result.metrics["record_qualification"]
+        summary["input_records"] = qualification["input_records"]
+        summary["accepted_records"] = qualification["accepted_records"]
+        summary["quarantined_records"] = qualification["rejected_records"]
+        summary["complete_accounting"] = qualification["complete_accounting"]
+    print(json.dumps(summary, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

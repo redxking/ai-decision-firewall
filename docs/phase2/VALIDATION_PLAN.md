@@ -4,7 +4,7 @@
 
 Validation must establish whether the built-in Phase 2 path can reject untrusted or ungoverned replay inputs, produce traceable counterfactual decisions from accepted records, account for every input, and maintain zero authorization-token issuance, zero broker invocation, and zero operational effects under the exact tested configuration.
 
-The current evidence base is a synthetic fixture with `historical_case_count=0`. Historical efficacy, historical calibration, and analyst-agreement claims are therefore unavailable.
+The current evidence base contains only synthetic fixtures with `historical_case_count=0`: the three-case starter and the seven-record Phase 2.1 qualification campaign. Historical efficacy, historical calibration, historical acceptance rates, and analyst-agreement claims are therefore unavailable.
 
 ## Evidence hierarchy
 
@@ -12,8 +12,8 @@ Phase 2 uses six complementary evidence types:
 
 1. **Static architecture inspection** confirms that no live mode, production connector, action credential, or action-enable parameter exists.
 2. **Execution-guard unit tests** prove that read-only modes do not construct or call the authorization gate, broker, or target.
-3. **Contract tests** exercise structure, semantics, governance, path confinement, digest verification, and label separation.
-4. **Replay integration tests** verify frozen-input integrity, record accounting, normalization, counterfactual output, decision/audit binding, metrics, and failure behavior.
+3. **Contract and qualification unit tests** exercise structure, semantics, governance, path confinement, digest verification, label separation, bounded parsing, code-owned fatal/quarantine classification, metadata privacy, and deterministic accounting.
+4. **Replay integration tests** verify frozen-input integrity, qualification/rejection artifacts, record accounting, normalization, counterfactual output, decision/audit binding, metrics, and failure behavior.
 5. **Claim-evidence records** bind the exact public wording to the system, harness, data origin, raw counts, artifacts, validity checks, limitations, review state, and prohibited inferences.
 6. **Governance review evidence** authorizes any future historical or live read-only use; software tests cannot substitute for data-owner, privacy/legal, security, or mission approval.
 
@@ -54,6 +54,23 @@ The contract-validation plan covers the following cases. Implemented versus rema
 - absolute, traversal, symlink-escape, and otherwise out-of-scope paths;
 - case or adjudication digest and record-count mismatch.
 
+### Record-qualification tests
+
+`tests/test_replay_qualification_unit.py` and `tests/test_replay_qualification.py` cover:
+
+- exact classification of reviewed ordinary record-local defects into sanitized category/code pairs;
+- fatal whole-call behavior for source-read faults, invalid UTF-8, record-count overflow, a full physical line over the encoded limit, excessive JSON nesting, unsupported record version, runtime-label contamination, duplicate case/event identifiers, source-digest mismatch, and unmapped validator failure;
+- the distinction between a line-size bound that includes LF/CRLF and a raw-line digest that excludes only that delimiter;
+- deterministic qualification identity and byte-stable ledger/rejection output;
+- absence of rejected payload, payload identifiers, exception text, and free-form messages from result and error representations;
+- schema validation for accepted and quarantined metadata records;
+- exact source physical-line, nonblank-ordinal, file-digest, and raw-line-digest correspondence;
+- rejection artifact equality with the ordered quarantined ledger projection;
+- forged, incomplete, or internally inconsistent accounting rejected before engine invocation; and
+- the predeclared campaign result `7 input = 3 accepted + 4 quarantined`, with three decisions and zero tokens, brokers, or effects.
+
+`tests/test_qualification_fixture_generator.py` separately verifies that the reviewed fixture source is hashed from the single byte string that is parsed, and that symbolic-link directory redirection and hard-linked target overwrite attempts fail closed.
+
 ### Replay-harness tests
 
 `tests/test_replay_harness.py` is the required starter evidence for:
@@ -69,15 +86,15 @@ The contract-validation plan covers the following cases. Implemented versus rema
 - token/decision-hash residue and any non-applicable post-action success claim are rejected;
 - authorization, broker, and operational-effect counters remain zero.
 
-The following are planned follow-on tests, not starter evidence:
+The following remain planned, not current evidence:
 
-- safe per-record reject-and-continue behavior;
-- a `rejections.jsonl` artifact with record-specific reasons;
-- `input_records = accepted_records + rejected_records` accounting for a partially accepted file;
-- source-completeness and collection-delay metrics against an approved historical mapping;
-- explicit historical-unavailability reason objects in a future origin-stratified metrics contract.
+- source-completeness, collection-delay, and quarantine-distribution measures against an approved historical mapping;
+- independent reconstruction of normalized cases from accepted source occurrences in the standalone claim-evidence validator;
+- missingness and survivorship-bias analysis by authorized source, time, population, and consequence strata;
+- explicit historical-unavailability reason objects in a future origin-stratified metrics contract; and
+- independent review and a claim-evidence record specific to any historical qualification result.
 
-The implemented starter treats all runtime cases as one validation unit: any invalid case aborts before engine invocation. Adjudications are a separate post-decision validation unit; any invalid adjudication aborts comparisons and metrics after preserving the already-written decision and audit evidence. This fail-closed choice prevents silent partial-set evaluation while the partial-acceptance policy remains undefined.
+The default `FAIL_DATASET` policy still treats all runtime cases as one validation unit. The cases-only `QUARANTINE_RECORD` policy is implemented only for offline `HISTORICAL_REPLAY`: reviewed record-local defects can be quarantined, but source-read, integrity, encoding, line-size, JSON-nesting, version, label-contamination, duplicate-identifier, record-count, and unmapped-validator failures abort the complete qualification call. Adjudications remain a separate post-decision validation unit; any invalid adjudication aborts comparisons and metrics after preserving decision and audit evidence.
 
 ## Starter release criteria
 
@@ -90,9 +107,10 @@ The Phase 2 starter is acceptable for public release only when the implemented g
 | No live capability | No live mode, write-capable connector, action credential, or enablement override exists | Required |
 | Integrity | Referenced file digests/counts verify, exact inputs are snapshotted, and snapshot integrity verifies before and after engine execution; mismatch aborts | Required |
 | Path safety | Manifest-relative paths cannot escape the manifest directory | Required |
-| Contract safety | Invalid critical fields, labels, governance failures, and context disagreements abort before engine invocation | Required |
+| Contract safety | Governance, integrity, label-contamination, version, duplicate, bound, and unmapped failures abort; only reviewed record-local defects may be quarantined under the explicit offline policy | Required |
 | Whole-dataset accounting | Every declared file count and accepted case-to-decision count reconciles | Required |
-| Partial-file accounting | `input_records = accepted_records + rejected_records` with a rejection artifact | Planned; not a release claim |
+| Qualification accounting | Under `QUARANTINE_RECORD`, `input_records = accepted_records + quarantined_records`, the rejection artifact is the exact quarantined projection, and accepted cases equal decisions | Required for Phase 2.1; observed as 7 = 3 + 4 in the synthetic campaign |
+| Qualification privacy | Ledger, rejection, expectation, and fatal-error surfaces contain metadata only and do not echo source payload or raw validator text | Required for Phase 2.1 |
 | Traceability | Every accepted decision's cited and feature-linked event IDs resolve to accepted input events | Required |
 | Audit | One suppression, no-authorization, and hash-bound finalization record exists per case and the presented hash chain verifies | Required, with custody limitation |
 | Compatibility | All Phase 1 tests continue to pass | Required |
@@ -106,6 +124,7 @@ An audit-validity result alone does not satisfy the integrity gate because the c
 The implemented `replay_metrics.json` reports:
 
 - cases evaluated, adjudicated-case count, and adjudication coverage;
+- qualification input, accepted, rejected, and decision counts; complete-accounting status; rejection-reason counts; historical-availability flag; and denominator note when qualification is enabled;
 - declared `data_origin` and `historical_case_count` carried from the validated manifest;
 - disposition counts and counterfactual-action count;
 - adjudicated-disposition match count and rate when adjudications are present;
@@ -120,7 +139,7 @@ The implemented `normalization_diagnostics.json` reports case and event counts, 
 
 The following metrics remain planned for an approved historical-replay evaluation:
 
-- accepted/rejected record accounting and rejection-reason distribution;
+- historical acceptance/quarantine rates and rejection-reason distribution by approved source and time strata;
 - required-field completeness, unmapped-field counts, and missing expected-source rate;
 - collection-delay p50 and p95;
 - evidence decision-grade and evidence-ID traceability rates;
@@ -131,11 +150,11 @@ The following metrics remain planned for an approved historical-replay evaluatio
 - raw analyst agreement and Cohen's kappa;
 - Wilson confidence bounds for proportions.
 
-Future results must be stratified by synthetic versus historical origin and must not be combined into a single efficacy figure. The current metrics file evaluates the included synthetic adjudications only. Because the input manifest declares `historical_case_count=0`, those values are not historical-performance evidence. When no adjudications are present, the implemented rate, accuracy, and Brier fields are `null`; zero confusion counts do not establish measured historical performance.
+Future results must be stratified by synthetic versus historical origin and must not be combined into a single efficacy figure. The current files evaluate synthetic adjudications and synthetic qualification behavior only. Because both manifests declare `historical_case_count=0`, those values are not historical-performance or historical-quality evidence. When no adjudications are present, the implemented rate, accuracy, and Brier fields are `null`; zero confusion counts do not establish measured historical performance. Decision metrics over accepted records must retain the complete intake and quarantine counts next to them.
 
 ## Claim and adversarial-evaluation rules
 
-Passing tests support only the claim those tests were designed to evaluate. Every release result must use the claim class, evidence-record fields, statistical rules, and prohibited wording in [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md). The machine-readable contract is `contracts/v0.2.0/evaluation-evidence.schema.json`, and the starter record is explicitly a CE-2 controlled-behavior result over three synthetic cases.
+Passing tests support only the claim those tests were designed to evaluate. Every release result must use the claim class, evidence-record fields, statistical rules, and prohibited wording in [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md). The machine-readable contract is `contracts/v0.2.0/evaluation-evidence.schema.json`, and the existing starter record is explicitly a CE-2 controlled-behavior result over three synthetic cases. It does not cover the later seven-record qualification increment; a separate or superseding evidence record is required before assigning that increment a stronger public claim class.
 
 The adversarial matrix in that standard derives future test families from Anthropic and OpenAI research: goal conflict, evaluation awareness, instruction/evidence poisoning, reward and test hacking, code sabotage, oversight undermining, sandbagging, hidden-objective audit, long-horizon state manipulation, human-decision sabotage, monitor effectiveness, and independent operational-effect proof. The current deterministic POC implements only a subset. It contains no autonomous generative-language-model agent, so it makes no claim about alignment, scheming, sabotage resistance, or monitor recall.
 
@@ -147,12 +166,12 @@ For any later repeated behavioral evaluation, report raw numerators and denomina
 
 Required evidence:
 
-- all Phase 1 and Phase 2 starter tests pass;
+- all Phase 1, Phase 2 starter, and Phase 2.1 qualification tests pass;
 - no credential or production endpoint is present;
 - fixture provenance and synthetic status are documented;
 - public files contain no historical or direct-identifier data;
 - requirement statuses match the committed implementation;
-- the supported public result has a schema-valid evidence record and its deterministic artifact hashes match a clean run;
+- each supported public result has a schema-valid evidence record and its deterministic artifact hashes match a clean run;
 - security and integrity limitations remain adjacent to relevant results.
 
 Passing Gate A authorizes only publication of the starter code and synthetic fixture.
@@ -169,12 +188,14 @@ Before any historical record is processed, require:
 - manifest and dataset custody outside the mutable replay directory;
 - temporal holdout design and safeguards against hindsight, selection, and adjudication bias;
 - an approved plan for handling disagreement and indeterminate outcomes.
+- predeclared overall and category-specific quarantine thresholds, fatal stop conditions, escalation ownership, complete-intake reporting, and survivorship-bias analysis;
+- restricted handling for source and raw-line hashes, which remain linkable even though the ledger is metadata-only.
 
-Gate B does not authorize a live feed or operational action.
+Gate B does not authorize a live feed, shadow-feed deployment, operational recommendation workflow, or operational action.
 
 ### Gate C: Live read-only shadow evaluation
 
-Before a Phase 3 live shadow service, require:
+Phase 2.1 did not enter Gate C. Before a Phase 3 live shadow service, require:
 
 - a separately approved deployment architecture;
 - read-only service identities with no action permission;
@@ -192,4 +213,4 @@ Phase 2 may recommend whether the privileged-identity use case warrants further 
 
 ## Exit conditions and nonclaims
 
-The starter exits validation when all implemented requirements have passing evidence, planned requirements are not mislabeled as complete, every unavailable metric is explicit, and the public claim is no broader than its evidence record. Success establishes a controlled result for the built-in test-harness path, not operational efficacy, safe future autonomy, privacy compliance, production readiness, agentic alignment, monitor effectiveness, or independent audit custody.
+The current increment exits validation when all implemented requirements have passing evidence, planned requirements are not mislabeled as complete, every unavailable metric is explicit, and each public claim is no broader than its evidence record. Success establishes a controlled synthetic result for the built-in test-harness path, not historical efficacy, historical data quality, safe future autonomy, privacy compliance, production readiness, live-shadow readiness, agentic alignment, monitor effectiveness, or independent audit custody.

@@ -4,6 +4,8 @@ from collections import Counter
 from statistics import mean
 from typing import Any, Iterable
 
+from .qualification import QUALIFICATION_TAXONOMY_VERSION
+
 
 DISPOSITIONS = (
     "NO_ACTION",
@@ -50,6 +52,7 @@ def compute_replay_metrics(
     decisions: list[dict[str, Any]],
     adjudications: list[dict[str, Any]],
     audit_assurance: dict[str, Any],
+    qualification_records: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     counts = Counter(row["final_disposition"] for row in decisions)
     comparisons = build_comparisons(decisions, adjudications)
@@ -77,7 +80,7 @@ def compute_replay_metrics(
     counterfactual_actions = sum(len(row.get("counterfactual_actions", [])) for row in decisions)
     agreement_count = sum(1 for row in comparisons if row["disposition_match"])
 
-    return {
+    result = {
         "schema_version": "0.2.0",
         "dataset_id": dataset_id,
         "data_origin": data_origin,
@@ -137,3 +140,35 @@ def compute_replay_metrics(
             ],
         },
     }
+    if qualification_records is not None:
+        accepted_records = sum(
+            row.get("status") == "ACCEPTED" for row in qualification_records
+        )
+        rejected_records = sum(
+            row.get("status") == "QUARANTINED" for row in qualification_records
+        )
+        reason_counts = Counter(
+            f"{row['error_category']}/{row['error_code']}"
+            for row in qualification_records
+            if row.get("status") == "QUARANTINED"
+        )
+        result["record_qualification"] = {
+            "taxonomy_version": QUALIFICATION_TAXONOMY_VERSION,
+            "input_records": len(qualification_records),
+            "accepted_records": accepted_records,
+            "rejected_records": rejected_records,
+            "decision_records": len(decisions),
+            "rejection_reason_counts": {
+                name: reason_counts[name] for name in sorted(reason_counts)
+            },
+            "complete_accounting": (
+                len(qualification_records) == accepted_records + rejected_records
+                and accepted_records == len(decisions)
+            ),
+            "historical_metrics_available": historical_case_count > 0,
+            "denominator_note": (
+                "Qualification counts use every governed nonblank source case; "
+                "decision and adjudication measures use accepted records only."
+            ),
+        }
+    return result

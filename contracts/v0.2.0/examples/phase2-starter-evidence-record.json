@@ -8,7 +8,7 @@
   "evaluated_at": "2026-08-14T19:06:28Z",
   "system_under_test": {
     "release_version": "0.2.0-alpha.1",
-    "source_reference": "The immutable Git commit containing this record is the source identity; its root MANIFEST.sha256 binds the release files except the manifest itself. The exact replay inputs are independently bound by evidence/phase2_starter/replay_run_manifest.json.",
+    "source_reference": "Git commit b3a4c89450cc76576d463ae4006228a98603e260 (https://github.com/redxking/ai-decision-firewall/commit/b3a4c89450cc76576d463ae4006228a98603e260) is the Phase 2 starter source identity. Its root MANIFEST.sha256 binds the release files except the manifest itself; evidence/phase2_starter/replay_run_manifest.json independently binds the exact replay inputs.",
     "component_kind": "DETERMINISTIC_PIPELINE",
     "execution_mode": "historical_replay",
     "model": {

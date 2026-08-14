@@ -1,9 +1,9 @@
 # AI Decision Firewall
 
-- **Current code:** v0.2.0-alpha.1 Phase 2 starter
+- **Current code:** v0.2.0-alpha.2 Phase 2.1 record-qualification increment
 - **Validated baseline:** v0.1.0 synthetic proof of concept
 - **Decision domain:** privileged-identity containment
-- **Operational status:** synthetic baseline plus historical-replay/shadow-mode scaffolding; no historical organizational data included
+- **Operational status:** offline synthetic replay and record qualification; shadow-read-only remains an unconnected execution semantic, and no historical organizational data is included
 - **Safety boundary:** not approved for production integration, operational decision-making, or live containment
 
 AI systems can rank alerts and recommend actions, but consequential operations require a stronger control boundary: the system must determine whether the available evidence is trustworthy and sufficient, whether an action is within delegated authority, and whether the intended effect actually occurred.
@@ -44,7 +44,7 @@ Version 0.1 implements a complete synthetic decision transaction for privileged 
 
 There are no production credentials, production connectors, or external action interfaces in this repository.
 
-## Phase 2 starter: replay and shadow mode
+## Phase 2: replay boundary and record qualification
 
 Phase 2 begins the transition from generator-consistent evidence to evidence-realism testing, without expanding action authority. The starter adds:
 
@@ -58,6 +58,14 @@ Phase 2 begins the transition from generator-consistent evidence to evidence-rea
 - one-to-one suppression, authorization, and decision-finalization audit checks, including recomputation of each decision-record hash;
 - a research-informed claim-evidence standard, machine-readable evidence schema, worked evidence record, and adversarial-evaluation backlog;
 - a small, explicitly synthetic starter fixture and automated regression tests.
+
+Phase 2.1 adds an explicit, cases-only qualification policy for offline historical-replay runs:
+
+- `FAIL_DATASET` preserves the original whole-dataset behavior and remains the default;
+- `QUARANTINE_RECORD` is permitted only with `HISTORICAL_REPLAY`, never `SHADOW_READ_ONLY`;
+- code-owned fatal conditions abort the complete qualification call, while reviewed record-local defects produce sanitized `QUARANTINED` entries;
+- a closed metadata-only ledger binds every nonblank source occurrence by source digest, physical line, nonblank ordinal, and raw-line digest without copying rejected payloads or exception text;
+- the harness independently revalidates `input = accepted + quarantined`, requires the rejection artifact to equal the ordered quarantined projection, and requires one decision per accepted case before it finalizes evidence.
 
 The included Phase 2 fixture contains **zero historical cases**. It exercises the framework; it does not establish historical replay performance, analyst agreement, operational calibration, or readiness for live shadow deployment. See [`docs/phase2/`](docs/phase2/) for the architecture, data contract, requirements, safety case, and validation plan.
 
@@ -75,9 +83,22 @@ The committed starter fixture provides a small deterministic integration check:
 | Broker invocations or operational effects | 0 |
 | Action or post-action audit records | 0 |
 | Presented audit chain | Valid, 24 records |
-| Full automated suite | 33 of 33 passed |
+| Full automated suite | 67 of 67 passed |
 
 The fixture's three adjudications are test expectations, not historical ground truth. Agreement or classification measures calculated from these three synthetic records are wiring checks and must not be represented as efficacy evidence.
+
+The separate Phase 2.1 qualification campaign is also synthetic and predeclared:
+
+| Phase 2.1 qualification measure | Included result |
+|---|---:|
+| Nonblank input records | 7 |
+| Accepted / quarantined | 3 / 4 |
+| Quarantine reasons | 1 invalid JSON, 1 missing field, 1 invalid timestamp, 1 canonical-context mismatch |
+| Decisions emitted | 3, one per accepted record |
+| Historical cases | 0 |
+| Authorization tokens / broker invocations / operational effects | 0 / 0 / 0 |
+
+The test suite observed deterministic accounting and fail-closed qualification behavior under the named fixture. It does not estimate historical acceptance, data quality, model efficacy, operational error rates, agentic alignment, or readiness for a live shadow connection. Qualification changes the evaluated population, so any future result over accepted records must report the full intake and quarantine distribution to avoid survivorship bias. The committed CE-2 evidence record below covers the earlier three-case starter; the seven-record increment still requires its own committed evidence record and persistent artifact bundle before a stronger qualification claim class is assigned.
 
 The worked [`evaluation evidence record`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json) states the exact narrow claim these results support, identifies the system and deterministic artifacts, and carries forward limitations and prohibited inferences. The broader [`claim-evidence standard`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) defines what additional validity, adversarial, statistical, and independent-review evidence is required before stronger language is permitted. The current POC uses a logistic model and deterministic controls; it does not contain an autonomous generative-language-model agent.
 
@@ -122,13 +143,22 @@ The model has no signing key, target credentials, action-broker reference, or di
 Phase 2 places a read-only ingestion boundary in front of the same decision path:
 
 ```text
-Approved replay manifest + canonical envelopes
+Approved replay manifest + canonical records
                     |
                     v
  digest/count/path/governance validation
                     |
                     v
  frozen run-input snapshot and revalidation
+                    |
+                    v
+ fail-dataset validation OR cases-only qualification
+          |                         |
+          |                 metadata-only ledger
+          |                 + quarantined subset
+          +------------+------------+
+                       v
+             accepted cases only
                     |
                     v
  deterministic normalization and temporal ordering
@@ -238,10 +268,30 @@ Validate the Phase 2 configuration, governed manifest, file integrity, and canon
 python run_phase2.py --validate-only
 ```
 
+Validate the seven-record Phase 2.1 qualification campaign without invoking the engine:
+
+```bash
+python run_phase2.py \
+  --config config/phase2_qualification.json \
+  --validate-only
+```
+
+Verify that the committed fixture still matches deterministic generation from the reviewed three-case controls:
+
+```bash
+python scripts/generate_phase2_qualification_fixture.py --check
+```
+
 Run the synthetic starter through the historical-replay code path:
 
 ```bash
 python run_phase2.py
+```
+
+Run the qualification campaign through the same offline, read-only historical-replay path:
+
+```bash
+python run_phase2.py --config config/phase2_qualification.json
 ```
 
 The Phase 2 run writes local, ignored artifacts under `outputs/replay/phase2_starter/` and refuses to overwrite a nonempty output directory. Under the built-in tested path it issues no authorization token, constructs no action broker or target, and produces no operational effect. Use a reviewed configuration with a new repository-confined `output_dir` for each additional run.
@@ -275,10 +325,12 @@ shasum -a 256 -c MANIFEST.sha256
 .
 ├── config/
 │   ├── policy.json                 # Decision, evidence, authority, and safety policy
-│   └── phase2_replay.json          # Fail-closed, read-only replay configuration
+│   ├── phase2_replay.json          # Whole-dataset, read-only replay configuration
+│   └── phase2_qualification.json   # Cases-only synthetic qualification campaign
 ├── contracts/v0.2.0/               # Replay and claim-evidence contracts plus examples
 ├── data/
-│   └── phase2_starter/             # Three-case synthetic replay fixture; no historical data
+│   ├── phase2_starter/             # Three-case synthetic replay fixture; no historical data
+│   └── phase2_qualification/       # Seven-record mixed-quality synthetic fixture and expectations
 ├── docs/
 │   ├── adr/                        # Architecture decision records
 │   ├── architecture/               # Source and rendered diagrams
@@ -290,9 +342,9 @@ shasum -a 256 -c MANIFEST.sha256
 │   └── TEST_AND_EVALUATION_PLAN.md
 ├── evidence/phase2_starter/         # Sanitized evidence supporting the narrow CE-2 starter claim
 ├── outputs/baseline/               # Reproducible decisions, metrics, audit, and report
-├── scripts/                        # Fixture generation and claim-evidence validation
+├── scripts/                        # Confined fixture generation/checks and claim-evidence validation
 ├── src/adf_poc/
-│   └── replay/                     # Contracts, adapter, normalizer, harness, and metrics
+│   └── replay/                     # Contracts, qualification, adapter, normalizer, harness, and metrics
 ├── tests/                          # Safety and end-to-end tests
 ├── run_poc.py                      # End-to-end synthetic baseline entry point
 ├── run_phase2.py                   # Offline replay/shadow starter entry point
@@ -305,6 +357,7 @@ shasum -a 256 -c MANIFEST.sha256
 The current baseline has not established:
 
 - behavior on any historical organizational case (the Phase 2 starter reports `historical_case_count = 0`);
+- historical acceptance or quarantine rates, source completeness, or performance over records that did not survive qualification;
 - production vendor-adapter behavior or semantic equivalence between source telemetry and the canonical contract;
 - performance against historical or live identity, endpoint, network, or cloud telemetry;
 - generalization to unseen attack or benign-administration patterns;
@@ -317,14 +370,15 @@ The current baseline has not established:
 - independent target-state readback or executable rollback orchestration;
 - reconciliation of conflicting break-glass or asset-criticality values in the v0.1 direct-run interface (the Phase 2 canonical adapter instead rejects such disagreement before engine invocation);
 - suitability for safety-critical, operational-technology, or critical-infrastructure control environments.
+- agentic alignment, scheming, sabotage resistance, or monitor effectiveness; the evaluated path is deterministic and contains no autonomous generative agent.
 
 The policy engine and verifier also share configuration and may share design defects. The POC signing key has a documented non-production fallback. These limitations are deliberate release constraints, not deferred permission to connect the software to a live environment.
 
 ## Roadmap
 
-The **Phase 2 starter is now present**, with live actions remaining disabled. It establishes the read-only mode boundary, canonical contracts, replay manifests, adapter and harness scaffolding, counterfactual evaluation, validation controls, tests, and release-gate documentation.
+The **Phase 2 starter and Phase 2.1 qualification increment are now present**, with live actions remaining disabled. They establish the read-only mode boundary, canonical contracts, replay manifests, bounded cases-only quarantine policy, metadata-only accounting, counterfactual evaluation, validation controls, tests, and release-gate documentation.
 
-The next Phase 2 increment is an approved, de-identified historical corpus and a controlled mapping exercise. That work must measure source availability, schema gaps, temporal fidelity, analyst disagreement, contextual assumptions, and calibration before any live read-only connection is considered.
+The next Phase 2 increment is the Gate B authorization and custody package followed by a small, approved, de-identified historical pilot. That work must predeclare sampling and quarantine stop conditions, measure source availability, schema gaps, temporal fidelity, analyst disagreement, contextual assumptions, and calibration, and keep the complete intake denominator visible. No live or shadow-feed progression has occurred; `shadow_read_only` remains an unconnected code path until a separately approved Phase 3 architecture and safety case exist.
 
 Later phases, each requiring separate evidence and authorization, are:
 
@@ -347,7 +401,10 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`docs/phase2/README.md`](docs/phase2/README.md) — Phase 2 scope and documentation map
 - [`docs/phase2/CLAIM_EVIDENCE_STANDARD.md`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) — claim classes, proof requirements, statistical rules, and adversarial evaluations
 - [`docs/phase2/RESEARCH_COVERAGE_REGISTER.md`](docs/phase2/RESEARCH_COVERAGE_REGISTER.md) — dated Anthropic and OpenAI research screen, dispositions, gaps, and refresh triggers
+- [`docs/phase2/RECORD_QUALIFICATION.md`](docs/phase2/RECORD_QUALIFICATION.md) — fatal/quarantine taxonomy, metadata contract, accounting invariants, privacy rules, synthetic gate, and historical-pilot prerequisites
 - [`docs/phase2/REQUIREMENTS_TRACEABILITY.csv`](docs/phase2/REQUIREMENTS_TRACEABILITY.csv) — Phase 2 requirement status and verification evidence
+- [`contracts/v0.2.0/replay-qualification.schema.json`](contracts/v0.2.0/replay-qualification.schema.json) — closed per-source-record qualification ledger contract
+- [`contracts/v0.2.0/qualification-expectations.schema.json`](contracts/v0.2.0/qualification-expectations.schema.json) — closed predeclared synthetic-campaign expectation contract
 - [`contracts/v0.2.0/evaluation-evidence.schema.json`](contracts/v0.2.0/evaluation-evidence.schema.json) — machine-readable claim-evidence contract
 - [`contracts/v0.2.0/examples/phase2-starter-evidence-record.json`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json) — validated, narrowly bounded starter result
 - [`evidence/phase2_starter/README.md`](evidence/phase2_starter/README.md) — sanitized inputs, outputs, hashes, and custody limits for that result

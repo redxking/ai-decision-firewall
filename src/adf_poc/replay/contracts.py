@@ -19,6 +19,7 @@ MAX_UNTRUSTED_TEXT_CHARS = 16_384
 MAX_ATTRIBUTES_BYTES = 256 * 1024
 MAX_DECLARED_FILE_BYTES = 512 * 1024 * 1024
 ALLOWED_REPLAY_MODES = frozenset({"HISTORICAL_REPLAY", "SHADOW_READ_ONLY"})
+RECORD_FAILURE_POLICIES = frozenset({"FAIL_DATASET", "QUARANTINE_RECORD"})
 ALLOWED_DISPOSITIONS = frozenset(
     {"NO_ACTION", "INVESTIGATE", "CONTAIN_REVERSIBLE", "ESCALATE_HUMAN"}
 )
@@ -104,6 +105,7 @@ class ReplayConfig:
     contract_adapter: str
     deterministic_outputs: bool
     zero_effects_required: bool
+    record_failure_policy: str
     path: Path
     source_sha256: str
 
@@ -125,13 +127,27 @@ class ReplayConfig:
             "deterministic_outputs",
             "zero_effects_required",
         }
-        _require_exact_fields(value, required, "replay configuration")
+        allowed = required | {"record_failure_policy"}
+        missing = sorted(required - set(value))
+        unexpected = sorted(set(value) - allowed)
+        if missing:
+            raise ReplayConfigurationError(
+                "replay configuration is missing required fields: "
+                + ", ".join(missing)
+                + "."
+            )
+        if unexpected:
+            raise ReplayConfigurationError(
+                "replay configuration contains unsupported fields: "
+                + ", ".join(unexpected)
+                + "."
+            )
         _require_version(value.get("schema_version"), "replay configuration")
         mode = value.get("execution_mode")
         if mode not in ALLOWED_REPLAY_MODES:
-            allowed = ", ".join(sorted(ALLOWED_REPLAY_MODES))
+            allowed_modes = ", ".join(sorted(ALLOWED_REPLAY_MODES))
             raise ReplayConfigurationError(
-                f"execution_mode must be one of {allowed}; received {mode!r}."
+                f"execution_mode must be one of {allowed_modes}; received {mode!r}."
             )
         if value.get("live_actions_enabled") is not False:
             raise ReplayConfigurationError("live_actions_enabled must be exactly false.")
@@ -143,11 +159,26 @@ class ReplayConfig:
             raise ReplayConfigurationError("deterministic_outputs must be exactly true.")
         if value.get("zero_effects_required") is not True:
             raise ReplayConfigurationError("zero_effects_required must be exactly true.")
+        record_failure_policy = value.get("record_failure_policy", "FAIL_DATASET")
+        if record_failure_policy not in RECORD_FAILURE_POLICIES:
+            raise ReplayConfigurationError(
+                "record_failure_policy must be FAIL_DATASET or QUARANTINE_RECORD."
+            )
+        if (
+            record_failure_policy == "QUARANTINE_RECORD"
+            and mode != "HISTORICAL_REPLAY"
+        ):
+            raise ReplayConfigurationError(
+                "QUARANTINE_RECORD is limited to offline HISTORICAL_REPLAY; "
+                "shadow input remains fail-dataset."
+            )
         for name in ("dataset_manifest", "model_path", "policy_path", "output_dir"):
             _require_nonempty_string(value.get(name), f"replay configuration.{name}")
             if Path(str(value[name])).is_absolute():
                 raise ReplayConfigurationError(f"{name} must be a repository-relative path.")
-        return cls(path=target, source_sha256=source_sha256, **value)
+        normalized = dict(value)
+        normalized["record_failure_policy"] = record_failure_policy
+        return cls(path=target, source_sha256=source_sha256, **normalized)
 
     def resolve_paths(self, repository_root: str | Path) -> dict[str, Path]:
         root = Path(repository_root).resolve()
@@ -234,7 +265,12 @@ def _require_boolean(value: Any, label: str) -> bool:
 def _require_unit_interval(value: Any, label: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ContractValidationError(f"{label} must be numeric.")
-    candidate = float(value)
+    try:
+        candidate = float(value)
+    except OverflowError:
+        raise ContractValidationError(
+            f"{label} must be finite and within [0, 1]."
+        ) from None
     if not math.isfinite(candidate) or not 0.0 <= candidate <= 1.0:
         raise ContractValidationError(f"{label} must be finite and within [0, 1].")
     return candidate

@@ -157,9 +157,19 @@ class TrackingAdapter(CanonicalJSONLAdapter):
         self.events = events
         self.decision_path = decision_path
 
-    def load_cases(self, entry):
+    def load_cases(
+        self,
+        entry,
+        *,
+        record_failure_policy="FAIL_DATASET",
+        dataset_id=None,
+    ):
         self.events.append("cases_loaded")
-        return super().load_cases(entry)
+        return super().load_cases(
+            entry,
+            record_failure_policy=record_failure_policy,
+            dataset_id=dataset_id,
+        )
 
     def load_adjudications(self, entry, *, known_case_ids):
         self.assert_decisions_exist()

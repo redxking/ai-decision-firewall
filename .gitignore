@@ -17,7 +17,8 @@ outputs/replay/
 outputs/shadow/
 
 # Historical/replay data are local and potentially sensitive. Commit only
-# reviewed synthetic fixtures under data/phase2_starter/.
+# reviewed synthetic fixtures under data/phase2_starter/ and
+# data/phase2_qualification/.
 data/raw/
 data/historical/
 data/replay/

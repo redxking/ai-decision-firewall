@@ -2,6 +2,8 @@
 
 This directory preserves the complete output of one built-in `historical_replay` run over the three-case synthetic starter fixture on 2026-08-14. It exists so the narrow CE-2 result can be independently inspected rather than inferred from a summary table.
 
+The implementation and harness used for the starter claim are fixed by Git commit `b3a4c89450cc76576d463ae4006228a98603e260`. Later repository changes do not silently broaden or rewrite that result.
+
 The bundle includes:
 
 - exact snapshotted configuration, manifest, model, policy, cases, and adjudications;
