@@ -15,3 +15,12 @@ dist/
 .env.*
 outputs/replay/
 outputs/shadow/
+
+# Historical/replay data are local and potentially sensitive. Commit only
+# reviewed synthetic fixtures under data/phase2_starter/.
+data/raw/
+data/historical/
+data/replay/
+data/shadow/
+data/local/
+data/**/*.local.*

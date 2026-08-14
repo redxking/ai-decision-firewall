@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run unit tests
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Validate Phase 2 starter inputs
+        run: python run_phase2.py --validate-only
+      - name: Run Phase 2 starter read-only replay
+        run: python run_phase2.py
+      - name: Validate committed Phase 2 claim evidence
+        run: python scripts/validate_claim_evidence.py
+      - name: Verify repository manifest
+        run: shasum -a 256 -c MANIFEST.sha256

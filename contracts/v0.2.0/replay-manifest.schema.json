@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/replay-manifest.schema.json",
+  "title": "AI Decision Firewall Phase 2 Dataset Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "data_origin",
+    "historical_case_count",
+    "intended_mode",
+    "created_at",
+    "attestations",
+    "files"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2.0" },
+    "dataset_id": { "$ref": "#/$defs/identifier" },
+    "data_origin": {
+      "enum": ["SYNTHETIC_FIXTURE", "HISTORICAL_DEIDENTIFIED", "SHADOW_TELEMETRY_DEIDENTIFIED"]
+    },
+    "historical_case_count": { "type": "integer", "minimum": 0 },
+    "intended_mode": { "enum": ["HISTORICAL_REPLAY", "SHADOW_READ_ONLY"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "attestations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approved_for_replay",
+        "approval_reference",
+        "deidentified",
+        "deidentification_method",
+        "direct_identifiers_present",
+        "attested_by",
+        "attested_at"
+      ],
+      "properties": {
+        "approved_for_replay": { "const": true },
+        "approval_reference": { "type": "string", "minLength": 1 },
+        "deidentified": { "type": "boolean" },
+        "deidentification_method": { "type": "string", "minLength": 1 },
+        "direct_identifiers_present": { "const": false },
+        "attested_by": { "$ref": "#/$defs/identifier" },
+        "attested_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "sha256", "record_count", "adapter"],
+        "properties": {
+          "role": { "enum": ["cases", "adjudications"] },
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "record_count": { "type": "integer", "minimum": 0, "maximum": 100000 },
+          "adapter": { "const": "canonical_jsonl_v0.2" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/replay-case.schema.json",
+  "title": "AI Decision Firewall Phase 2 Replay Case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "opened_at",
+    "subject_id",
+    "privilege_level",
+    "break_glass",
+    "asset_id",
+    "asset_criticality",
+    "events"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2.0" },
+    "case_id": { "$ref": "#/$defs/identifier" },
+    "opened_at": { "type": "string", "format": "date-time" },
+    "subject_id": { "$ref": "#/$defs/identifier" },
+    "privilege_level": { "$ref": "#/$defs/identifier" },
+    "break_glass": { "type": "boolean" },
+    "asset_id": { "$ref": "#/$defs/identifier" },
+    "asset_criticality": { "type": "number", "minimum": 0, "maximum": 1 },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": { "$ref": "#/$defs/evidence_event" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "evidence_event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "case_id",
+        "source_type",
+        "source_instance",
+        "observed_at",
+        "collected_at",
+        "integrity",
+        "provenance_id",
+        "trust_score",
+        "entity_refs",
+        "attributes",
+        "untrusted_text",
+        "contains_instructional_content"
+      ],
+      "properties": {
+        "event_id": { "$ref": "#/$defs/identifier" },
+        "case_id": { "$ref": "#/$defs/identifier" },
+        "source_type": { "$ref": "#/$defs/identifier" },
+        "source_instance": { "$ref": "#/$defs/identifier" },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "collected_at": { "type": "string", "format": "date-time" },
+        "integrity": { "enum": ["verified", "unverified", "failed"] },
+        "provenance_id": {
+          "type": "string",
+          "pattern": "^$|^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "trust_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "entity_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "attributes": { "type": "object" },
+        "untrusted_text": { "type": "string", "maxLength": 16384 },
+        "contains_instructional_content": { "type": "boolean" }
+      }
+    }
+  }
+}

@@ -3,13 +3,14 @@ from __future__ import annotations
 import argparse
 import time
 import uuid
-from dataclasses import asdict
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from .actions import ActionBroker, AuthorizationError, AuthorizationGate, PostActionVerifier, SimulatedIdentityProvider
 from .audit import AuditLogger
 from .evidence import assess_evidence
+from .execution import ExecutionMode, SafetyInvariantError
 from .model import LogisticRiskModel
 from .policy import DecisionProposal, PolicyConfig, PolicyEngine
 from .schemas import Disposition, IdentityCase
@@ -24,16 +25,32 @@ class DecisionFirewallEngine:
         model: LogisticRiskModel,
         policy_config: PolicyConfig,
         audit_logger: AuditLogger,
+        execution_mode: ExecutionMode | str = ExecutionMode.SYNTHETIC_SIMULATION,
     ) -> None:
         self.model = model
         self.policy_config = policy_config
         self.audit = audit_logger
+        self.execution_mode = ExecutionMode(execution_mode)
         self.policy_engine = PolicyEngine(policy_config)
         self.verifier = IndependentVerifier(policy_config)
-        self.gate = AuthorizationGate(policy_config)
-        self.target = SimulatedIdentityProvider()
-        self.broker = ActionBroker(self.gate, self.target)
         self.post_action_verifier = PostActionVerifier()
+        self.gate: AuthorizationGate | None = None
+        self.target: SimulatedIdentityProvider | None = None
+        self.broker: ActionBroker | None = None
+
+        if not self.execution_mode.is_read_only:
+            self.gate = AuthorizationGate(policy_config)
+            self.target = SimulatedIdentityProvider()
+            self.broker = ActionBroker(self.gate, self.target)
+
+    def _require_simulation_wiring(self) -> tuple[AuthorizationGate, ActionBroker]:
+        if self.execution_mode.is_read_only:
+            raise SafetyInvariantError(
+                f"Execution wiring is prohibited in {self.execution_mode.value} mode."
+            )
+        if self.gate is None or self.broker is None or self.target is None:
+            raise SafetyInvariantError("Synthetic simulation execution wiring is incomplete.")
+        return self.gate, self.broker
 
     def process(self, case: IdentityCase) -> dict[str, Any]:
         started = time.perf_counter()
@@ -50,7 +67,11 @@ class DecisionFirewallEngine:
         self.audit.append("MODEL_ASSESSED", {"case_id": case.case_id, **model_assessment.to_dict()})
 
         proposal = self.policy_engine.propose(case, model_assessment, evidence)
-        self.audit.append("POLICY_PROPOSED", {"case_id": case.case_id, **proposal.to_dict()})
+        policy_audit_payload = proposal.to_dict()
+        if self.execution_mode.is_read_only:
+            policy_audit_payload["counterfactual_actions"] = list(policy_audit_payload["executable_actions"])
+            policy_audit_payload["executable_actions"] = []
+        self.audit.append("POLICY_PROPOSED", {"case_id": case.case_id, **policy_audit_payload})
 
         verification = self.verifier.verify(case, model_assessment, evidence, proposal)
         self.audit.append("INDEPENDENTLY_VERIFIED", {"case_id": case.case_id, **verification.to_dict()})
@@ -69,14 +90,40 @@ class DecisionFirewallEngine:
                 rollback_plan={},
             )
 
+        counterfactual_actions: list[str] = []
         token = None
         authorization_error = ""
-        try:
-            token = self.gate.authorize(case, proposal, verification)
-        except AuthorizationError as exc:
-            authorization_error = str(exc)
+        authorization_attempted = False
+        broker_invocations = 0
+
+        if self.execution_mode.is_read_only:
+            counterfactual_actions = list(proposal.executable_actions)
+            proposal = replace(
+                proposal,
+                executable_actions=[],
+                required_authority="read_only_observation",
+                rollback_plan={},
+            )
+            self.audit.append("EXECUTION_SUPPRESSED", {
+                "case_id": case.case_id,
+                "execution_mode": self.execution_mode.value,
+                "reason": "Historical replay and shadow modes are observation-only.",
+                "counterfactual_actions": counterfactual_actions,
+                "authorization_attempted": False,
+                "broker_invocations": 0,
+                "operational_effects": 0,
+            })
+        else:
+            gate, _ = self._require_simulation_wiring()
+            authorization_attempted = True
+            try:
+                token = gate.authorize(case, proposal, verification)
+            except AuthorizationError as exc:
+                authorization_error = str(exc)
         self.audit.append("AUTHORIZATION_EVALUATED", {
             "case_id": case.case_id,
+            "execution_mode": self.execution_mode.value,
+            "attempted": authorization_attempted,
             "issued": token is not None,
             "token_id": token.token_id if token else "",
             "permitted_actions": token.permitted_actions if token else [],
@@ -85,9 +132,11 @@ class DecisionFirewallEngine:
 
         action_results: list[dict[str, Any]] = []
         if token is not None:
+            _, broker = self._require_simulation_wiring()
             for action in proposal.executable_actions:
+                broker_invocations += 1
                 try:
-                    result = self.broker.execute(case, action, token)
+                    result = broker.execute(case, action, token)
                     action_results.append(result.to_dict())
                     self.audit.append("ACTION_EXECUTED", {"case_id": case.case_id, **result.to_dict()})
                 except AuthorizationError as exc:
@@ -106,9 +155,32 @@ class DecisionFirewallEngine:
         if action_results:
             from .actions import ActionResult
             action_result_objects = [ActionResult(**row) for row in action_results]
-        post_action = self.post_action_verifier.verify(action_result_objects)
+        if self.execution_mode.is_read_only:
+            post_action = {
+                "applicable": False,
+                "status": "NOT_APPLICABLE",
+                "passed": None,
+                "checks": [],
+            }
+        else:
+            verification_result = self.post_action_verifier.verify(action_result_objects)
+            post_action = {
+                "applicable": bool(action_result_objects),
+                "status": (
+                    "VERIFIED" if verification_result["passed"] else "FAILED"
+                )
+                if action_result_objects
+                else "NOT_APPLICABLE",
+                **verification_result,
+            }
         if action_results:
             self.audit.append("POST_ACTION_VERIFIED", {"case_id": case.case_id, **post_action})
+
+        operational_effects = (
+            0
+            if self.execution_mode.is_read_only
+            else sum(1 for result in action_results if result.get("success") is True)
+        )
 
         latency_ms = round((time.perf_counter() - started) * 1000.0, 3)
         decision_core = {
@@ -122,8 +194,10 @@ class DecisionFirewallEngine:
             "policy_id": self.policy_config.policy_id,
             "policy_version": self.policy_config.version,
             "model_version": model_assessment.model_version,
+            "execution_mode": self.execution_mode.value,
             "original_disposition": original_disposition,
             "final_disposition": proposal.disposition,
+            "counterfactual_actions": counterfactual_actions,
             "compromise_probability": model_assessment.compromise_probability,
             "evidence_assessment": evidence.to_dict(),
             "model_assessment": model_assessment.to_dict(),
@@ -138,6 +212,14 @@ class DecisionFirewallEngine:
             },
             "action_results": action_results,
             "post_action_verification": post_action,
+            "execution_control": {
+                "mode": self.execution_mode.value,
+                "read_only": self.execution_mode.is_read_only,
+                "status": "SUPPRESSED_READ_ONLY" if self.execution_mode.is_read_only else "SYNTHETIC_SIMULATION",
+                "authorization_attempted": authorization_attempted,
+                "broker_invocations": broker_invocations,
+                "operational_effects": operational_effects,
+            },
             "latency_ms": latency_ms,
             "traceability": {
                 "input_event_ids": [event.event_id for event in case.events],
@@ -162,6 +244,7 @@ def run_engine(
     policy_path: str | Path,
     decisions_path: str | Path,
     audit_path: str | Path,
+    execution_mode: ExecutionMode | str = ExecutionMode.SYNTHETIC_SIMULATION,
 ) -> list[dict[str, Any]]:
     audit_target = Path(audit_path)
     if audit_target.exists():
@@ -169,7 +252,12 @@ def run_engine(
     model = LogisticRiskModel.load(model_path)
     policy = PolicyConfig.load(policy_path)
     audit = AuditLogger(audit_target)
-    engine = DecisionFirewallEngine(model=model, policy_config=policy, audit_logger=audit)
+    engine = DecisionFirewallEngine(
+        model=model,
+        policy_config=policy,
+        audit_logger=audit,
+        execution_mode=execution_mode,
+    )
     cases = [IdentityCase.from_dict(row) for row in read_jsonl(cases_path)]
     decisions = [engine.process(case) for case in cases]
     write_jsonl(decisions_path, decisions)

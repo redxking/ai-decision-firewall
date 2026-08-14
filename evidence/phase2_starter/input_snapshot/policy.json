@@ -1,0 +1,38 @@
+{
+  "policy_id": "ADF-POC-IDENTITY-001",
+  "version": "0.1.0",
+  "thresholds": {
+    "no_action_max_probability": 0.24,
+    "human_escalation_min_probability": 0.62,
+    "autonomous_containment_min_probability": 0.88
+  },
+  "evidence": {
+    "minimum_quality": 0.74,
+    "minimum_provenance_ratio": 0.95,
+    "minimum_integrity_verified_ratio": 0.90,
+    "minimum_independent_supporting_sources": 2,
+    "maximum_missing_expected_sources_for_decision": 1,
+    "maximum_conflicts_for_automation": 0
+  },
+  "authority": {
+    "maximum_asset_criticality_for_automation": 0.75,
+    "break_glass_requires_human": true,
+    "autonomous_actions": [
+      "revoke_active_sessions",
+      "force_step_up_auth",
+      "increase_monitoring"
+    ],
+    "human_only_actions": [
+      "disable_account",
+      "isolate_endpoint",
+      "block_network_path",
+      "modify_persistent_access_policy"
+    ]
+  },
+  "safety": {
+    "poisoned_evidence_blocks_automation": true,
+    "require_independent_verifier": true,
+    "require_rollback_plan": true,
+    "authorization_token_ttl_seconds": 120
+  }
+}

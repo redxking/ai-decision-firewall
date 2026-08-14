@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.2.0",
+  "execution_mode": "HISTORICAL_REPLAY",
+  "live_actions_enabled": false,
+  "dataset_manifest": "data/phase2_starter/manifest.json",
+  "model_path": "outputs/baseline/model.json",
+  "policy_path": "config/policy.json",
+  "output_dir": "outputs/replay/phase2_starter",
+  "contract_adapter": "canonical_jsonl_v0.2",
+  "deterministic_outputs": true,
+  "zero_effects_required": true
+}
+

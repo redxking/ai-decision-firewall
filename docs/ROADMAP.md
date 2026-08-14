@@ -12,7 +12,9 @@ Completed in this package. Deliverables include the scenario generator, learned 
 
 ## Phase 2 — Historical replay and data-contract discovery (v0.2)
 
-Replace 25–50% of the synthetic cases with de-identified historical incidents and benign administrative cases. Build vendor adapters and a canonical event contract. Measure missing fields, source delays, analyst disagreement, false contextual assumptions, and model calibration.
+**Starter status:** Implemented and validated against the included synthetic fixture. The repository now includes a code-owned historical-replay and shadow-read-only boundary, canonical contracts and adapter scaffolding, integrity-bound replay manifests, a deterministic harness, synthetic Phase 2 fixtures, safety tests, and a claim-evidence/requirements package. Authorization, brokering, target construction, and operational effects are suppressed in both read-only modes. There is no live execution mode. This closes the starter increment, not Phase 2 or any historical-performance gate.
+
+The starter contains zero historical cases and makes no claim about operational performance. The next increment is to ingest an approved, de-identified corpus of historical incidents and benign administrative cases; measure missing fields, source delays, analyst disagreement, false contextual assumptions, and calibration; then determine whether the available evidence can support a defensible shadow experiment.
 
 **Decision point:** Determine whether identity containment remains the best entry use case and whether available evidence supports reliable abstention and escalation.
 

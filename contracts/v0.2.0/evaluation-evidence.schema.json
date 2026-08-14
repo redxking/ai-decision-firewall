@@ -1,0 +1,460 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/evaluation-evidence.schema.json",
+  "title": "AI Decision Firewall evaluation evidence record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_record_id",
+    "claim_id",
+    "claim_text",
+    "claim_class",
+    "claim_status",
+    "evaluated_at",
+    "system_under_test",
+    "evaluation_scope",
+    "evaluation_environment",
+    "budget",
+    "evaluation_design",
+    "monitoring_design",
+    "scoring_and_adjudication",
+    "research_basis",
+    "results",
+    "validity_assessment",
+    "evidence_artifacts",
+    "review",
+    "supported_wording",
+    "prohibited_inferences",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.2.0"},
+    "evidence_record_id": {"$ref": "#/$defs/identifier"},
+    "claim_id": {"$ref": "#/$defs/identifier"},
+    "claim_text": {"$ref": "#/$defs/nonemptyString"},
+    "claim_class": {
+      "enum": [
+        "NOT_EVALUATED",
+        "IMPLEMENTATION_EXISTENCE",
+        "CONTROLLED_BEHAVIOR",
+        "SAFEGUARD_EFFECTIVENESS",
+        "OPERATIONAL_SHADOW_PERFORMANCE",
+        "OPERATIONAL_READINESS"
+      ]
+    },
+    "claim_status": {
+      "enum": ["OBSERVED", "NOT_OBSERVED", "INCONCLUSIVE", "NOT_EVALUATED"]
+    },
+    "evaluated_at": {"type": "string", "format": "date-time"},
+    "system_under_test": {"$ref": "#/$defs/systemUnderTest"},
+    "evaluation_scope": {"$ref": "#/$defs/evaluationScope"},
+    "evaluation_environment": {"$ref": "#/$defs/evaluationEnvironment"},
+    "budget": {"$ref": "#/$defs/budget"},
+    "evaluation_design": {"$ref": "#/$defs/evaluationDesign"},
+    "monitoring_design": {"$ref": "#/$defs/monitoringDesign"},
+    "scoring_and_adjudication": {"$ref": "#/$defs/scoringAndAdjudication"},
+    "research_basis": {"$ref": "#/$defs/researchBasis"},
+    "results": {"$ref": "#/$defs/results"},
+    "validity_assessment": {"$ref": "#/$defs/validityAssessment"},
+    "evidence_artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/evidenceArtifact"}
+    },
+    "review": {"$ref": "#/$defs/review"},
+    "supported_wording": {"$ref": "#/$defs/nonemptyString"},
+    "prohibited_inferences": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+    "limitations": {"$ref": "#/$defs/nonemptyUniqueStrings"}
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "nonemptyString": {"type": "string", "minLength": 1},
+    "nonemptyUniqueStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/nonemptyString"}
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "artifactReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {"$ref": "#/$defs/nonemptyString"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "systemUnderTest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "release_version",
+        "source_reference",
+        "component_kind",
+        "execution_mode",
+        "model",
+        "reasoning_setting",
+        "policy",
+        "contract_version",
+        "adapter",
+        "harness",
+        "permissions",
+        "safeguards"
+      ],
+      "properties": {
+        "release_version": {"$ref": "#/$defs/nonemptyString"},
+        "source_reference": {"$ref": "#/$defs/nonemptyString"},
+        "component_kind": {
+          "enum": [
+            "DETERMINISTIC_PIPELINE",
+            "GENERATIVE_AGENT",
+            "MODEL_BASED_VERIFIER",
+            "MODEL_BASED_MONITOR"
+          ]
+        },
+        "execution_mode": {
+          "enum": ["historical_replay", "shadow_read_only"]
+        },
+        "model": {"$ref": "#/$defs/artifactReference"},
+        "reasoning_setting": {"$ref": "#/$defs/nonemptyString"},
+        "policy": {"$ref": "#/$defs/artifactReference"},
+        "contract_version": {"const": "0.2.0"},
+        "adapter": {"$ref": "#/$defs/nonemptyString"},
+        "harness": {"$ref": "#/$defs/nonemptyString"},
+        "permissions": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "safeguards": {"$ref": "#/$defs/nonemptyUniqueStrings"}
+      }
+    },
+    "evaluationScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "data_origin",
+        "historical_case_count",
+        "case_count",
+        "adjudicated_case_count",
+        "time_window",
+        "sample_selection_method",
+        "network_access",
+        "action_credentials_present",
+        "tools"
+      ],
+      "properties": {
+        "data_origin": {"$ref": "#/$defs/nonemptyString"},
+        "historical_case_count": {"type": "integer", "minimum": 0},
+        "case_count": {"type": "integer", "minimum": 0},
+        "adjudicated_case_count": {"type": "integer", "minimum": 0},
+        "time_window": {"$ref": "#/$defs/nonemptyString"},
+        "sample_selection_method": {"$ref": "#/$defs/nonemptyString"},
+        "network_access": {"type": "boolean"},
+        "action_credentials_present": {"type": "boolean"},
+        "tools": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/nonemptyString"}
+        }
+      }
+    },
+    "evaluationEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "isolation_boundary",
+        "network_egress",
+        "dependency_access",
+        "credentials_and_canaries",
+        "tenant_separation",
+        "monitoring",
+        "containment_and_kill_switch",
+        "residual_risks"
+      ],
+      "properties": {
+        "isolation_boundary": {"$ref": "#/$defs/nonemptyString"},
+        "network_egress": {"$ref": "#/$defs/nonemptyString"},
+        "dependency_access": {"$ref": "#/$defs/nonemptyString"},
+        "credentials_and_canaries": {"$ref": "#/$defs/nonemptyString"},
+        "tenant_separation": {"$ref": "#/$defs/nonemptyString"},
+        "monitoring": {"$ref": "#/$defs/nonemptyString"},
+        "containment_and_kill_switch": {"$ref": "#/$defs/nonemptyString"},
+        "residual_risks": {"$ref": "#/$defs/nonemptyUniqueStrings"}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evaluation_runs",
+        "case_evaluations",
+        "retries",
+        "turns",
+        "tokens",
+        "wall_time_seconds",
+        "resource_limits",
+        "human_assistance",
+        "notes"
+      ],
+      "properties": {
+        "evaluation_runs": {"type": "integer", "minimum": 1},
+        "case_evaluations": {"type": "integer", "minimum": 0},
+        "retries": {"type": "integer", "minimum": 0},
+        "turns": {"type": ["integer", "null"], "minimum": 0},
+        "tokens": {"type": ["integer", "null"], "minimum": 0},
+        "wall_time_seconds": {"type": ["number", "null"], "minimum": 0},
+        "resource_limits": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "human_assistance": {"$ref": "#/$defs/nonemptyString"},
+        "notes": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "evaluationDesign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "threat_model",
+        "scenarios",
+        "scenario_distribution",
+        "controls",
+        "safe_alternatives",
+        "elicitation",
+        "prompts_or_inputs_reference",
+        "monitoring_visibility",
+        "evaluation_framing",
+        "deployment_framing",
+        "seeds",
+        "validity_checks"
+      ],
+      "properties": {
+        "threat_model": {"$ref": "#/$defs/nonemptyString"},
+        "scenarios": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "scenario_distribution": {"$ref": "#/$defs/nonemptyString"},
+        "controls": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "safe_alternatives": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "elicitation": {"$ref": "#/$defs/nonemptyString"},
+        "prompts_or_inputs_reference": {"$ref": "#/$defs/nonemptyString"},
+        "monitoring_visibility": {"$ref": "#/$defs/nonemptyString"},
+        "evaluation_framing": {"$ref": "#/$defs/nonemptyString"},
+        "deployment_framing": {"$ref": "#/$defs/nonemptyString"},
+        "seeds": {
+          "type": "array",
+          "items": {"type": "integer"}
+        },
+        "validity_checks": {"$ref": "#/$defs/nonemptyUniqueStrings"}
+      }
+    },
+    "monitoringDesign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "agent_monitor_pair",
+        "observation_scope",
+        "test_classes",
+        "intervention_authority",
+        "version_drift_plan"
+      ],
+      "properties": {
+        "status": {"enum": ["NOT_APPLICABLE", "PLANNED", "EVALUATED"]},
+        "agent_monitor_pair": {"$ref": "#/$defs/nonemptyString"},
+        "observation_scope": {"$ref": "#/$defs/nonemptyString"},
+        "test_classes": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "intervention_authority": {"$ref": "#/$defs/nonemptyString"},
+        "version_drift_plan": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "scoringAndAdjudication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "objective_outcome_checks",
+        "grader_identity_and_version",
+        "automated_grader_validation",
+        "consequence_weighting",
+        "human_protocol",
+        "ground_truth_status",
+        "disagreement_treatment",
+        "exclusion_rules",
+        "failure_examples"
+      ],
+      "properties": {
+        "objective_outcome_checks": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "grader_identity_and_version": {"$ref": "#/$defs/nonemptyString"},
+        "automated_grader_validation": {"$ref": "#/$defs/nonemptyString"},
+        "consequence_weighting": {"$ref": "#/$defs/nonemptyString"},
+        "human_protocol": {"$ref": "#/$defs/nonemptyString"},
+        "ground_truth_status": {"$ref": "#/$defs/nonemptyString"},
+        "disagreement_treatment": {"$ref": "#/$defs/nonemptyString"},
+        "exclusion_rules": {"$ref": "#/$defs/nonemptyString"},
+        "failure_examples": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonemptyString"}
+        }
+      }
+    },
+    "researchBasis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "coverage_register",
+        "reviewed_through",
+        "applicable_families",
+        "not_yet_evaluated"
+      ],
+      "properties": {
+        "coverage_register": {"$ref": "#/$defs/nonemptyString"},
+        "reviewed_through": {"type": "string", "format": "date"},
+        "applicable_families": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "not_yet_evaluated": {"$ref": "#/$defs/nonemptyUniqueStrings"}
+      }
+    },
+    "resultStratum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "denominator", "passed", "failed", "excluded"],
+      "properties": {
+        "name": {"$ref": "#/$defs/nonemptyString"},
+        "denominator": {"type": "integer", "minimum": 0},
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "excluded": {"type": "integer", "minimum": 0}
+      }
+    },
+    "results": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "denominator",
+        "passed",
+        "failed",
+        "excluded",
+        "metrics",
+        "strata",
+        "uncertainty",
+        "deviations_from_plan"
+      ],
+      "properties": {
+        "denominator": {"type": "integer", "minimum": 0},
+        "passed": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0},
+        "excluded": {"type": "integer", "minimum": 0},
+        "metrics": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": ["number", "integer", "string", "boolean", "null"]
+          }
+        },
+        "strata": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/resultStratum"}
+        },
+        "uncertainty": {"$ref": "#/$defs/nonemptyString"},
+        "deviations_from_plan": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonemptyString"}
+        }
+      }
+    },
+    "validityCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "notes"],
+      "properties": {
+        "status": {
+          "enum": [
+            "CHECKED_NOT_OBSERVED",
+            "OBSERVED_ADJUSTED",
+            "NOT_CHECKED",
+            "NOT_APPLICABLE",
+            "UNKNOWN"
+          ]
+        },
+        "notes": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "validityAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reward_hacking",
+        "evaluation_awareness",
+        "contamination",
+        "refusals",
+        "broken_problems",
+        "sandbagging",
+        "label_or_answer_leakage",
+        "scorer_or_harness_exploitation",
+        "actor_monitor_collusion"
+      ],
+      "properties": {
+        "reward_hacking": {"$ref": "#/$defs/validityCheck"},
+        "evaluation_awareness": {"$ref": "#/$defs/validityCheck"},
+        "contamination": {"$ref": "#/$defs/validityCheck"},
+        "refusals": {"$ref": "#/$defs/validityCheck"},
+        "broken_problems": {"$ref": "#/$defs/validityCheck"},
+        "sandbagging": {"$ref": "#/$defs/validityCheck"},
+        "label_or_answer_leakage": {"$ref": "#/$defs/validityCheck"},
+        "scorer_or_harness_exploitation": {"$ref": "#/$defs/validityCheck"},
+        "actor_monitor_collusion": {"$ref": "#/$defs/validityCheck"}
+      }
+    },
+    "evidenceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_role",
+        "path",
+        "sha256",
+        "deterministic",
+        "committed",
+        "custody_notes"
+      ],
+      "properties": {
+        "artifact_role": {"$ref": "#/$defs/identifier"},
+        "path": {"$ref": "#/$defs/nonemptyString"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "record_count": {"type": "integer", "minimum": 0},
+        "deterministic": {"type": "boolean"},
+        "committed": {"type": "boolean"},
+        "custody_notes": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_type",
+        "reviewer_role",
+        "reviewed_at",
+        "review_scope",
+        "findings",
+        "unresolved_objections",
+        "claim_expires_at",
+        "revalidation_triggers",
+        "pause_or_revocation_authority",
+        "incident_reporting_gate"
+      ],
+      "properties": {
+        "review_type": {
+          "enum": ["SELF", "INTERNAL_INDEPENDENT", "EXTERNAL_INDEPENDENT"]
+        },
+        "reviewer_role": {"$ref": "#/$defs/nonemptyString"},
+        "reviewed_at": {"type": ["string", "null"], "format": "date-time"},
+        "review_scope": {"$ref": "#/$defs/nonemptyString"},
+        "findings": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "unresolved_objections": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/nonemptyString"}
+        },
+        "claim_expires_at": {"type": ["string", "null"], "format": "date-time"},
+        "revalidation_triggers": {"$ref": "#/$defs/nonemptyUniqueStrings"},
+        "pause_or_revocation_authority": {"$ref": "#/$defs/nonemptyString"},
+        "incident_reporting_gate": {"$ref": "#/$defs/nonemptyString"}
+      }
+    }
+  }
+}

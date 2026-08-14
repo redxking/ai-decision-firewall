@@ -1,0 +1,91 @@
+{
+  "contract_adapter": "canonical_jsonl_v0.2",
+  "contract_version": "0.2.0",
+  "data_origin": "SYNTHETIC_FIXTURE",
+  "dataset_id": "adf-phase2-starter-synthetic",
+  "deterministic_artifacts": {
+    "adjudication_comparison": {
+      "path": "adjudication_comparison.jsonl",
+      "record_count": 3,
+      "sha256": "265a628f067eec2f7b7d233e270fd7640742030082da35e31b625d95aa29c30e"
+    },
+    "normalization_diagnostics": {
+      "path": "normalization_diagnostics.json",
+      "sha256": "15488533de29e13a5bcd29ccd2c4b73f18d48f4fceb9218a634e3586f3079905"
+    },
+    "normalized_cases": {
+      "path": "normalized_cases.jsonl",
+      "record_count": 3,
+      "sha256": "4ad770a8c7984433499de5d17f49f6161e1430914fa917277538963d7325ec64"
+    },
+    "replay_decisions": {
+      "path": "replay_decisions.jsonl",
+      "record_count": 3,
+      "sha256": "ccf19054a54613214d285b7ab3d8e0fdc9eb95ff820fc4b515c1e946addb2241"
+    },
+    "replay_metrics": {
+      "path": "replay_metrics.json",
+      "sha256": "291df41f10fe6a1c2a43c4fe49f8fc5c0a9d0e492e8b32e63d8b95488dfcdc66"
+    }
+  },
+  "execution_mode": "historical_replay",
+  "historical_case_count": 0,
+  "inputs": {
+    "configuration": {
+      "path": "input_snapshot/configuration.json",
+      "sha256": "732be2f17cb86a5be6f840cf3a98761ca5bcd3d29964fcb600ab41226172bde4"
+    },
+    "dataset_manifest": {
+      "path": "input_snapshot/dataset_manifest.json",
+      "sha256": "3507bef3207e474d069518cc8af0dd17fa2a121bc7dbd9f97dd97819272da7c7"
+    },
+    "declared_files": {
+      "adjudications": {
+        "path": "input_snapshot/adjudications.jsonl",
+        "record_count": 3,
+        "sha256": "9fbfba2f1e7f39aa26817f5956cc065434114d4cfe478e16dd478e5ae774a079"
+      },
+      "cases": {
+        "path": "input_snapshot/cases.jsonl",
+        "record_count": 3,
+        "sha256": "2224e8fdebeec512880f89b43889195bdefa66389eee7ca70ac4370f1000d3d5"
+      }
+    },
+    "model": {
+      "path": "input_snapshot/model.json",
+      "sha256": "ab3ea55a2d7fcb88a0dda1b2756418f24432b4089ace92d3e8e6a34a3986b2cd"
+    },
+    "policy": {
+      "path": "input_snapshot/policy.json",
+      "sha256": "3f40d35784942bd72730e592d7a875ca15ff8c723481b2096359cf4a2576e561"
+    },
+    "snapshot_integrity_verified_before_and_after_execution": true
+  },
+  "live_actions_enabled": false,
+  "read_only_assurance": {
+    "action_executed_audit_records": 0,
+    "audit_chain_valid": true,
+    "audit_record_count": 24,
+    "audit_validation_enforced": true,
+    "authorization_evaluated_records": 3,
+    "authorization_tokens_issued": 0,
+    "broker_invocations": 0,
+    "decision_finalized_records": 3,
+    "execution_suppression_records": 3,
+    "operational_effects": 0
+  },
+  "schema_version": "0.2.0",
+  "volatile_engine_artifacts": {
+    "audit_log": {
+      "path": "replay_audit.jsonl",
+      "record_count": 24,
+      "sha256": "1bc72ab3770c2e55488a94f1d3889d987d9b35e3eb1cedef4c1d67826da39d7d"
+    },
+    "engine_decisions": {
+      "path": "engine_decisions.jsonl",
+      "record_count": 3,
+      "sha256": "a8a6b46f2f964050e2e88fd09108ea23528966f74f27bf8974489c55213f0a09"
+    },
+    "reproducibility_note": "Digests bind this run's raw artifacts; they vary across runs because the records contain timestamps, UUIDs, latency, and hash-chain values."
+  }
+}

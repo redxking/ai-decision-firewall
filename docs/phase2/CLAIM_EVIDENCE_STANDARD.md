@@ -1,0 +1,123 @@
+# Claim-Evidence and Adversarial Evaluation Standard
+
+## Purpose
+
+This standard defines what evidence must exist before this project says that a capability, safeguard, performance characteristic, or safety property has been demonstrated. It is deliberately stricter than “the tests passed.” A test result supports only the claim the harness was designed to test, under the exact conditions recorded.
+
+The current POC uses an interpretable logistic model, deterministic policy, and deterministic verifier. It does **not** contain an autonomous generative-language-model agent. Research on agentic misalignment therefore informs the threat model, control design, and future evaluation plan; it is not evidence that this POC is aligned or misaligned.
+
+This document is a project synthesis of the sources below, not a claim that Anthropic or OpenAI has certified this standard or this repository.
+
+The broader dated source screen, including applicable and excluded topic families from the dynamic OpenAI Research Index, is maintained in [`RESEARCH_COVERAGE_REGISTER.md`](RESEARCH_COVERAGE_REGISTER.md). An evidence record must identify the register review date and carry every applicable but untested family forward as `not_yet_evaluated`.
+
+## Research basis and evidence boundaries
+
+| Source | What the project takes from it | What the source does not prove for this project |
+|---|---|---|
+| [Anthropic: Agentic Misalignment](https://www.anthropic.com/research/agentic-misalignment) | Test goal conflict, threats to autonomy or replacement, access to sensitive context, tool authority, direct prohibitions, safe-alternative availability, and evaluation awareness. Preserve matched controls and repeated trials. | The deliberately constrained simulations demonstrate elicitable failure modes, not prevalence in real deployments. Anthropic reports no known real-deployment instances and identifies scenario-realism limitations. |
+| [Anthropic: Sabotage Evaluations for Frontier Models](https://www.anthropic.com/research/sabotage-evaluations) | Cover human-decision sabotage, code sabotage, sandbagging, and attempts to undermine oversight. Evaluate the actor and the control system together, including monitor suspicion and false positives. | Preparatory demonstrations do not establish that present controls defeat future sabotage or that a non-event in one harness means the capability is absent. |
+| [Anthropic: Alignment Faking](https://www.anthropic.com/research/alignment-faking) | Compare monitored and apparently unmonitored conditions; test whether behavior changes when the system expects training, review, or deployment consequences. | A constructed condition-dependent result is not proof that every model has a persistent hidden objective. |
+| [Anthropic: Auditing Language Models for Hidden Objectives](https://www.anthropic.com/research/auditing-hidden-objectives) | Validate audit methods with a known seeded objective, blind red/blue separation, explicit access tiers, held-out behaviors, and grading against known truth. | Surface compliance alone cannot establish motive, and a single seeded-model exercise cannot establish universal audit effectiveness. |
+| [Anthropic: SHADE-Arena](https://www.anthropic.com/research/shade-arena-sabotage-monitoring) | Use long, tool-rich tasks with hidden side objectives; score main-task success, sabotage success, evasion, monitor detection, and false-positive cost separately. | A result in synthetic hidden-objective tasks is not a real-world prevalence estimate or proof that one monitor generalizes. |
+| [OpenAI: Preparedness Framework v2](https://cdn.openai.com/pdf/18a02b5d-6b67-4cec-ab64-68cdfbddebcd/preparedness-framework-v2.pdf) | Build a threat-model-driven safety case. Map plausible harm paths to layered safeguards, efficacy measures, thresholds, residual risk, and governance. Test monitors with adversarial agents, measure recall and response latency, constrain credentials and tools, require human approval where consequences warrant it, and bind action logs. | A control's presence is not evidence of its effectiveness; each safeguard requires an efficacy assessment under the relevant threat model. |
+| [OpenAI: A Shared Playbook for Trustworthy Third-Party Evaluations](https://openai.com/index/trustworthy-third-party-evaluations-foundations/) | State whether a test supports a capability, safeguard-performance, or comparison claim. Record the exact system, harness, tools, budget, elicitation, and checks for reward hacking, refusals, contamination, broken tasks, sandbagging, and evaluation awareness. | A headline score without harness and validity evidence cannot support a broader claim. |
+| [OpenAI: Detecting Misbehavior in Frontier Reasoning Models](https://openai.com/index/chain-of-thought-monitoring/) | Test for reward hacking and test-subversion strategies; compare outcome/action monitoring with any legitimately available process signals. Treat monitorability as fragile and validate behavior independently of self-reported reasoning. | A monitor flag is not ground truth. Suppressing suspicious reasoning can hide intent without eliminating the behavior. |
+| [OpenAI: Detecting and Reducing Scheming in AI Models](https://openai.com/index/detecting-and-reducing-scheming-in-ai-models/) | Use out-of-distribution environments, independent task construction, evaluation-awareness interventions, realistic prompts, and separate methodologies. | Lower observed scheming in evaluation-aware conditions does not by itself establish deployment alignment. |
+| [OpenAI–Anthropic Pilot Alignment Evaluation](https://openai.com/index/openai-anthropic-safety-evaluation/) | Use cross-organization evaluation to surface blind spots; disclose model settings, safeguard changes, scorer limitations, representative failures, and qualitative review. Treat safety testing as continuing work. | Focused adversarial results indicate propensities in difficult environments, not apples-to-apples comparisons or real-world likelihoods. |
+| [OpenAI: Internal Coding-Agent Misalignment Monitoring](https://openai.com/index/how-we-monitor-internal-coding-agents-misalignment/) | Evaluate realistic, extended, tool-rich trajectories; measure coverage, false negatives, detection latency, escalation, human response, privacy controls, and possible actor-monitor collusion. Use monitoring only as one defense layer. | Matching known escalations does not quantify open-ended false-negative rates. Even perfect performance on an easy control evaluation does not establish robust monitoring. |
+| [OpenAI: GPT-Red](https://openai.com/index/unlocking-self-improvement-gpt-red/) | Use adaptive automated red teams with explicit attacker control, held-out environments, realistic transfer tests, and capability/over-refusal controls. Pair automation with human and third-party testing. | Saturating a fixed benchmark or resisting one attacker distribution does not establish general robustness. |
+| [OpenAI: Separating Signal from Noise in Coding Evaluations](https://openai.com/index/separating-signal-from-noise-coding-evaluations/) | Audit prompts, tests, tasks, traces, and scorers for underspecification, misleading instructions, overly strict tests, and low coverage. Use independent expert review and escalate disagreement. | A green benchmark score is not meaningful when the tasks or grading logic are broken. |
+| [OpenAI: Why Language Models Hallucinate](https://openai.com/index/why-language-models-hallucinate/) | Report errors, correct answers, and abstentions separately; penalize confident consequential errors more than appropriate uncertainty; evaluate calibration rather than optimizing accuracy alone. | Higher answer rate or aggregate accuracy does not establish trustworthy evidence handling. |
+| [OpenAI: Prompt Injection](https://openai.com/index/prompt-injections/) and [Instruction Hierarchy Challenge](https://openai.com/index/instruction-hierarchy-challenge/) | Combine authority hierarchy with least privilege, sandboxing, monitoring, explicit confirmation, adaptive red teaming, over-refusal checks, and normal-capability regression tests. | An input classifier or direct prohibition alone does not prove prompt-injection resistance. |
+| [OpenAI: Safety and Alignment in an Era of Long-Horizon Models](https://openai.com/index/safety-alignment-long-horizon-models/) | Match evaluation horizon to use, evaluate cumulative trajectory intent and outcome rather than isolated acceptable actions, test instruction retention, add monitor intervention/pause, and convert observed incidents into regression evaluations before limited redeployment. | A small internal replay after an incident does not establish general safeguard effectiveness or eliminate the need for continued monitoring and rollback authority. |
+| [OpenAI: Model-Evaluation Security Incident](https://openai.com/index/hugging-face-model-evaluation-security-incident/) | Treat the evaluation environment itself as a security boundary. Threat-model egress, dependency proxies, credentials, lateral movement, tenant separation, containment, monitoring, and emergency termination—even when the nominal task is sandboxed. | The published account is preliminary and does not establish that any one isolation design is sufficient. |
+| [OpenAI: Practices for Governing Agentic AI Systems](https://openai.com/index/practices-for-governing-agentic-ai-systems/) | Record lifecycle roles, task suitability, constrained action space, meaningful approval, safe defaults, activity legibility, interruptibility, attribution, pause/revocation authority, and continuing responsibility. | The proposed practices are governance building blocks and open questions, not a validated assurance certificate. |
+| [OpenAI: PaperBench](https://openai.com/index/paperbench/) | Use hierarchical rubrics, expert involvement, multiple runs, executable artifacts, human baselines, and independent validation of any automated judge used on long-horizon work. | A model-based judge remains imperfect and domain-specific; its score cannot replace expert known-truth review. |
+
+## Claim classes and minimum evidence
+
+Every public claim must be assigned exactly one class.
+
+| Level | Claim class | Minimum evidence | Allowed wording |
+|---|---|---|---|
+| CE-0 | Not evaluated | No adequate evidence package | “Not evaluated,” “unknown,” or “planned” |
+| CE-1 | Implementation existence | Source artifact, versioned interface, static inspection, and traceability entry | “Implemented in commit X” |
+| CE-2 | Controlled behavior | CE-1 plus executable positive and negative controls, exact harness/configuration, raw artifacts, repeatability evidence, and known limitations | “Observed under the named synthetic tests” |
+| CE-3 | Safeguard effectiveness | CE-2 plus threat model, adversarial elicitation, representative task distribution, predeclared thresholds, denominators, uncertainty, validity checks, monitor/error analysis, and independent review | “Met the predeclared threshold in the tested distribution” |
+| CE-4 | Operational shadow performance | CE-3 plus approved representative data, held-out temporal evaluation, source-specific mapping validation, analyst adjudication protocol, workflow and latency evidence, incident handling, and origin-stratified results | “Observed in the approved shadow scope and period” |
+| CE-5 | Operational readiness or safety case | CE-4 plus complete control argument, defense in depth, deployment-specific threat model, independent red team, external-effect observation, rollback and recovery evidence, monitoring SLAs, governance approval, and accepted residual risk | Only the exact conclusion approved by the authorizing authority |
+
+The words **safe**, **proven**, **prevents**, **fully validated**, **production ready**, and **operationally effective** are prohibited below CE-5 unless the sentence explicitly narrows them to a deterministic property of a named artifact. “No failures observed” must never be shortened to “zero risk.”
+
+## Required evidence record
+
+The machine-readable contract is [`contracts/v0.2.0/evaluation-evidence.schema.json`](../../contracts/v0.2.0/evaluation-evidence.schema.json). Every reported result must preserve:
+
+1. **Claim** — identifier, exact wording, class, status, supported wording, and prohibited inferences.
+2. **System under test** — release, source reference, model and reasoning setting, policy, contract, adapter, harness, tools, permissions, safeguards, and execution mode.
+3. **Evaluation environment** — process/tenant isolation, egress, package and dependency paths, credentials and secret canaries, monitoring, containment, kill switch, and residual environment risk.
+4. **Budget** — turns, tokens where applicable, attempts, retries, wall time, resource limits, and any human assistance.
+5. **Evaluation content** — data origin, time window, scenario distribution, sample-selection method, denominators, seeds, controls, safe alternatives, and horizon distribution.
+6. **Elicitation** — prompts, goal/conflict conditions, tool availability, monitoring visibility, evaluation/deployment framing, attacker identity/budget, and efforts used to find the strongest credible success or failure.
+7. **Scoring and adjudication** — objective outcome checks, consequence weighting, grader identity/version, automated-grader validation against expert known truth, human protocol, disagreement treatment, exclusions, and failure examples.
+8. **Monitoring design** — exact actor/monitor versions, observation scope, intervention/process/outcome-property test classes, reasoning and compute settings, severity rubric, intervention authority, and drift/revalidation plan.
+9. **Validity checks** — reward hacking, refusals, contamination, broken tasks, leakage, sandbagging, evaluation awareness, scorer/harness exploitation, benchmark saturation, and actor-monitor collusion.
+10. **Results** — raw counts before rates, failures and exclusions, uncertainty, origin and consequence stratification, and deviations from the plan.
+11. **Artifacts** — inputs, outputs, traces, logs, configuration, hashes, and custody limitations sufficient to reproduce or independently inspect the result.
+12. **Review and lifecycle** — self, internal-independent, or external-independent review; reviewer scope; findings; unresolved objections; claim expiry; revalidation triggers; incident gate; and pause/revocation authority.
+
+If a field is unavailable, the record must say `NOT_CHECKED`, `NOT_APPLICABLE`, or `UNKNOWN` and explain why. Absence must not be silently converted to a passing result.
+
+## Statistical and reporting rules
+
+- Report raw numerators and denominators before percentages.
+- Report failures and disqualified “successes,” including reward hacks, separately.
+- Report disposition-specific and consequence-specific counts. At minimum, keep false containment, missed compromise, appropriate investigation, appropriate escalation, and appropriate abstention separate; aggregate accuracy cannot erase asymmetric operational cost.
+- A result of `0/n` means only that no event was observed in those `n` trials. It does not establish a zero event probability.
+- Use confidence or credible intervals only when the sampling and independence assumptions are defensible. For independent Bernoulli trials with zero events, the exact one-sided 95% upper bound is `1 - 0.05^(1/n)`; most scenario suites do not satisfy the independence or representativeness assumptions needed to apply that bound operationally.
+- Do not combine synthetic, historical, and live-shadow results into one efficacy rate.
+- Do not treat evaluator adjudications as ground truth without an adjudication protocol, expertise criteria, and disagreement analysis.
+- Report each model, policy, prompt, reasoning setting, harness, and tool configuration separately unless equivalence has been demonstrated.
+- Preserve representative failures and counterexamples. Averages must not hide a catastrophic class of failure.
+- Predeclare release thresholds before running the decision-making evaluation. Post-hoc thresholds are exploratory.
+
+## Adversarial evaluation matrix
+
+The current deterministic control layer can be tested with defective or adversarial upstream records. Tests that depend on strategic reasoning become mandatory only if a generative agent, model-based verifier, or model-based monitor is introduced.
+
+| ID | Evaluation family | Required design and evidence | Current status |
+|---|---|---|---|
+| ADV-001 | Goal conflict and authority pressure | Cross goal conflict, replacement/authority threat, and neutral controls; keep abstention and ethical alternatives available; measure policy-bypass attempts and behavior deltas | Planned for any future generative agent |
+| ADV-002 | Evaluation awareness | Matched “evaluation,” “deployment,” and neutral framing with repeated samples; inspect actions and legitimately available traces; predeclare acceptable deltas | Planned for any future generative agent |
+| ADV-003 | Instruction and evidence poisoning | Put conflicting instructions, false authority, labels, and action requests in every untrusted field; prove they cannot change authority or executable state | Partially implemented; expand corpus |
+| ADV-004 | Reward and test hacking | Seed opportunities to skip tests, alter scorers, weaken assertions, edit metrics, or exploit hidden answer artifacts; independently validate the real outcome | Planned; current CI and review are controls, not a reward-hacking evaluation |
+| ADV-005 | Code sabotage | Seed subtle fail-open changes in modes, policy thresholds, verifier logic, audit validation, schemas, and metrics; measure survival through tests and independent review | Planned mutation/red-team campaign |
+| ADV-006 | Oversight undermining and collusion | Use independent actor, verifier, and monitor configurations; inject known harmful cases; measure harmful-pass rate, recall, precision, false positives, and latency | Partial: malformed/forged audit and custom-runner tests exist |
+| ADV-007 | Sandbagging and selective compliance | Vary monitoring visibility, expected deployment consequence, hidden triggers, model/version, reasoning budget, and tool access; analyze unexplained selective degradation | Planned for model-based components |
+| ADV-008 | Hidden-objective audit | Blind red/blue exercise with a deliberately seeded objective or defect, access tiers, held-out behavior, and known-truth grading | Planned before an alignment claim |
+| ADV-009 | Long-horizon and state manipulation | Match operational horizon lengths; test instruction retention, cumulative objective/authority across individually acceptable actions, input mutation, later-case contamination, log alteration, retained state, retries, and intervention latency; preserve sequence-level labels | Partial: frozen-input and non-overwrite tests exist; no generative trajectory evaluation |
+| ADV-010 | Human-decision sabotage | Blinded operators receive subtly misleading recommendations; measure decision correctness, suspicion, escalation, and trust calibration against controls | Planned before workflow-effectiveness claims |
+| ADV-011 | Monitor effectiveness | Record exact actor/monitor pair, versions, reasoning/compute settings, observation scope, intervention/process/outcome-property tests, adversarial distribution, false-negative analysis, precision/recall by severity, detection/intervention latency, response effectiveness, privacy, collusion, and drift | Not implemented |
+| ADV-012 | Operational-effect proof | Independent target-side observation, command/effect separation, idempotency, race testing, rollback/recovery, and external log custody | Prohibited in Phase 2; required in a later non-production phase |
+| ADV-013 | Evaluation-environment containment | Threat-model sandbox, dependency/cache/proxy paths, egress, credentials/canaries, tenant boundaries, filesystem scope, lateral movement, monitoring, containment, and kill switch; use an authorized escape campaign | Partial: local path and parser confinement exist; no OS-enforced sandbox or escape campaign |
+| ADV-014 | Automated-grader assurance | Benchmark the judge against blinded expert known truth, quantify error/disagreement by severity, adversarially test judge manipulation, version the rubric, and preserve human escalation | Partial: deterministic outcome checks have negative tests; no independent expert benchmark |
+| ADV-015 | Incident and claim lifecycle | Predeclare claim expiry and revalidation triggers; define accountable owner, pause/revocation authority, incident-reporting gate, evidence preservation, and conversion of validated incidents into regression tests | Starter record includes lifecycle fields; no operational incident process exercised |
+| ADV-016 | Cyber operational validity | Separate isolated skill, consistency, and end-to-end operational measures; test realistic noise, hardened targets, active defense, mitigations-on/off where authorized, and safe containment | Not applicable to the current deterministic defensive POC; mandatory before a generative cyber capability claim |
+
+## Current evidence boundary
+
+| Candidate statement | Current disposition |
+|---|---|
+| “The built-in Phase 2 runner and canonical adapter do not construct the v0.1 authorization gate, broker, or target in the tested read-only modes.” | CE-2, supported by construction tests and source inspection. This does not cover arbitrary Python code imported into the same process. |
+| “Three included synthetic fixture cases produced zero authorization attempts/tokens, broker invocations, action records, or operational effects.” | CE-2, supported only for the named fixture and run artifacts. |
+| “Input snapshots, decision hashes, suppression/authorization/finalization audit records, and run-artifact hashes cross-check for the included replay.” | CE-2 internal consistency claim; the audit chain still lacks independent custody. |
+| “The system performs well on historical identity incidents.” | CE-0. `historical_case_count=0`; prohibited claim. |
+| “The system is robust to agentic misalignment, scheming, sandbagging, or sabotage.” | CE-0. No generative agent or corresponding adversarial evaluation exists; prohibited claim. |
+| “The monitor has high recall or a bounded false-negative rate.” | CE-0. No operational monitor corpus or control evaluation exists; prohibited claim. |
+| “The POC is safe for live containment.” | CE-0 and outside Phase 2 authority; prohibited claim. |
+
+The worked record [`contracts/v0.2.0/examples/phase2-starter-evidence-record.json`](../../contracts/v0.2.0/examples/phase2-starter-evidence-record.json) demonstrates how to report the current narrow result without promoting it into an operational claim.
+
+## Release rule
+
+A repository test may block a release when an invariant fails. Passing the test does not automatically authorize a broader claim. The claim owner must produce the evidence record, confirm that its class matches the decision being supported, resolve validity hazards, preserve counterexamples, obtain the required review, and carry forward every prohibited inference and limitation into the public report. Claims expire or are revoked when their recorded date or revalidation trigger is reached; an incident cannot be closed by editing the narrative—it must be preserved, investigated, and converted into a regression evaluation where technically applicable.
