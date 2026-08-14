@@ -1,0 +1,20 @@
+{
+  "dataset_manifest_hash": "3c8371d15d216556eb6863eed77f12fcbd5ebd00cda8cae727770ff6dbfd705e",
+  "model_version": "synthetic-logistic-v0.1",
+  "outputs": [
+    "model.json",
+    "decisions.jsonl",
+    "audit_chain.jsonl",
+    "metrics.json",
+    "decision_summary.csv",
+    "per_scenario_metrics.csv",
+    "baseline_report.html"
+  ],
+  "poc_version": "0.1.0",
+  "policy_file": "config/policy.json",
+  "policy_sha256": "3f40d35784942bd72730e592d7a875ca15ff8c723481b2096359cf4a2576e561",
+  "safety_notice": "Synthetic data and simulated actions only. Not approved for operational use.",
+  "seed": 20260814,
+  "test_cases": 400,
+  "train_cases": 800
+}

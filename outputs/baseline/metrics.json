@@ -1,0 +1,197 @@
+{
+  "decision_control": {
+    "autonomous_containment_count": 112,
+    "autonomous_containment_precision": 1.0,
+    "compromise_autonomous_containment_coverage": 0.59893,
+    "compromise_contain_or_escalate_coverage": 0.834225,
+    "disposition_counts": {
+      "CONTAIN_REVERSIBLE": 112,
+      "ESCALATE_HUMAN": 63,
+      "INVESTIGATE": 64,
+      "NO_ACTION": 161
+    },
+    "expected_disposition_match_rate": 0.9875,
+    "false_containment_count": 0,
+    "false_containment_rate_per_benign_case": 0.0,
+    "investigation_abstention_rate": 0.16
+  },
+  "interpretation": [
+    "These results validate POC mechanics against a synthetic generator, not real-world security efficacy.",
+    "Because the model and evaluation data share a synthetic scenario family, performance is optimistic and must not be used for production authorization.",
+    "The primary POC success criteria are policy enforcement, abstention, traceability, authorization separation, and post-action verification."
+  ],
+  "model": {
+    "accuracy_at_0_5": 0.98,
+    "brier_score": 0.020594,
+    "confusion_matrix": {
+      "false_negative": 2,
+      "false_positive": 6,
+      "true_negative": 207,
+      "true_positive": 185
+    },
+    "expected_calibration_error_10_bin": 0.044691,
+    "f1_at_0_5": 0.978836,
+    "log_loss": 0.083605,
+    "precision_at_0_5": 0.968586,
+    "recall_at_0_5": 0.989305,
+    "roc_auc": 0.998368
+  },
+  "per_scenario": [
+    {
+      "cases": 38,
+      "compromised": 0,
+      "contain_reversible": 0,
+      "escalate_human": 0,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 38,
+      "scenario": "approved_maintenance"
+    },
+    {
+      "cases": 40,
+      "compromised": 0,
+      "contain_reversible": 0,
+      "escalate_human": 1,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 39,
+      "scenario": "benign_travel"
+    },
+    {
+      "cases": 18,
+      "compromised": 0,
+      "contain_reversible": 0,
+      "escalate_human": 18,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 0,
+      "scenario": "break_glass_drill"
+    },
+    {
+      "cases": 54,
+      "compromised": 0,
+      "contain_reversible": 0,
+      "escalate_human": 0,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 54,
+      "scenario": "corporate_vpn_geolocation"
+    },
+    {
+      "cases": 41,
+      "compromised": 41,
+      "contain_reversible": 33,
+      "escalate_human": 8,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 0,
+      "scenario": "credential_dump_lateral"
+    },
+    {
+      "cases": 18,
+      "compromised": 18,
+      "contain_reversible": 13,
+      "escalate_human": 5,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 0,
+      "scenario": "malicious_oauth_consent"
+    },
+    {
+      "cases": 46,
+      "compromised": 46,
+      "contain_reversible": 32,
+      "escalate_human": 14,
+      "expected_disposition_match_rate": 0.934783,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 0,
+      "scenario": "password_spray_success"
+    },
+    {
+      "cases": 51,
+      "compromised": 51,
+      "contain_reversible": 34,
+      "escalate_human": 17,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 0,
+      "no_action": 0,
+      "scenario": "privileged_token_theft"
+    },
+    {
+      "cases": 28,
+      "compromised": 13,
+      "contain_reversible": 0,
+      "escalate_human": 0,
+      "expected_disposition_match_rate": 0.964286,
+      "false_containment": 0,
+      "investigate": 28,
+      "no_action": 0,
+      "scenario": "prompt_injection_poisoning"
+    },
+    {
+      "cases": 17,
+      "compromised": 6,
+      "contain_reversible": 0,
+      "escalate_human": 0,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 17,
+      "no_action": 0,
+      "scenario": "sensor_conflict"
+    },
+    {
+      "cases": 31,
+      "compromised": 0,
+      "contain_reversible": 0,
+      "escalate_human": 0,
+      "expected_disposition_match_rate": 0.967742,
+      "false_containment": 0,
+      "investigate": 1,
+      "no_action": 30,
+      "scenario": "service_account_batch"
+    },
+    {
+      "cases": 18,
+      "compromised": 12,
+      "contain_reversible": 0,
+      "escalate_human": 0,
+      "expected_disposition_match_rate": 1.0,
+      "false_containment": 0,
+      "investigate": 18,
+      "no_action": 0,
+      "scenario": "telemetry_gap"
+    }
+  ],
+  "performance": {
+    "max_decision_latency_ms": 1.385,
+    "mean_decision_latency_ms": 0.521,
+    "median_decision_latency_ms": 0.455
+  },
+  "safety_and_assurance": {
+    "action_command_success_rate": 0.97619,
+    "audit_chain_errors": [],
+    "audit_chain_valid": true,
+    "authorization_without_independent_verifier": 0,
+    "evidence_traceability_rate": 1.0,
+    "poisoned_evidence_autonomous_actions": 0,
+    "poisoned_evidence_cases": 28,
+    "post_action_verification_pass_rate": 0.928571,
+    "unsafe_automation_case_ids": [],
+    "unsafe_automation_count": 0
+  },
+  "scope": {
+    "benign_cases": 213,
+    "cases_evaluated": 400,
+    "compromised_cases": 187,
+    "data_type": "synthetic",
+    "operational_validity": "not established"
+  }
+}

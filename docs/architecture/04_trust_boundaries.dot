@@ -1,0 +1,40 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="white", pad="0.3", nodesep="0.45", ranksep="0.7", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall POC — Trust Boundaries and Data Separation"];
+  node [shape=box, style="rounded,filled", fillcolor="#F7F9FC", color="#526C89", fontname="Arial", fontsize=11, margin="0.16,0.10"];
+  edge [color="#617286", fontname="Arial", fontsize=9, arrowsize=0.75];
+
+  subgraph cluster_untrusted {
+    label="Untrusted / Partially Trusted Evidence Zone"; color="#C77C7C"; style="rounded,dashed";
+    logs [label="Raw telemetry"];
+    tickets [label="Free-text tickets / analyst notes", fillcolor="#FDEBEC"];
+    intel [label="External threat intelligence"];
+  }
+
+  subgraph cluster_control {
+    label="Decision Firewall Control Zone"; color="#6E94C5"; style="rounded";
+    parser [label="Strict parsers + allowlist"];
+    structured [label="Structured evidence store"];
+    risk [label="Risk model"];
+    policy [label="Policy + verifier"];
+    token [label="Authorization token service"];
+  }
+
+  subgraph cluster_target {
+    label="Action Target Zone (POC Simulator Only)"; color="#73A47F"; style="rounded";
+    broker [label="Action broker\n(no model access to credentials)"];
+    target [label="Identity state simulator"];
+  }
+
+  labels [label="Ground-truth labels\nEvaluator only", fillcolor="#EEE6FA", color="#8A70AE"];
+  audit [label="Append-only audit chain", fillcolor="#EEE6FA", color="#8A70AE"];
+
+  logs -> parser;
+  intel -> parser;
+  tickets -> parser [label="text isolated; instructions never authoritative"];
+  parser -> structured -> risk -> policy -> token -> broker -> target;
+  policy -> audit;
+  token -> audit;
+  broker -> audit;
+  labels -> risk [style=dashed, label="training only"];
+  labels -> policy [style=dashed, label="never at runtime", dir=none];
+}

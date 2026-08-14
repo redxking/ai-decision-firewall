@@ -1,0 +1,61 @@
+digraph G {
+  graph [rankdir=TB, bgcolor="white", pad="0.22", nodesep="0.46", ranksep="0.62", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall POC — Logical Architecture", splines=ortho];
+  node [shape=plain, fontname="Arial", fontsize=11];
+  edge [color="#617286", arrowsize=0.68, penwidth=1.15, fontname="Arial", fontsize=9.5];
+
+  evidence [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#7F95AA">
+      <TR><TD BGCOLOR="#DDE7F0"><B>1. Evidence Plane</B></TD></TR>
+      <TR><TD BGCOLOR="#F7F9FC">Schema normalization</TD></TR>
+      <TR><TD BGCOLOR="#F7F9FC">Provenance, integrity, and freshness</TD></TR>
+      <TR><TD BGCOLOR="#F7F9FC">Adversarial-content detection</TD></TR>
+      <TR><TD BGCOLOR="#F7F9FC">Case assembly and evidence graph</TD></TR>
+    </TABLE>
+  >];
+
+  decision [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#5E8CC8">
+      <TR><TD COLSPAN="2" BGCOLOR="#DCEBFA"><B>2. Decision Plane</B></TD></TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#F7F9FC">Allow-listed structured features</TD></TR>
+      <TR>
+        <TD BGCOLOR="#E8F1FF">Replaceable risk model<BR/><FONT POINT-SIZE="9">advisory only; no action authority</FONT></TD>
+        <TD BGCOLOR="#F7F9FC">Evidence-quality and<BR/>contradiction analysis</TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#F7F9FC">Deterministic policy engine</TD></TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#FFF4DD">Independent non-model verifier</TD></TR>
+    </TABLE>
+  >];
+
+  action [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#679B78">
+      <TR><TD BGCOLOR="#DFF0E4"><B>3. Authority and Action Plane</B></TD></TR>
+      <TR><TD BGCOLOR="#E9F8EE">Signed, case-bound authorization token gate</TD></TR>
+      <TR><TD BGCOLOR="#F7F9FC">Credential-isolated action broker</TD></TR>
+      <TR><TD BGCOLOR="#F7F9FC">In-memory identity simulator</TD></TR>
+      <TR><TD BGCOLOR="#F7F9FC">Post-action state verification</TD></TR>
+    </TABLE>
+  >];
+
+  assurance [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#8C78AD">
+      <TR><TD COLSPAN="3" BGCOLOR="#E9E1F3"><B>4. Assurance Plane</B></TD></TR>
+      <TR>
+        <TD PORT="e" BGCOLOR="#F7F9FC">Evidence and provenance events</TD>
+        <TD PORT="d" BGCOLOR="#F7F9FC">Score, decision, and authorization events</TD>
+        <TD PORT="a" BGCOLOR="#F7F9FC">Execution and outcome events</TD>
+      </TR>
+      <TR><TD COLSPAN="3" BGCOLOR="#F3EFF8">Hash-chained audit log with tamper detection</TD></TR>
+      <TR>
+        <TD COLSPAN="2" BGCOLOR="#F7F9FC">Evaluation, calibration, safety, and operational metrics</TD>
+        <TD BGCOLOR="#F7F9FC">HTML / CSV / engineering evidence</TD>
+      </TR>
+    </TABLE>
+  >];
+
+  {rank=same; evidence; decision; action;}
+  evidence -> decision [label="decision-grade case"];
+  decision -> action [label="verified authorization"];
+  evidence:s -> assurance:e:n [style=dashed, label="evidence"];
+  decision:s -> assurance:d:n [style=dashed, label="decision"];
+  action:s -> assurance:a:n [style=dashed, label="outcome"];
+}

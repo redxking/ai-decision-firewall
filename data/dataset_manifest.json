@@ -1,0 +1,89 @@
+{
+  "dataset_name": "ADF Synthetic Privileged Identity Dataset",
+  "files": {
+    "test_cases": "test_cases.jsonl",
+    "test_labels": "test_labels.jsonl",
+    "train_cases": "train_cases.jsonl",
+    "train_labels": "train_labels.jsonl"
+  },
+  "manifest_hash": "3c8371d15d216556eb6863eed77f12fcbd5ebd00cda8cae727770ff6dbfd705e",
+  "scenario_catalog": [
+    {
+      "compromised": true,
+      "description": "Stolen privileged session token used from unfamiliar infrastructure.",
+      "name": "privileged_token_theft",
+      "weight": 0.13
+    },
+    {
+      "compromised": true,
+      "description": "Password spray followed by successful privileged authentication.",
+      "name": "password_spray_success",
+      "weight": 0.1
+    },
+    {
+      "compromised": true,
+      "description": "Credential dumping on an endpoint followed by lateral movement.",
+      "name": "credential_dump_lateral",
+      "weight": 0.1
+    },
+    {
+      "compromised": true,
+      "description": "Suspicious OAuth grant enables persistent cloud access.",
+      "name": "malicious_oauth_consent",
+      "weight": 0.06
+    },
+    {
+      "compromised": false,
+      "description": "Privileged user is traveling with approved itinerary and compliant device.",
+      "name": "benign_travel",
+      "weight": 0.11
+    },
+    {
+      "compromised": false,
+      "description": "VPN egress creates apparent impossible travel.",
+      "name": "corporate_vpn_geolocation",
+      "weight": 0.12
+    },
+    {
+      "compromised": false,
+      "description": "After-hours administrative activity is covered by a valid change record.",
+      "name": "approved_maintenance",
+      "weight": 0.1
+    },
+    {
+      "compromised": false,
+      "description": "Service account executes a known scheduled batch workload.",
+      "name": "service_account_batch",
+      "weight": 0.08
+    },
+    {
+      "compromised": false,
+      "description": "Authorized emergency-account exercise requires human oversight.",
+      "name": "break_glass_drill",
+      "weight": 0.05
+    },
+    {
+      "compromised": null,
+      "description": "Identity and network sensors disagree about location and device posture.",
+      "name": "sensor_conflict",
+      "weight": 0.06
+    },
+    {
+      "compromised": null,
+      "description": "Insufficient evidence exists because a key telemetry source is unavailable.",
+      "name": "telemetry_gap",
+      "weight": 0.05
+    },
+    {
+      "compromised": null,
+      "description": "Untrusted log text attempts to instruct an AI agent to take action.",
+      "name": "prompt_injection_poisoning",
+      "weight": 0.04
+    }
+  ],
+  "seed": 20260814,
+  "separation_note": "Ground-truth labels are stored separately from input case records and are not passed to the decision engine.",
+  "test_case_count": 400,
+  "train_case_count": 800,
+  "version": "0.1.0"
+}

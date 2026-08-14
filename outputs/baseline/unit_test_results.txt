@@ -1,0 +1,12 @@
+test_ground_truth_is_separate_from_case_input (test_dataset_and_pipeline.DatasetAndPipelineTests.test_ground_truth_is_separate_from_case_input) ... ok
+test_small_end_to_end_run_preserves_safety_invariants (test_dataset_and_pipeline.DatasetAndPipelineTests.test_small_end_to_end_run_preserves_safety_invariants) ... ok
+test_action_broker_rejects_missing_token (test_safety_controls.SafetyControlTests.test_action_broker_rejects_missing_token) ... ok
+test_audit_chain_detects_tampering (test_safety_controls.SafetyControlTests.test_audit_chain_detects_tampering) ... ok
+test_break_glass_never_auto_contains (test_safety_controls.SafetyControlTests.test_break_glass_never_auto_contains) ... ok
+test_poisoned_evidence_forces_abstention (test_safety_controls.SafetyControlTests.test_poisoned_evidence_forces_abstention) ... ok
+test_verifier_rejects_human_only_action (test_safety_controls.SafetyControlTests.test_verifier_rejects_human_only_action) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.335s
+
+OK

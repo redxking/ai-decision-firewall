@@ -1,0 +1,21 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="white", pad="0.35", nodesep="0.55", ranksep="0.8", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall POC — System Context"];
+  node [shape=box, style="rounded,filled", fillcolor="#F4F7FB", color="#49627F", fontname="Arial", fontsize=12, margin="0.18,0.12"];
+  edge [color="#5F6F82", fontname="Arial", fontsize=10, arrowsize=0.8];
+
+  sources [label="Synthetic Evidence Sources\nIdentity • EDR • Network • CTI\nCMDB • Change • Travel • Tickets", fillcolor="#EAF2FF"];
+  firewall [label="AI Decision Firewall\nEvidence assessment • Risk model\nPolicy • Verifier • Authorization", fillcolor="#DDEBFF", penwidth=2.2];
+  human [label="Human Decision Authority\nSOC lead • Identity owner\nIncident commander", fillcolor="#FFF5E1"];
+  simulator [label="In-Memory Identity Simulator\nRevoke sessions • Step-up auth\nIncrease monitoring", fillcolor="#E7F7ED"];
+  audit [label="Tamper-Evident Audit Chain\nDecisions • Evidence • Tokens\nActions • Verification", fillcolor="#F2EAFE"];
+  evaluator [label="Independent Evaluator\nGround truth • Metrics\nScenario analysis", fillcolor="#F9EEF0"];
+
+  sources -> firewall [label="structured events + provenance"];
+  firewall -> human [label="escalation / approval request"];
+  firewall -> simulator [label="signed, scoped action token"];
+  simulator -> firewall [label="action outcome + state"];
+  firewall -> audit [label="append-only records"];
+  simulator -> audit [label="execution evidence"];
+  firewall -> evaluator [label="decision records"];
+  sources -> evaluator [style=dashed, label="labels stored separately"];
+}

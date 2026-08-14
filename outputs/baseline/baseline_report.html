@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Decision Firewall POC Baseline Report</title>
+<style>
+:root { --ink:#172033; --muted:#5a6475; --panel:#f5f7fa; --line:#d8dee8; --accent:#2856a6; --warn:#8a4b00; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:Arial, Helvetica, sans-serif; color:var(--ink); background:white; line-height:1.45; }
+header { padding:42px 6vw 30px; background:linear-gradient(120deg,#172033,#284a80); color:white; }
+header h1 { margin:0 0 8px; font-size:34px; }
+header p { margin:0; max-width:980px; color:#e6ecf7; }
+main { padding:30px 6vw 60px; max-width:1500px; margin:auto; }
+.notice { padding:16px 18px; border-left:5px solid var(--warn); background:#fff7e8; margin-bottom:24px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+.card { border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--panel); min-height:130px; }
+.card-label { color:var(--muted); font-size:13px; text-transform:uppercase; letter-spacing:.04em; }
+.card-value { font-size:30px; font-weight:700; margin:8px 0 4px; }
+.card-note { color:var(--muted); font-size:13px; }
+section { margin-top:30px; }
+.chart { border:1px solid var(--line); border-radius:10px; padding:12px 18px; overflow:auto; }
+.chart svg { width:100%; min-width:700px; }
+.bar { fill:var(--accent); }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { border-bottom:1px solid var(--line); text-align:right; padding:9px 8px; }
+th:first-child, td:first-child { text-align:left; }
+th { background:var(--panel); position:sticky; top:0; }
+pre { white-space:pre-wrap; background:#101724; color:#e7edf7; padding:16px; border-radius:8px; overflow:auto; }
+footer { margin-top:35px; color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+<h1>AI Decision Firewall POC — Baseline Evaluation</h1>
+<p>Privileged-identity containment using synthetic evidence, a replaceable learned risk model, deterministic policy enforcement, independent verification, signed authorization, simulated reversible actions, and hash-chained audit records.</p>
+</header>
+<main>
+<div class="notice"><strong>Interpretation boundary:</strong> This is a mechanics and assurance test against generated data. It does not establish operational detection accuracy, production safety, or authorization to act on real systems.</div>
+<div class="grid"><div class="card"><div class="card-label">Cases</div><div class="card-value">400</div><div class="card-note">Synthetic test partition</div></div><div class="card"><div class="card-label">Autonomous containment precision</div><div class="card-value">100.0%</div><div class="card-note">Precision among reversible actions</div></div><div class="card"><div class="card-label">False containment</div><div class="card-value">0</div><div class="card-note">Synthetic benign cases acted upon</div></div><div class="card"><div class="card-label">Unsafe automation</div><div class="card-value">0</div><div class="card-note">Critical, break-glass, conflicted, or poisoned</div></div><div class="card"><div class="card-label">Traceability</div><div class="card-value">100.0%</div><div class="card-note">Decision evidence resolves to source events</div></div><div class="card"><div class="card-label">Audit chain</div><div class="card-value">VALID</div><div class="card-note">SHA-256 chained records</div></div><div class="card"><div class="card-label">ROC AUC</div><div class="card-value">0.998</div><div class="card-note">Synthetic model discrimination</div></div><div class="card"><div class="card-label">Median latency</div><div class="card-value">0.46 ms</div><div class="card-note">Local POC execution</div></div></div>
+<section><div class="chart"><h3>Decision dispositions</h3><svg viewBox="0 0 760 181" role="img" aria-label="Decision dispositions"><text x="0" y="50" font-size="13">No action</text><rect x="170" y="35" width="520.0" height="20" rx="3" class="bar"/><text x="700.0" y="50" font-size="13">161</text><text x="0" y="84" font-size="13">Investigate</text><rect x="170" y="69" width="206.7" height="20" rx="3" class="bar"/><text x="386.7" y="84" font-size="13">64</text><text x="0" y="118" font-size="13">Contain reversible</text><rect x="170" y="103" width="361.7" height="20" rx="3" class="bar"/><text x="541.7" y="118" font-size="13">112</text><text x="0" y="152" font-size="13">Escalate human</text><rect x="170" y="137" width="203.5" height="20" rx="3" class="bar"/><text x="383.5" y="152" font-size="13">63</text></svg></div></section>
+<section>
+<h2>Scenario-level results</h2>
+<div style="overflow:auto"><table>
+<thead><tr><th>Scenario</th><th>Cases</th><th>Compromised</th><th>Contain</th><th>False contain</th><th>Investigate</th><th>Escalate</th><th>No action</th><th>Expected match</th></tr></thead>
+<tbody><tr><td>approved_maintenance</td><td>38</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>38</td><td>100.0%</td></tr><tr><td>benign_travel</td><td>40</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>39</td><td>100.0%</td></tr><tr><td>break_glass_drill</td><td>18</td><td>0</td><td>0</td><td>0</td><td>0</td><td>18</td><td>0</td><td>100.0%</td></tr><tr><td>corporate_vpn_geolocation</td><td>54</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>54</td><td>100.0%</td></tr><tr><td>credential_dump_lateral</td><td>41</td><td>41</td><td>33</td><td>0</td><td>0</td><td>8</td><td>0</td><td>100.0%</td></tr><tr><td>malicious_oauth_consent</td><td>18</td><td>18</td><td>13</td><td>0</td><td>0</td><td>5</td><td>0</td><td>100.0%</td></tr><tr><td>password_spray_success</td><td>46</td><td>46</td><td>32</td><td>0</td><td>0</td><td>14</td><td>0</td><td>93.5%</td></tr><tr><td>privileged_token_theft</td><td>51</td><td>51</td><td>34</td><td>0</td><td>0</td><td>17</td><td>0</td><td>100.0%</td></tr><tr><td>prompt_injection_poisoning</td><td>28</td><td>13</td><td>0</td><td>0</td><td>28</td><td>0</td><td>0</td><td>96.4%</td></tr><tr><td>sensor_conflict</td><td>17</td><td>6</td><td>0</td><td>0</td><td>17</td><td>0</td><td>0</td><td>100.0%</td></tr><tr><td>service_account_batch</td><td>31</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>30</td><td>96.8%</td></tr><tr><td>telemetry_gap</td><td>18</td><td>12</td><td>0</td><td>0</td><td>18</td><td>0</td><td>0</td><td>100.0%</td></tr></tbody>
+</table></div>
+</section>
+<section>
+<h2>What this baseline proves</h2>
+<ul>
+<li>Ground-truth labels are separate from runtime case inputs.</li>
+<li>Untrusted free text is excluded from model features and can force abstention.</li>
+<li>The model has no direct action path and holds no target-system credentials.</li>
+<li>Only an independently verified, deterministic policy decision can mint an action token.</li>
+<li>Actions are confined to an in-memory simulator and are verified after execution.</li>
+<li>Every decision and action is captured in a tamper-evident hash chain.</li>
+</ul>
+</section>
+<section>
+<h2>Raw metrics</h2>
+<pre>{
+  &quot;decision_control&quot;: {
+    &quot;autonomous_containment_count&quot;: 112,
+    &quot;autonomous_containment_precision&quot;: 1.0,
+    &quot;compromise_autonomous_containment_coverage&quot;: 0.59893,
+    &quot;compromise_contain_or_escalate_coverage&quot;: 0.834225,
+    &quot;disposition_counts&quot;: {
+      &quot;CONTAIN_REVERSIBLE&quot;: 112,
+      &quot;ESCALATE_HUMAN&quot;: 63,
+      &quot;INVESTIGATE&quot;: 64,
+      &quot;NO_ACTION&quot;: 161
+    },
+    &quot;expected_disposition_match_rate&quot;: 0.9875,
+    &quot;false_containment_count&quot;: 0,
+    &quot;false_containment_rate_per_benign_case&quot;: 0.0,
+    &quot;investigation_abstention_rate&quot;: 0.16
+  },
+  &quot;interpretation&quot;: [
+    &quot;These results validate POC mechanics against a synthetic generator, not real-world security efficacy.&quot;,
+    &quot;Because the model and evaluation data share a synthetic scenario family, performance is optimistic and must not be used for production authorization.&quot;,
+    &quot;The primary POC success criteria are policy enforcement, abstention, traceability, authorization separation, and post-action verification.&quot;
+  ],
+  &quot;model&quot;: {
+    &quot;accuracy_at_0_5&quot;: 0.98,
+    &quot;brier_score&quot;: 0.020594,
+    &quot;confusion_matrix&quot;: {
+      &quot;false_negative&quot;: 2,
+      &quot;false_positive&quot;: 6,
+      &quot;true_negative&quot;: 207,
+      &quot;true_positive&quot;: 185
+    },
+    &quot;expected_calibration_error_10_bin&quot;: 0.044691,
+    &quot;f1_at_0_5&quot;: 0.978836,
+    &quot;log_loss&quot;: 0.083605,
+    &quot;precision_at_0_5&quot;: 0.968586,
+    &quot;recall_at_0_5&quot;: 0.989305,
+    &quot;roc_auc&quot;: 0.998368
+  },
+  &quot;per_scenario&quot;: [
+    {
+      &quot;cases&quot;: 38,
+      &quot;compromised&quot;: 0,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 0,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 38,
+      &quot;scenario&quot;: &quot;approved_maintenance&quot;
+    },
+    {
+      &quot;cases&quot;: 40,
+      &quot;compromised&quot;: 0,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 1,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 39,
+      &quot;scenario&quot;: &quot;benign_travel&quot;
+    },
+    {
+      &quot;cases&quot;: 18,
+      &quot;compromised&quot;: 0,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 18,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;break_glass_drill&quot;
+    },
+    {
+      &quot;cases&quot;: 54,
+      &quot;compromised&quot;: 0,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 0,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 54,
+      &quot;scenario&quot;: &quot;corporate_vpn_geolocation&quot;
+    },
+    {
+      &quot;cases&quot;: 41,
+      &quot;compromised&quot;: 41,
+      &quot;contain_reversible&quot;: 33,
+      &quot;escalate_human&quot;: 8,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;credential_dump_lateral&quot;
+    },
+    {
+      &quot;cases&quot;: 18,
+      &quot;compromised&quot;: 18,
+      &quot;contain_reversible&quot;: 13,
+      &quot;escalate_human&quot;: 5,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;malicious_oauth_consent&quot;
+    },
+    {
+      &quot;cases&quot;: 46,
+      &quot;compromised&quot;: 46,
+      &quot;contain_reversible&quot;: 32,
+      &quot;escalate_human&quot;: 14,
+      &quot;expected_disposition_match_rate&quot;: 0.934783,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;password_spray_success&quot;
+    },
+    {
+      &quot;cases&quot;: 51,
+      &quot;compromised&quot;: 51,
+      &quot;contain_reversible&quot;: 34,
+      &quot;escalate_human&quot;: 17,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 0,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;privileged_token_theft&quot;
+    },
+    {
+      &quot;cases&quot;: 28,
+      &quot;compromised&quot;: 13,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 0,
+      &quot;expected_disposition_match_rate&quot;: 0.964286,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 28,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;prompt_injection_poisoning&quot;
+    },
+    {
+      &quot;cases&quot;: 17,
+      &quot;compromised&quot;: 6,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 0,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 17,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;sensor_conflict&quot;
+    },
+    {
+      &quot;cases&quot;: 31,
+      &quot;compromised&quot;: 0,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 0,
+      &quot;expected_disposition_match_rate&quot;: 0.967742,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 1,
+      &quot;no_action&quot;: 30,
+      &quot;scenario&quot;: &quot;service_account_batch&quot;
+    },
+    {
+      &quot;cases&quot;: 18,
+      &quot;compromised&quot;: 12,
+      &quot;contain_reversible&quot;: 0,
+      &quot;escalate_human&quot;: 0,
+      &quot;expected_disposition_match_rate&quot;: 1.0,
+      &quot;false_containment&quot;: 0,
+      &quot;investigate&quot;: 18,
+      &quot;no_action&quot;: 0,
+      &quot;scenario&quot;: &quot;telemetry_gap&quot;
+    }
+  ],
+  &quot;performance&quot;: {
+    &quot;max_decision_latency_ms&quot;: 1.385,
+    &quot;mean_decision_latency_ms&quot;: 0.521,
+    &quot;median_decision_latency_ms&quot;: 0.455
+  },
+  &quot;safety_and_assurance&quot;: {
+    &quot;action_command_success_rate&quot;: 0.97619,
+    &quot;audit_chain_errors&quot;: [],
+    &quot;audit_chain_valid&quot;: true,
+    &quot;authorization_without_independent_verifier&quot;: 0,
+    &quot;evidence_traceability_rate&quot;: 1.0,
+    &quot;poisoned_evidence_autonomous_actions&quot;: 0,
+    &quot;poisoned_evidence_cases&quot;: 28,
+    &quot;post_action_verification_pass_rate&quot;: 0.928571,
+    &quot;unsafe_automation_case_ids&quot;: [],
+    &quot;unsafe_automation_count&quot;: 0
+  },
+  &quot;scope&quot;: {
+    &quot;benign_cases&quot;: 213,
+    &quot;cases_evaluated&quot;: 400,
+    &quot;compromised_cases&quot;: 187,
+    &quot;data_type&quot;: &quot;synthetic&quot;,
+    &quot;operational_validity&quot;: &quot;not established&quot;
+  }
+}</pre>
+</section>
+<footer>AI Decision Firewall POC v0.1 — Synthetic data only — Working engineering baseline.</footer>
+</main>
+</body>
+</html>
