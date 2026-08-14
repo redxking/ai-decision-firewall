@@ -39,5 +39,10 @@ jobs:
         run: python run_phase2.py --config config/phase2_qualification.json
       - name: Validate committed Phase 2 claim evidence
         run: python scripts/validate_claim_evidence.py
+      - name: Validate committed Phase 2.1 qualification evidence
+        run: >-
+          python scripts/validate_claim_evidence.py
+          --record contracts/v0.2.0/examples/phase2-qualification-evidence-record.json
+          --profile P2-CE-002
       - name: Verify repository manifest
         run: shasum -a 256 -c MANIFEST.sha256

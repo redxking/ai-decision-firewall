@@ -98,9 +98,9 @@ The separate Phase 2.1 qualification campaign is also synthetic and predeclared:
 | Historical cases | 0 |
 | Authorization tokens / broker invocations / operational effects | 0 / 0 / 0 |
 
-The test suite observed deterministic accounting and fail-closed qualification behavior under the named fixture. It does not estimate historical acceptance, data quality, model efficacy, operational error rates, agentic alignment, or readiness for a live shadow connection. Qualification changes the evaluated population, so any future result over accepted records must report the full intake and quarantine distribution to avoid survivorship bias. The committed CE-2 evidence record below covers the earlier three-case starter; the seven-record increment still requires its own committed evidence record and persistent artifact bundle before a stronger qualification claim class is assigned.
+The test suite and committed `P2-CE-002` evidence package observed deterministic accounting and fail-closed qualification behavior under the named fixture. They do not estimate historical acceptance, data quality, model efficacy, operational error rates, agentic alignment, or readiness for a live shadow connection. Qualification changes the evaluated population, so any future result over accepted records must report the full intake and quarantine distribution to avoid survivorship bias.
 
-The worked [`evaluation evidence record`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json) states the exact narrow claim these results support, identifies the system and deterministic artifacts, and carries forward limitations and prohibited inferences. The broader [`claim-evidence standard`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) defines what additional validity, adversarial, statistical, and independent-review evidence is required before stronger language is permitted. The current POC uses a logistic model and deterministic controls; it does not contain an autonomous generative-language-model agent.
+The worked [`starter evidence record`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json) and [`qualification evidence record`](contracts/v0.2.0/examples/phase2-qualification-evidence-record.json) state the exact narrow claims these results support, identify the systems and artifacts, and carry forward limitations and prohibited inferences. The broader [`claim-evidence standard`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) defines what additional validity, adversarial, statistical, and independent-review evidence is required before stronger language is permitted. The current POC uses a logistic model and deterministic controls; it does not contain an autonomous generative-language-model agent.
 
 ## Architecture
 
@@ -341,6 +341,7 @@ shasum -a 256 -c MANIFEST.sha256
 │   ├── SYNTHETIC_DATA_CARD.md
 │   └── TEST_AND_EVALUATION_PLAN.md
 ├── evidence/phase2_starter/         # Sanitized evidence supporting the narrow CE-2 starter claim
+├── evidence/phase2_qualification/   # Sanitized 7=3+4 qualification evidence and exact run artifacts
 ├── outputs/baseline/               # Reproducible decisions, metrics, audit, and report
 ├── scripts/                        # Confined fixture generation/checks and claim-evidence validation
 ├── src/adf_poc/
@@ -407,7 +408,9 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`contracts/v0.2.0/qualification-expectations.schema.json`](contracts/v0.2.0/qualification-expectations.schema.json) — closed predeclared synthetic-campaign expectation contract
 - [`contracts/v0.2.0/evaluation-evidence.schema.json`](contracts/v0.2.0/evaluation-evidence.schema.json) — machine-readable claim-evidence contract
 - [`contracts/v0.2.0/examples/phase2-starter-evidence-record.json`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json) — validated, narrowly bounded starter result
+- [`contracts/v0.2.0/examples/phase2-qualification-evidence-record.json`](contracts/v0.2.0/examples/phase2-qualification-evidence-record.json) — validated, narrowly bounded seven-record qualification result
 - [`evidence/phase2_starter/README.md`](evidence/phase2_starter/README.md) — sanitized inputs, outputs, hashes, and custody limits for that result
+- [`evidence/phase2_qualification/README.md`](evidence/phase2_qualification/README.md) — exact qualification run, accounting artifacts, hashes, and custody limits
 - [`SECURITY.md`](SECURITY.md) — vulnerability reporting and non-production security boundaries
 - [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md) — imported-package provenance and archive-integrity limitation
 

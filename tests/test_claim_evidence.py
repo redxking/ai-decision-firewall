@@ -364,6 +364,13 @@ class ClaimEvidenceContractTests(unittest.TestCase):
                 "rejected_records": 4,
             },
         )
+        committed = validate_evidence_record(
+            ROOT
+            / "contracts/v0.2.0/examples/phase2-qualification-evidence-record.json",
+            profile_id="P2-CE-002",
+        )
+        self.assertEqual(committed["status"], "VALID")
+        self.assertEqual(committed["artifact_count"], 17)
 
     def test_profile_rejects_live_executable_or_stale_hash_decisions(self) -> None:
         for mutation in ("live-mode", "executable-action", "stale-hash"):

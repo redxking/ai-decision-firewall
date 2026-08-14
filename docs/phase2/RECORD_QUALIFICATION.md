@@ -11,7 +11,7 @@ Qualification prevents a malformed record from silently disappearing while other
 
 The implemented boundary is deliberately narrow: it qualifies the manifest role `cases` only. Adjudications remain a separate, whole-file evaluator input loaded after read-only decisions close. The schemas permit no live mode or action authority.
 
-This is a CE-1 implementation contract until executable evidence meets the synthetic campaign criteria below. A passing synthetic campaign can support only CE-2 wording such as “record accounting and quarantine behavior were observed under the named synthetic fixture and implementation.” It cannot support claims of historical data quality, operational performance, production readiness, or safeguard effectiveness.
+This document is the CE-1 implementation contract. The committed `P2-CE-002` run meets the fixed synthetic campaign criteria below and supports only CE-2 wording such as “record accounting and quarantine behavior were observed under the named synthetic fixture and implementation.” It cannot support claims of historical data quality, operational performance, production readiness, or safeguard effectiveness.
 
 ## Normative artifacts
 

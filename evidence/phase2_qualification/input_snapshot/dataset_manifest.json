@@ -1,0 +1,33 @@
+{
+  "attestations": {
+    "approval_reference": "SYNTHETIC-QUALIFICATION-FIXTURE-NO-EXTERNAL-DATA",
+    "approved_for_replay": true,
+    "attested_at": "2026-08-14T00:00:00+00:00",
+    "attested_by": "phase2-qualification-fixture-generator",
+    "deidentification_method": "synthetic-by-construction",
+    "deidentified": true,
+    "direct_identifiers_present": false
+  },
+  "created_at": "2026-08-14T00:00:00+00:00",
+  "data_origin": "SYNTHETIC_FIXTURE",
+  "dataset_id": "adf-phase2-qualification-synthetic",
+  "files": [
+    {
+      "adapter": "canonical_jsonl_v0.2",
+      "path": "cases.jsonl",
+      "record_count": 7,
+      "role": "cases",
+      "sha256": "1a2085a8c9c709766d8395e2ec5390c9c9ec3d15329bf87ac7cc6569d6fe4e44"
+    },
+    {
+      "adapter": "canonical_jsonl_v0.2",
+      "path": "adjudications.jsonl",
+      "record_count": 3,
+      "role": "adjudications",
+      "sha256": "9fbfba2f1e7f39aa26817f5956cc065434114d4cfe478e16dd478e5ae774a079"
+    }
+  ],
+  "historical_case_count": 0,
+  "intended_mode": "HISTORICAL_REPLAY",
+  "schema_version": "0.2.0"
+}

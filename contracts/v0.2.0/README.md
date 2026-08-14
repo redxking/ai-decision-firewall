@@ -12,6 +12,7 @@ These versioned starter contracts define the boundary between de-identified repl
 - `qualification-expectations.schema.json` defines closed metadata-only totals and predeclared per-record outcomes for a synthetic qualification campaign.
 - `evaluation-evidence.schema.json` defines the claim, exact system and harness, evaluation scope, validity checks, raw counts, evidence artifacts, review state, limitations, and prohibited inferences required before reporting a result.
 - `examples/phase2-starter-evidence-record.json` is a worked CE-2 controlled-behavior record for the three-case synthetic fixture. It is not historical or operational evidence.
+- `examples/phase2-qualification-evidence-record.json` is the CE-2 controlled-behavior record for the fixed seven-record qualification campaign and exact `evidence/phase2_qualification/` bundle. It is not historical data-quality, efficacy, alignment, or live-shadow evidence.
 
 For replay manifests, whole-dataset cases, and adjudications, the Python validator in `src/adf_poc/replay/contracts.py` is the executable POC authority. It enforces constraints that JSON Schema cannot express cleanly, including repository-path confinement, file digest and record-count verification, globally unique case and event identifiers, timezone-aware timestamp ordering, runtime-label exclusion, and equality between canonical `break_glass` / `asset_criticality` values and the corresponding asset-inventory attributes.
 

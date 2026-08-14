@@ -1,0 +1,13 @@
+{
+  "contract_adapter": "canonical_jsonl_v0.2",
+  "dataset_manifest": "data/phase2_qualification/manifest.json",
+  "deterministic_outputs": true,
+  "execution_mode": "HISTORICAL_REPLAY",
+  "live_actions_enabled": false,
+  "model_path": "outputs/baseline/model.json",
+  "output_dir": "outputs/replay/phase2_qualification",
+  "policy_path": "config/policy.json",
+  "record_failure_policy": "QUARANTINE_RECORD",
+  "schema_version": "0.2.0",
+  "zero_effects_required": true
+}

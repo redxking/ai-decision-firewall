@@ -15,6 +15,7 @@ Phase 2.1 bounded record qualification and quarantine increment.
 - Hardened validate-only processing so adapter substitution and an empty accepted set fail before a `VALID` result is returned.
 - Hardened claim-evidence validation by recomputing the shared read-only decision and audit invariants and cross-binding raw decisions, deterministic projections, adjudication comparisons, metrics, model, policy, and execution scope.
 - Added qualification architecture, data-contract, validation, privacy, survivorship-bias, research-evidence, and historical-pilot-gate documentation.
+- Added the validated `P2-CE-002` evidence record and exact 17-artifact run bundle for the fixed seven-record synthetic campaign.
 
 This increment uses synthetic records only, reports `historical_case_count: 0`, and does not establish historical efficacy, agentic alignment, live-shadow readiness, or authority to connect to an operational environment.
 

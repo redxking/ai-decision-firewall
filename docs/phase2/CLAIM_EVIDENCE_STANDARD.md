@@ -101,7 +101,7 @@ The current deterministic control layer can be tested with defective or adversar
 | ADV-012 | Operational-effect proof | Independent target-side observation, command/effect separation, idempotency, race testing, rollback/recovery, and external log custody | Prohibited in Phase 2; required in a later non-production phase |
 | ADV-013 | Evaluation-environment containment | Threat-model sandbox, dependency/cache/proxy paths, egress, credentials/canaries, tenant boundaries, filesystem scope, lateral movement, monitoring, containment, and kill switch; use an authorized escape campaign | Partial: local path and parser confinement exist; no OS-enforced sandbox or escape campaign |
 | ADV-014 | Automated-grader assurance | Benchmark the judge against blinded expert known truth, quantify error/disagreement by severity, adversarially test judge manipulation, version the rubric, and preserve human escalation | Partial: deterministic outcome checks have negative tests; no independent expert benchmark |
-| ADV-015 | Incident and claim lifecycle | Predeclare claim expiry and revalidation triggers; define accountable owner, pause/revocation authority, incident-reporting gate, evidence preservation, and conversion of validated incidents into regression tests | Starter record includes lifecycle fields; no operational incident process exercised |
+| ADV-015 | Incident and claim lifecycle | Predeclare claim expiry and revalidation triggers; define accountable owner, pause/revocation authority, incident-reporting gate, evidence preservation, and conversion of validated incidents into regression tests | Both CE-2 records include lifecycle fields; no operational incident process exercised |
 | ADV-016 | Cyber operational validity | Separate isolated skill, consistency, and end-to-end operational measures; test realistic noise, hardened targets, active defense, mitigations-on/off where authorized, and safe containment | Not applicable to the current deterministic defensive POC; mandatory before a generative cyber capability claim |
 
 ## Current evidence boundary
@@ -110,13 +110,14 @@ The current deterministic control layer can be tested with defective or adversar
 |---|---|
 | “The built-in Phase 2 runner and canonical adapter do not construct the v0.1 authorization gate, broker, or target in the tested read-only modes.” | CE-2, supported by construction tests and source inspection. This does not cover arbitrary Python code imported into the same process. |
 | “Three included synthetic fixture cases produced zero authorization attempts/tokens, broker invocations, action records, or operational effects.” | CE-2, supported only for the named fixture and run artifacts. |
+| “The fixed seven-record synthetic qualification campaign matched all seven predeclared outcomes: three accepted and four quarantined; accepted cases retained zero-effect invariants.” | CE-2, supported only for `P2-CE-002`, its exact source commit, and its 17-artifact bundle. This is not a historical data-quality or efficacy result. |
 | “Input snapshots, decision hashes, suppression/authorization/finalization audit records, and run-artifact hashes cross-check for the included replay.” | CE-2 internal consistency claim; the audit chain still lacks independent custody. |
 | “The system performs well on historical identity incidents.” | CE-0. `historical_case_count=0`; prohibited claim. |
 | “The system is robust to agentic misalignment, scheming, sandbagging, or sabotage.” | CE-0. No generative agent or corresponding adversarial evaluation exists; prohibited claim. |
 | “The monitor has high recall or a bounded false-negative rate.” | CE-0. No operational monitor corpus or control evaluation exists; prohibited claim. |
 | “The POC is safe for live containment.” | CE-0 and outside Phase 2 authority; prohibited claim. |
 
-The worked record [`contracts/v0.2.0/examples/phase2-starter-evidence-record.json`](../../contracts/v0.2.0/examples/phase2-starter-evidence-record.json) demonstrates how to report the current narrow result without promoting it into an operational claim.
+The worked records [`phase2-starter-evidence-record.json`](../../contracts/v0.2.0/examples/phase2-starter-evidence-record.json) and [`phase2-qualification-evidence-record.json`](../../contracts/v0.2.0/examples/phase2-qualification-evidence-record.json) demonstrate how to report the current narrow results without promoting them into operational claims.
 
 ## Release rule
 

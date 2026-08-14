@@ -1,0 +1,110 @@
+{
+  "contract_adapter": "canonical_jsonl_v0.2",
+  "contract_version": "0.2.0",
+  "data_origin": "SYNTHETIC_FIXTURE",
+  "dataset_id": "adf-phase2-qualification-synthetic",
+  "deterministic_artifacts": {
+    "adjudication_comparison": {
+      "path": "adjudication_comparison.jsonl",
+      "record_count": 3,
+      "sha256": "265a628f067eec2f7b7d233e270fd7640742030082da35e31b625d95aa29c30e"
+    },
+    "normalization_diagnostics": {
+      "path": "normalization_diagnostics.json",
+      "sha256": "f091b54c888bb1eec082090856b8842fcabbe85c591ff96904604e47111ec42e"
+    },
+    "normalized_cases": {
+      "path": "normalized_cases.jsonl",
+      "record_count": 3,
+      "sha256": "4ad770a8c7984433499de5d17f49f6161e1430914fa917277538963d7325ec64"
+    },
+    "qualification_accounting": {
+      "path": "qualification_accounting.jsonl",
+      "record_count": 7,
+      "sha256": "398a7dc20710e06c730a9e308a5720e6cf895f657915281b83fba06631e46cde"
+    },
+    "rejections": {
+      "path": "rejections.jsonl",
+      "record_count": 4,
+      "sha256": "79bb99d0e2e38980020d1886adfb543c9cc706886235f8023a92548f56a6525c"
+    },
+    "replay_decisions": {
+      "path": "replay_decisions.jsonl",
+      "record_count": 3,
+      "sha256": "ccf19054a54613214d285b7ab3d8e0fdc9eb95ff820fc4b515c1e946addb2241"
+    },
+    "replay_metrics": {
+      "path": "replay_metrics.json",
+      "sha256": "dc874dee06c62ecee0a17f231c99ccc3892cb675494927e57e4e6f86f1b8af35"
+    }
+  },
+  "execution_mode": "historical_replay",
+  "historical_case_count": 0,
+  "inputs": {
+    "configuration": {
+      "path": "input_snapshot/configuration.json",
+      "sha256": "06bb13e469a65450c7f390bbb7956216a7056914b38e29ad748df83ab8cb3de0"
+    },
+    "dataset_manifest": {
+      "path": "input_snapshot/dataset_manifest.json",
+      "sha256": "24beef99cc03c18f9dbaa2dacfdaa0bd9aea96f874e13df4eb0e4bef1cbc1096"
+    },
+    "declared_files": {
+      "adjudications": {
+        "path": "input_snapshot/adjudications.jsonl",
+        "record_count": 3,
+        "sha256": "9fbfba2f1e7f39aa26817f5956cc065434114d4cfe478e16dd478e5ae774a079"
+      },
+      "cases": {
+        "path": "input_snapshot/cases.jsonl",
+        "record_count": 7,
+        "sha256": "1a2085a8c9c709766d8395e2ec5390c9c9ec3d15329bf87ac7cc6569d6fe4e44"
+      }
+    },
+    "model": {
+      "path": "input_snapshot/model.json",
+      "sha256": "ab3ea55a2d7fcb88a0dda1b2756418f24432b4089ace92d3e8e6a34a3986b2cd"
+    },
+    "policy": {
+      "path": "input_snapshot/policy.json",
+      "sha256": "3f40d35784942bd72730e592d7a875ca15ff8c723481b2096359cf4a2576e561"
+    },
+    "snapshot_integrity_verified_before_and_after_execution": true
+  },
+  "live_actions_enabled": false,
+  "read_only_assurance": {
+    "action_executed_audit_records": 0,
+    "audit_chain_valid": true,
+    "audit_record_count": 24,
+    "audit_validation_enforced": true,
+    "authorization_evaluated_records": 3,
+    "authorization_tokens_issued": 0,
+    "broker_invocations": 0,
+    "decision_finalized_records": 3,
+    "execution_suppression_records": 3,
+    "operational_effects": 0
+  },
+  "record_failure_policy": "QUARANTINE_RECORD",
+  "record_qualification": {
+    "accepted_records": 3,
+    "complete_accounting_verified": true,
+    "decision_records": 3,
+    "input_records": 7,
+    "rejected_records": 4,
+    "taxonomy_version": "1.0.0"
+  },
+  "schema_version": "0.2.0",
+  "volatile_engine_artifacts": {
+    "audit_log": {
+      "path": "replay_audit.jsonl",
+      "record_count": 24,
+      "sha256": "2249e41510d5fb3561fcd6b60a715b23ab9c8254f2a053d1ba3323f1e494b033"
+    },
+    "engine_decisions": {
+      "path": "engine_decisions.jsonl",
+      "record_count": 3,
+      "sha256": "c112ffcc27447d04d0244242d65d66e68fb9bf517a65efd1359fa6c3a14d7db6"
+    },
+    "reproducibility_note": "Digests bind this run's raw artifacts; they vary across runs because the records contain timestamps, UUIDs, latency, and hash-chain values."
+  }
+}

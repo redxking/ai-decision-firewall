@@ -32,11 +32,12 @@ The starter allocates responsibilities to the following repository areas:
 
 | Area | Responsibility |
 |---|---|
-| `contracts/v0.2.0/` | Versioned replay-manifest, replay-case, adjudication, qualification, rejection, synthetic-expectation, and evaluation-evidence schemas plus a worked starter evidence record |
+| `contracts/v0.2.0/` | Versioned replay-manifest, replay-case, adjudication, qualification, rejection, synthetic-expectation, and evaluation-evidence schemas plus validated starter and qualification evidence records |
 | `config/phase2_replay.json` | Fail-closed replay configuration with no live-action option |
 | `config/phase2_qualification.json` | Synthetic, offline historical-replay configuration with `record_failure_policy: QUARANTINE_RECORD` |
 | `data/phase2_starter/` | Synthetic-only fixture and manifest; no historical records |
 | `data/phase2_qualification/` | Seven-record synthetic mixed-quality fixture, separate adjudications, and predeclared metadata-only expectations |
+| `evidence/phase2_qualification/` | Exact sanitized run artifacts supporting the narrow `P2-CE-002` qualification claim |
 | `src/adf_poc/execution.py` | Execution-mode definitions and the read-only suppression boundary |
 | `src/adf_poc/replay/` | Contract validation, record qualification, local adapter, normalization, harness, and replay metrics |
 | `run_phase2.py` | Offline Phase 2 entry point |
