@@ -119,9 +119,15 @@ class PublicSiteStructureTests(unittest.TestCase):
         self.assertTrue(parser.has_main)
         self.assertTrue(parser.has_h1)
         self.assertTrue({"decision-demo", "how-it-works", "evidence", "boundaries"}.issubset(parser.ids))
-        self.assertEqual(parser.scripts, ["./app.js?v=1.0.2"])
-        self.assertEqual(parser.stylesheets, ["./styles.css?v=1.0.2"])
+        self.assertEqual(parser.scripts, ["./app.js?v=1.0.3"])
+        self.assertEqual(parser.stylesheets, ["./styles.css?v=1.0.3"])
         self.assertEqual(parser.run_decision_links, ["#decision-demo", "#decision-demo"])
+
+    def test_evidence_loader_is_versioned_bounded_and_fail_closed(self) -> None:
+        script = (ROOT / "site/app.js").read_text(encoding="utf-8")
+        self.assertIn('const PUBLIC_DATA_URL = "./data/public-results.json?v=1.0.3";', script)
+        self.assertIn("const PUBLIC_DATA_ATTEMPTS = 3;", script)
+        self.assertIn("The validated public evidence bundle could not be loaded.", script)
 
     def test_social_preview_asset_is_present(self) -> None:
         image = ROOT / "site/assets/og.png"

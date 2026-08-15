@@ -2,6 +2,8 @@
   "use strict";
 
   const PLAYER_INTERVAL_MS = 1850;
+  const PUBLIC_DATA_URL = "./data/public-results.json?v=1.0.3";
+  const PUBLIC_DATA_ATTEMPTS = 3;
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const state = {
     data: null,
@@ -518,6 +520,24 @@
     renderBoundaries();
   }
 
+  async function loadPublicData() {
+    let lastError;
+    for (let attempt = 1; attempt <= PUBLIC_DATA_ATTEMPTS; attempt += 1) {
+      try {
+        const response = await fetch(PUBLIC_DATA_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Evidence bundle returned ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        lastError = error;
+        if (attempt < PUBLIC_DATA_ATTEMPTS) {
+          loading.querySelector("p").textContent = "Retrying the validated public evidence bundle…";
+          await new Promise((resolve) => window.setTimeout(resolve, attempt * 400));
+        }
+      }
+    }
+    throw lastError;
+  }
+
   player.addEventListener("click", (event) => {
     const scenarioButton = event.target.closest("[data-scenario-index]");
     if (scenarioButton) {
@@ -564,11 +584,7 @@
     chooseScenario(next);
   });
 
-  fetch("./data/public-results.json", { cache: "no-store" })
-    .then((response) => {
-      if (!response.ok) throw new Error(`Evidence bundle returned ${response.status}`);
-      return response.json();
-    })
+  loadPublicData()
     .then((data) => {
       state.data = data;
       state.scenarioIndex = Math.min(2, data.scenarios.length - 1);
