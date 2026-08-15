@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adf_poc.audit import AuditLogger
+from adf_poc.features import extract_features
 from adf_poc.replay.adapters import CanonicalJSONLAdapter
 from adf_poc.replay.contracts import (
     ContractValidationError,
@@ -15,6 +16,7 @@ from adf_poc.replay.contracts import (
     sha256_file,
 )
 from adf_poc.replay.harness import ReplayHarness, ReplaySafetyViolation
+from adf_poc.schemas import IdentityCase
 from adf_poc.utils import read_jsonl, sha256_json, write_jsonl
 
 
@@ -44,6 +46,7 @@ def write_json(path: Path, value) -> None:
 
 def make_repository(root: Path, *, mode: str = "HISTORICAL_REPLAY") -> Path:
     shutil.copytree(ROOT / "data" / "phase2_starter", root / "data" / "phase2_starter")
+    shutil.copytree(ROOT / "contracts", root / "contracts")
     (root / "config").mkdir(parents=True)
     (root / "outputs" / "baseline").mkdir(parents=True)
     shutil.copyfile(ROOT / "config" / "policy.json", root / "config" / "policy.json")
@@ -73,7 +76,8 @@ def make_repository(root: Path, *, mode: str = "HISTORICAL_REPLAY") -> Path:
     return config_path
 
 
-def safe_fake_decision(case_id: str, execution_mode: str) -> dict:
+def safe_fake_decision(case: str | dict, execution_mode: str) -> dict:
+    case_id = case if isinstance(case, str) else str(case["case_id"])
     decision = {
         "decision_id": f"test-decision-{case_id}",
         "case_id": case_id,
@@ -151,6 +155,17 @@ def safe_fake_decision(case_id: str, execution_mode: str) -> dict:
             "feature_trace": {},
         },
     }
+    if isinstance(case, dict):
+        typed_case = IdentityCase.from_dict(case)
+        feature_values, feature_trace = extract_features(typed_case)
+        decision["model_assessment"]["feature_values"] = {
+            name: round(float(value), 6) for name, value in feature_values.items()
+        }
+        decision["model_assessment"]["feature_trace"] = feature_trace
+        decision["traceability"]["input_event_ids"] = [
+            event.event_id for event in typed_case.events
+        ]
+        decision["traceability"]["feature_trace"] = feature_trace
     decision["decision_record_hash"] = sha256_json(decision)
     return decision
 
@@ -161,12 +176,12 @@ def rehash_decision(decision: dict) -> None:
 
 
 def make_containment_decision(
-    case_id: str,
+    case: str | dict,
     execution_mode: str,
     *,
     verifier_downgrade: bool,
 ) -> dict:
-    decision = safe_fake_decision(case_id, execution_mode)
+    decision = safe_fake_decision(case, execution_mode)
     decision["original_disposition"] = "CONTAIN_REVERSIBLE"
     decision["proposal"].update(
         {
@@ -400,6 +415,14 @@ class ReplayHarnessTests(unittest.TestCase):
             self.assertEqual(result.metrics["scope"]["cases_evaluated"], 3)
             self.assertEqual(result.data_origin, "SYNTHETIC_FIXTURE")
             self.assertEqual(result.historical_case_count, 0)
+            reference_assurance = result.metrics["reference_feature_assurance"]
+            self.assertEqual(reference_assurance["cases_checked"], 3)
+            self.assertEqual(reference_assurance["matched_cases"], 3)
+            self.assertEqual(reference_assurance["mismatched_cases"], 0)
+            self.assertTrue(reference_assurance["complete"])
+            reference_records = read_jsonl(result.reference_feature_assurance_path)
+            self.assertEqual(len(reference_records), 3)
+            self.assertTrue(all(row["matched"] is True for row in reference_records))
             decisions = read_jsonl(result.raw_decisions_path)
             self.assertTrue(any(row["counterfactual_actions"] for row in decisions))
             for row in decisions:
@@ -422,6 +445,14 @@ class ReplayHarnessTests(unittest.TestCase):
             )
             self.assertEqual(
                 volatile["audit_log"]["record_count"], assurance["audit_record_count"]
+            )
+            reference_artifact = run_manifest["deterministic_artifacts"][
+                "reference_feature_assurance"
+            ]
+            self.assertEqual(reference_artifact["record_count"], 3)
+            self.assertEqual(
+                reference_artifact["sha256"],
+                sha256_file(result.reference_feature_assurance_path),
             )
             inputs = run_manifest["inputs"]
             self.assertTrue(
@@ -486,7 +517,7 @@ class ReplayHarnessTests(unittest.TestCase):
                 ):
                     self.assertNotIn(forbidden, serialized)
                 mode = kwargs["execution_mode"].value
-                decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                decisions = [safe_fake_decision(row, mode) for row in cases]
                 write_jsonl(kwargs["decisions_path"], decisions)
                 write_safe_read_only_audit(kwargs["audit_path"], decisions)
                 events.append("decisions_written")
@@ -542,7 +573,7 @@ class ReplayHarnessTests(unittest.TestCase):
                 engine_started = True
                 cases = read_jsonl(kwargs["cases_path"])
                 mode = kwargs["execution_mode"].value
-                decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                decisions = [safe_fake_decision(row, mode) for row in cases]
                 write_jsonl(kwargs["decisions_path"], decisions)
                 write_safe_read_only_audit(kwargs["audit_path"], decisions)
                 return decisions
@@ -566,7 +597,7 @@ class ReplayHarnessTests(unittest.TestCase):
             def source_mutating_runner(**kwargs):
                 cases = read_jsonl(kwargs["cases_path"])
                 mode = kwargs["execution_mode"].value
-                decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                decisions = [safe_fake_decision(row, mode) for row in cases]
                 write_jsonl(kwargs["decisions_path"], decisions)
                 write_safe_read_only_audit(kwargs["audit_path"], decisions)
                 mutated = [dict(row) for row in original_adjudications]
@@ -607,9 +638,7 @@ class ReplayHarnessTests(unittest.TestCase):
                 def runner_without_boundary_audit(**kwargs):
                     cases = read_jsonl(kwargs["cases_path"])
                     mode = kwargs["execution_mode"].value
-                    decisions = [
-                        safe_fake_decision(row["case_id"], mode) for row in cases
-                    ]
+                    decisions = [safe_fake_decision(row, mode) for row in cases]
                     write_jsonl(kwargs["decisions_path"], decisions)
                     Path(kwargs["audit_path"]).write_text(
                         audit_contents, encoding="utf-8"
@@ -627,7 +656,7 @@ class ReplayHarnessTests(unittest.TestCase):
             def runner_with_unknown_audit_type(**kwargs):
                 cases = read_jsonl(kwargs["cases_path"])
                 mode = kwargs["execution_mode"].value
-                decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                decisions = [safe_fake_decision(row, mode) for row in cases]
                 write_jsonl(kwargs["decisions_path"], decisions)
                 write_safe_read_only_audit(kwargs["audit_path"], decisions)
                 AuditLogger(kwargs["audit_path"]).append(
@@ -639,6 +668,189 @@ class ReplayHarnessTests(unittest.TestCase):
             harness = ReplayHarness.from_config(config_path, repository_root=root)
             with self.assertRaises(ReplaySafetyViolation):
                 run_with_runner(harness, runner_with_unknown_audit_type)
+
+    def test_coherent_feature_and_audit_forgery_is_blocked_before_finalization(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+
+            def runner_with_coherent_feature_forgery(**kwargs):
+                cases = read_jsonl(kwargs["cases_path"])
+                mode = kwargs["execution_mode"].value
+                decisions = [safe_fake_decision(row, mode) for row in cases]
+                forged = decisions[0]
+                original = forged["model_assessment"]["feature_values"]["new_device"]
+                forged["model_assessment"]["feature_values"]["new_device"] = (
+                    0.0 if original == 1.0 else 1.0
+                )
+                rehash_decision(forged)
+                write_jsonl(kwargs["decisions_path"], decisions)
+                write_safe_read_only_audit(kwargs["audit_path"], decisions)
+                return decisions
+
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with self.assertRaisesRegex(
+                ReplaySafetyViolation,
+                "Reference feature assurance rejected",
+            ):
+                run_with_runner(harness, runner_with_coherent_feature_forgery)
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_reference_feature_artifact_mutation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+
+            def tampering_write_jsonl(path, rows):
+                count = write_jsonl(path, rows)
+                if Path(path).name == "reference_feature_assurance.jsonl":
+                    mutated = read_jsonl(path)
+                    mutated[0]["unexpected_payload"] = "blocked"
+                    write_jsonl(path, mutated)
+                return count
+
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with (
+                patch(
+                    "adf_poc.replay.harness.write_jsonl",
+                    side_effect=tampering_write_jsonl,
+                ),
+                self.assertRaisesRegex(
+                    ReplaySafetyViolation,
+                    "artifact changed after validation",
+                ),
+            ):
+                harness.run()
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_duplicate_reference_artifact_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+
+            def duplicate_member_write(path, rows):
+                count = write_jsonl(path, rows)
+                if Path(path).name == "reference_feature_assurance.jsonl":
+                    lines = Path(path).read_text(encoding="utf-8").splitlines()
+                    lines[0] = lines[0].replace(
+                        '"matched":true',
+                        '"matched":false,"matched":true',
+                        1,
+                    )
+                    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+                return count
+
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with (
+                patch(
+                    "adf_poc.replay.harness.write_jsonl",
+                    side_effect=duplicate_member_write,
+                ),
+                self.assertRaisesRegex(ReplaySafetyViolation, "artifact is invalid"),
+            ):
+                harness.run()
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_runner_cannot_mutate_normalized_cases_after_deciding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            builtin = harness._default_engine_runner()
+
+            def mutating_runner(**kwargs):
+                result = builtin(**kwargs)
+                cases = read_jsonl(kwargs["cases_path"])
+                cases[0]["events"][0]["attributes"]["runner_added_context"] = True
+                write_jsonl(kwargs["cases_path"], cases)
+                return result
+
+            with self.assertRaisesRegex(
+                ReplaySafetyViolation,
+                "Normalized cases artifact changed after validation",
+            ):
+                run_with_runner(harness, mutating_runner)
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_manifest_construction_rejects_late_reference_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            original = harness._build_run_manifest
+
+            def mutate_before_manifest(**kwargs):
+                records = read_jsonl(kwargs["reference_features_path"])
+                records[0]["expected_projection_sha256"] = "0" * 64
+                write_jsonl(kwargs["reference_features_path"], records)
+                return original(**kwargs)
+
+            with (
+                patch.object(
+                    harness,
+                    "_build_run_manifest",
+                    side_effect=mutate_before_manifest,
+                ),
+                self.assertRaisesRegex(
+                    ReplaySafetyViolation,
+                    "bound replay artifact changed",
+                ),
+            ):
+                harness.run()
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_nonfinite_case_json_is_rejected_before_engine_invocation(self) -> None:
+        for spelling in ("NaN", "1e400"):
+            with (
+                self.subTest(spelling=spelling),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+                cases_path = root / "data" / "phase2_starter" / "cases.jsonl"
+                content = cases_path.read_text(encoding="utf-8")
+                content = content.replace(
+                    '"travel_record_id":""',
+                    f'"opaque_overflow":{spelling},"travel_record_id":""',
+                    1,
+                )
+                cases_path.write_text(content, encoding="utf-8")
+                manifest_path = root / "data" / "phase2_starter" / "manifest.json"
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                cases_entry = next(
+                    entry for entry in manifest["files"] if entry["role"] == "cases"
+                )
+                cases_entry["sha256"] = sha256_file(cases_path)
+                write_json(manifest_path, manifest)
+
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                with (
+                    patch.object(
+                        harness,
+                        "_default_engine_runner",
+                        side_effect=AssertionError("engine must not be reached"),
+                    ),
+                    self.assertRaises(ContractValidationError),
+                ):
+                    harness.run()
+                self.assertFalse(
+                    (root / "outputs/replay/test/engine_decisions.jsonl").exists()
+                )
+                self.assertFalse(
+                    (root / "outputs/replay/test/replay_run_manifest.json").exists()
+                )
 
     def test_audit_must_bind_every_finalized_decision(self) -> None:
         for mutation in ("missing", "decision_id", "decision_record_hash"):
@@ -652,9 +864,7 @@ class ReplayHarnessTests(unittest.TestCase):
                 def runner_with_invalid_finalization(**kwargs):
                     cases = read_jsonl(kwargs["cases_path"])
                     mode = kwargs["execution_mode"].value
-                    decisions = [
-                        safe_fake_decision(row["case_id"], mode) for row in cases
-                    ]
+                    decisions = [safe_fake_decision(row, mode) for row in cases]
                     write_jsonl(kwargs["decisions_path"], decisions)
                     audit_path = kwargs["audit_path"]
                     write_safe_read_only_audit(audit_path, decisions)
@@ -688,9 +898,7 @@ class ReplayHarnessTests(unittest.TestCase):
                 def runner_with_invalid_stage_sequence(**kwargs):
                     cases = read_jsonl(kwargs["cases_path"])
                     mode = kwargs["execution_mode"].value
-                    decisions = [
-                        safe_fake_decision(row["case_id"], mode) for row in cases
-                    ]
+                    decisions = [safe_fake_decision(row, mode) for row in cases]
                     write_jsonl(kwargs["decisions_path"], decisions)
                     audit_path = kwargs["audit_path"]
                     write_safe_read_only_audit(audit_path, decisions)
@@ -745,9 +953,7 @@ class ReplayHarnessTests(unittest.TestCase):
                 def runner_with_invalid_audit_contract(**kwargs):
                     cases = read_jsonl(kwargs["cases_path"])
                     mode = kwargs["execution_mode"].value
-                    decisions = [
-                        safe_fake_decision(row["case_id"], mode) for row in cases
-                    ]
+                    decisions = [safe_fake_decision(row, mode) for row in cases]
                     write_jsonl(kwargs["decisions_path"], decisions)
                     audit_path = kwargs["audit_path"]
                     write_safe_read_only_audit(audit_path, decisions)
@@ -834,12 +1040,10 @@ class ReplayHarnessTests(unittest.TestCase):
                 def runner_with_bound_policy_trace(**kwargs):
                     cases = read_jsonl(kwargs["cases_path"])
                     mode = kwargs["execution_mode"].value
-                    decisions = [
-                        safe_fake_decision(row["case_id"], mode) for row in cases
-                    ]
+                    decisions = [safe_fake_decision(row, mode) for row in cases]
                     if scenario != "noncontain":
                         decisions[0] = make_containment_decision(
-                            decisions[0]["case_id"],
+                            cases[0],
                             mode,
                             verifier_downgrade=scenario == "verifier_downgrade",
                         )
@@ -866,11 +1070,9 @@ class ReplayHarnessTests(unittest.TestCase):
                     def runner_with_forged_policy_actions(**kwargs):
                         cases = read_jsonl(kwargs["cases_path"])
                         mode = kwargs["execution_mode"].value
-                        decisions = [
-                            safe_fake_decision(row["case_id"], mode) for row in cases
-                        ]
+                        decisions = [safe_fake_decision(row, mode) for row in cases]
                         decisions[0] = make_containment_decision(
-                            decisions[0]["case_id"],
+                            cases[0],
                             mode,
                             verifier_downgrade=scenario == "verifier_downgrade",
                         )
@@ -910,7 +1112,7 @@ class ReplayHarnessTests(unittest.TestCase):
             def runner_with_noncontain_human_action(**kwargs):
                 cases = read_jsonl(kwargs["cases_path"])
                 mode = kwargs["execution_mode"].value
-                decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                decisions = [safe_fake_decision(row, mode) for row in cases]
                 decisions[0]["counterfactual_actions"] = ["disable_account"]
                 rehash_decision(decisions[0])
                 write_jsonl(kwargs["decisions_path"], decisions)
@@ -951,9 +1153,7 @@ class ReplayHarnessTests(unittest.TestCase):
                 def unsafe_runner(**kwargs):
                     cases = read_jsonl(kwargs["cases_path"])
                     mode = kwargs["execution_mode"].value
-                    decisions = [
-                        safe_fake_decision(row["case_id"], mode) for row in cases
-                    ]
+                    decisions = [safe_fake_decision(row, mode) for row in cases]
                     if unsafe_field == "authorization":
                         decisions[0]["authorization"]["issued"] = True
                     elif unsafe_field in {"token_id", "decision_hash"}:

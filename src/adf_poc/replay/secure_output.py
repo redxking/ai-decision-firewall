@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import math
 import os
 import stat
 import threading
@@ -19,6 +20,41 @@ MAX_SECURE_JSONL_RECORDS = 1_000_000
 
 class HistoricalOutputError(RuntimeError):
     """Raised when historical output custody cannot be preserved."""
+
+
+class _InvalidJSONValue(ValueError):
+    """Internal marker for ambiguous or noncanonical JSON values."""
+
+
+def _reject_duplicate_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, child in pairs:
+        if key in value:
+            raise _InvalidJSONValue
+        value[key] = child
+    return value
+
+
+def _reject_nonstandard_number(_: str) -> None:
+    raise _InvalidJSONValue
+
+
+def _strict_json_value(payload: bytes) -> Any:
+    value = json.loads(
+        payload.decode("utf-8"),
+        object_pairs_hook=_reject_duplicate_pairs,
+        parse_constant=_reject_nonstandard_number,
+    )
+    pending = [value]
+    while pending:
+        child = pending.pop()
+        if isinstance(child, float) and not math.isfinite(child):
+            raise _InvalidJSONValue
+        if isinstance(child, dict):
+            pending.extend(child.values())
+        elif isinstance(child, list):
+            pending.extend(child)
+    return value
 
 
 class HistoricalOutputGuard:
@@ -170,7 +206,17 @@ class HistoricalOutputGuard:
         *,
         max_bytes: int | None = None,
     ) -> Path:
-        content = json.dumps(value, indent=2, sort_keys=True).encode("utf-8")
+        try:
+            content = json.dumps(
+                value,
+                indent=2,
+                sort_keys=True,
+                allow_nan=False,
+            ).encode("utf-8")
+        except (TypeError, ValueError):
+            raise HistoricalOutputError(
+                "Secure JSON output contains a noncanonical value."
+            ) from None
         return self.write_bytes(relative_path, content, max_bytes=max_bytes)
 
     def write_jsonl(
@@ -204,7 +250,12 @@ class HistoricalOutputGuard:
                         raise HistoricalOutputError(
                             "Secure JSONL output records must be objects."
                         )
-                    payload = (canonical_json(row) + "\n").encode("utf-8")
+                    try:
+                        payload = (canonical_json(row) + "\n").encode("utf-8")
+                    except (TypeError, ValueError):
+                        raise HistoricalOutputError(
+                            "Secure JSONL output contains a noncanonical value."
+                        ) from None
                     if len(payload) > MAX_SECURE_JSONL_LINE_BYTES + 1:
                         raise HistoricalOutputError(
                             "Secure JSONL output contains an oversized record."
@@ -262,10 +313,10 @@ class HistoricalOutputGuard:
         max_bytes: int | None = None,
     ) -> Any:
         try:
-            return json.loads(
-                self.read_bytes(relative_path, max_bytes=max_bytes).decode("utf-8")
+            return _strict_json_value(
+                self.read_bytes(relative_path, max_bytes=max_bytes)
             )
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        except (UnicodeDecodeError, json.JSONDecodeError, _InvalidJSONValue) as exc:
             raise HistoricalOutputError("Secure JSON output is invalid.") from exc
 
     def read_jsonl(
@@ -298,13 +349,13 @@ class HistoricalOutputGuard:
                     raise HistoricalOutputError(
                         f"Secure JSONL output exceeds {max_records} records."
                     )
-                value = json.loads(payload.decode("utf-8"))
+                value = _strict_json_value(payload)
                 if not isinstance(value, dict):
                     raise HistoricalOutputError(
                         "Secure JSONL output contains a non-object record."
                     )
                 rows.append(value)
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        except (UnicodeDecodeError, json.JSONDecodeError, _InvalidJSONValue) as exc:
             raise HistoricalOutputError("Secure JSONL output is invalid.") from exc
         return rows
 

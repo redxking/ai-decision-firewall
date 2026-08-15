@@ -104,6 +104,8 @@
                   "CASE_EVENT_ID_MISMATCH",
                   "EVENT_TIME_ORDER_INVALID",
                   "DUPLICATE_ENTITY_REFERENCE",
+                  "UNAUTHORIZED_MODELED_SIGNAL",
+                  "UNAUTHORIZED_DECISION_SIGNAL",
                   "CANONICAL_CONTEXT_MISSING",
                   "CANONICAL_CONTEXT_MISMATCH"
                 ]

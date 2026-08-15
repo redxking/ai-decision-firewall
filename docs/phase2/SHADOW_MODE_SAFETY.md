@@ -6,6 +6,8 @@ Under the built-in runner, canonical adapter, and tested repository configuratio
 
 This CE-2 controlled-behavior claim applies only to the repository-controlled path and exact configuration identified by the run evidence. The starter is a same-process Python program, not an OS-enforced sandbox against arbitrary imported code. The claim does not authorize a live data connection. The included fixture is synthetic, `historical_case_count=0`, and no live-feed connector or action capability exists.
 
+Phase 2.4 adds a separate CE-1 implementation-conformance boundary: modeled attributes require exact types and authorized sources, canonical inventory context is bound exactly, and a separately implemented in-process projector must reproduce the serialized 20-feature values and traces before evaluation metrics or a completed run manifest. This does not expand the CE-2 no-effect claim, and the planned `P2-CE-004` campaign has not been executed.
+
 ## Safety invariants
 
 | Invariant | Required enforcement |
@@ -18,8 +20,13 @@ This CE-2 controlled-behavior claim applies only to the repository-controlled pa
 | Zero effects | Authorization attempts, broker invocations, and operational effects remain zero |
 | Fail-closed configuration | Unknown modes and action-enabling settings fail before case processing |
 | Governed input only | Historical records without approval and de-identification attestation are rejected |
+| Typed/source-authorized modeled signals | A model-driving attribute must have its exact JSON type/range and appear only under a code-authorized source role; opaque attributes cannot become features |
+| Finite structured numbers | Every JSON number anywhere in an accepted case is finite before engine invocation, including otherwise opaque attributes |
+| Explicit non-feature evidence input | `source_conflict` is an exact JSON Boolean authorized only for `network`; `QUARANTINE_RECORD` maps wrong source to `SEMANTICS / UNAUTHORIZED_DECISION_SIGNAL` and wrong type to `SEMANTICS / INVALID_BOOLEAN`; it may affect evidence quality but is outside reference feature recomputation |
+| Exact canonical inventory binding | Every asset-inventory event must contain and exactly match case `asset_id`, `privilege_level`, `break_glass`, and `asset_criticality` |
 | No label leakage | Adjudications remain outside runtime evidence; historical label bytes are integrity-frozen inside the harness but their path and contents are withheld from the runner, and semantic loading occurs only after decisions close |
 | Audited suppression and finalization | Each read-only decision has exactly one suppression record, one no-authorization record, and one finalization record bound to the recomputed decision hash |
+| Separate reference projection | After complete decision/audit validation, separately reconstruct all 20 feature values/traces; a mismatch prevents assurance, evaluator, metrics, and completed-manifest output |
 
 An operator cannot convert a replay decision into an action by changing a threshold, policy disposition, evidence score, or input field. The code path itself must lack the objects needed to authorize or execute.
 
@@ -73,6 +80,9 @@ The engine audit includes exactly one canonical ordered trace for every read-onl
 | Input tampering or time-of-check/time-of-use replacement | Evaluate substituted evidence, model, policy, or labels | Copy all declared inputs into a run snapshot; verify digests/counts on copy, after engine execution, and before finalization; load only snapshot bytes | Mutable source files and the repository manifest still require an external custody record for approved work |
 | Direct identifiers in replay data | Privacy or operational exposure | Approval, attestation, field prohibitions, access and retention controls | De-identification attestation is not proof against reidentification |
 | Canonical-context disagreement | Understate break-glass or mission criticality | Fail-closed cross-field validation before the decision engine | Source authority can be ambiguous in real environments |
+| Type coercion or source spoofing | A truthy string, invalid count, or modeled key under an unrelated source becomes a model feature | Exact JSON type/range and source-authority matrix; stable fail/quarantine taxonomy; no generic truthiness or string-to-number coercion | An authorized assertion can still be false, incomplete, or semantically mis-mapped |
+| Non-finite or wrongly sourced evidence-control value | Nonstandard numeric behavior or coerced `source_conflict` changes evidence assessment | Reject any non-finite case number; accept `source_conflict` only as a network Boolean | Reference feature agreement does not recompute evidence-quality correctness |
+| Coherent decision and audit forgery | Feature values/traces are changed while decision hashes and the audit chain are recomputed | Separate in-process reconstruction from normalized cases after full audit validation | Same process, project, runtime, and normalized inputs can retain correlated defects; no external custody |
 | Embedded label or hindsight | Artificially improve decisions or contaminate evaluation | Runtime label prohibition; adjudication bytes frozen inside the harness but withheld from runner arguments and paths until post-decision semantic loading | Same-process isolation is not an OS security boundary, and operational context can indirectly reveal outcomes |
 | Poisoned free text | Influence an agent or operator | Preserve v0.1 untrusted-text isolation and abstention rules | Pattern-based detection is incomplete |
 | Audit rewriting | Conceal changes after execution | Hash-chain validation and artifact digests | Current chain lacks independent signature, external anchor, or WORM storage |
@@ -101,6 +111,14 @@ Those controls still would not authorize operational action.
 
 A successful `AuditLogger.verify()` and eight-stage harness result means that the presented rows are internally consistent with the presented chain, decisions, and bound policy actions under the tested mutation set. This is CE-1 implementation conformance. It does not independently recompute evidence, model, complete policy, verifier, or source-to-decision correctness; establish externally trusted timestamps or custody; or prevent a process with write access from replacing and recomputing the complete chain. Phase 2 reports must retain these limitations beside any audit-validity result.
 
+## Reference-assurance interpretation
+
+Reference assurance begins only after read-only decision validation, deterministic decision serialization, and the complete audit check. A successful `reference_feature_assurance.jsonl` row means that the separate projector reproduced the serialized feature values and traces for the named normalized case. The row is closed and metadata-only: it contains the case identifier, normalized-case digest, expected/observed projection digests, and `matched=true`. Metrics and the run manifest bind its count and digest.
+
+A mismatch raises a stable code-owned error and emits no reference-assurance artifact, qualification/rejection publication, adjudication comparison, metrics, or completed run manifest. Raw/normalized/deterministic decisions and the audit may already exist and must remain visibly incomplete rather than being treated as a completed replay.
+
+This check does not prove that source assertions are authentic or true, recompute `source_conflict` or evidence quality, recompute model probability, validate policy/disposition/verifier correctness, provide external custody, or constitute independent replication. `P2-CE-004` is a planned synthetic campaign with no observed outcomes or evidence record.
+
 ## Prohibited Phase 2 changes
 
 Phase 2 must not introduce:
@@ -116,4 +134,4 @@ Any work on non-production actions belongs to a separately authorized later phas
 
 ## Safety nonclaims
 
-Zero effects in the starter do not establish safe future action, operational model performance, privacy compliance, production isolation, monitor effectiveness, or resilience against strategic or arbitrary same-process misuse. They establish only the narrow behavior recorded for the built-in Phase 2 path under the tested configurations. See [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md) for the required evidence and prohibited inferences.
+Zero effects in the starter do not establish safe future action, operational model performance, privacy compliance, production isolation, monitor effectiveness, or resilience against strategic or arbitrary same-process misuse. The Phase 2.4 feature checks do not establish source truth, full source-to-decision correctness, model/policy efficacy, external independence/custody, exhaustive coverage, a bounded failure rate, OS-level isolation/non-egress, target-side proof, production readiness, or alignment/misalignment/sabotage robustness. They establish only the narrow implementation behavior recorded for the built-in Phase 2 path under the tested configurations. See [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md) for the required evidence and prohibited inferences.

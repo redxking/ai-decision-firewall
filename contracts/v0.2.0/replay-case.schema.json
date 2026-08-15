@@ -72,9 +72,167 @@
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/identifier" }
         },
-        "attributes": { "type": "object" },
+        "attributes": { "$ref": "#/$defs/event_attributes" },
         "untrusted_text": { "type": "string", "maxLength": 16384 },
         "contains_instructional_content": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "source_type": { "const": "asset_inventory" } }
+          },
+          "then": {
+            "properties": {
+              "attributes": {
+                "required": [
+                  "asset_id",
+                  "privilege_level",
+                  "break_glass",
+                  "asset_criticality"
+                ],
+                "properties": {
+                  "asset_id": { "$ref": "#/$defs/identifier" },
+                  "privilege_level": { "$ref": "#/$defs/identifier" },
+                  "break_glass": { "type": "boolean" },
+                  "asset_criticality": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "attributes": {
+                "anyOf": [
+                  { "required": ["failed_logins"] },
+                  { "required": ["new_device"] },
+                  { "required": ["impossible_travel"] },
+                  { "required": ["mfa_fatigue"] },
+                  { "required": ["token_reuse"] },
+                  { "required": ["after_hours"] },
+                  { "required": ["strong_mfa"] },
+                  { "required": ["oauth_grant"] }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": { "source_type": { "const": "identity" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "attributes": {
+                "anyOf": [
+                  { "required": ["credential_dumping"] },
+                  { "required": ["unusual_admin_action"] },
+                  { "required": ["edr_malware"] },
+                  { "required": ["device_noncompliant"] }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": { "source_type": { "const": "endpoint" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "attributes": {
+                "anyOf": [
+                  { "required": ["lateral_movement"] },
+                  { "required": ["known_vpn"] }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": { "source_type": { "const": "network" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "attributes": { "required": ["threat_ip"] }
+            }
+          },
+          "then": {
+            "properties": {
+              "source_type": { "enum": ["network", "threat_intel"] }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "attributes": {
+                "anyOf": [
+                  { "required": ["maintenance_window"] },
+                  { "required": ["service_account_baseline"] }
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": { "source_type": { "const": "change_management" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "attributes": { "required": ["approved_travel"] }
+            }
+          },
+          "then": {
+            "properties": { "source_type": { "const": "user_context" } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "attributes": { "required": ["source_conflict"] }
+            }
+          },
+          "then": {
+            "properties": { "source_type": { "const": "network" } }
+          }
+        }
+      ]
+    },
+    "event_attributes": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "failed_logins": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "new_device": { "type": "boolean" },
+        "impossible_travel": { "type": "boolean" },
+        "threat_ip": { "type": "boolean" },
+        "mfa_fatigue": { "type": "boolean" },
+        "token_reuse": { "type": "boolean" },
+        "credential_dumping": { "type": "boolean" },
+        "lateral_movement": { "type": "boolean" },
+        "unusual_admin_action": { "type": "boolean" },
+        "edr_malware": { "type": "boolean" },
+        "after_hours": { "type": "boolean" },
+        "known_vpn": { "type": "boolean" },
+        "approved_travel": { "type": "boolean" },
+        "maintenance_window": { "type": "boolean" },
+        "service_account_baseline": { "type": "boolean" },
+        "strong_mfa": { "type": "boolean" },
+        "device_noncompliant": { "type": "boolean" },
+        "oauth_grant": { "type": "boolean" },
+        "source_conflict": { "type": "boolean" }
       }
     }
   }

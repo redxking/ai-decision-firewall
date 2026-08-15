@@ -50,6 +50,15 @@ class HistoricalOutputGuardTests(unittest.TestCase):
                     guard.read_jsonl("decisions.jsonl"),
                     [{"a": 1, "z": 2}, {"case": 2}],
                 )
+                guard.write_bytes(
+                    "duplicate.jsonl",
+                    b'{"matched":false,"matched":true}\n',
+                )
+                guard.write_bytes("nonfinite.jsonl", b'{"value":1e400}\n')
+                for invalid in ("duplicate.jsonl", "nonfinite.jsonl"):
+                    with self.subTest(invalid=invalid):
+                        with self.assertRaises(HistoricalOutputError):
+                            guard.read_jsonl(invalid)
                 self.assertEqual(guard.count_nonblank_lines("decisions.jsonl"), 2)
                 self.assertEqual(
                     guard.sha256("decisions.jsonl"),
@@ -71,6 +80,12 @@ class HistoricalOutputGuardTests(unittest.TestCase):
                     guard.write_bytes("summary.json", b"replacement")
                 with self.assertRaises(HistoricalOutputError):
                     guard.write_bytes("oversized.bin", b"12345", max_bytes=4)
+                with self.assertRaises(HistoricalOutputError):
+                    guard.write_json("nonfinite.json", {"value": float("inf")})
+                with self.assertRaises(HistoricalOutputError):
+                    guard.write_jsonl(
+                        "nonfinite-write.jsonl", [{"value": float("nan")}]
+                    )
                 self.assertFalse((run_path / "oversized.bin").exists())
 
             with self.assertRaises(HistoricalOutputError):

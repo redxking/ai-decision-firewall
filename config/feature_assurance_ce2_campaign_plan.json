@@ -1,0 +1,218 @@
+{
+  "artifact_kind": "CAMPAIGN_PLAN",
+  "budget": {
+    "attempts_per_run": 16,
+    "engine_call_budget": 0,
+    "evaluation_runs": 2,
+    "retries": 0,
+    "total_attempt_executions": 32
+  },
+  "campaign_id": "P2-CE-004-FEATURE-ASSURANCE-SYNTHETIC",
+  "campaign_seed": 20260815,
+  "claim_id": "P2-CE-004",
+  "configuration_binding": {
+    "canonical_sha256": "d99d813b0da891b6b8ae65e1f1702f0c7b9ee67ef7ccb1f89ec2857b5c3af9ae",
+    "configuration": {
+      "campaign_mode": "SYNTHETIC_FEATURE_ASSURANCE",
+      "decision_engine_enabled": false,
+      "live_actions_enabled": false,
+      "projection_authority": "READ_ONLY_LOCAL_COMPARISON",
+      "qualification_api": "qualify_case_bytes",
+      "reference_projection_api": "verify_reference_feature_projections",
+      "schema_version": "0.2.0",
+      "zero_effects_required": true
+    }
+  },
+  "design": {
+    "actual_historical_records": 0,
+    "attempt_order_frozen": true,
+    "data_origin": "SYNTHETIC_FIXTURE",
+    "execution_authority": "NONE",
+    "failure_policy": "ABORT_WITHOUT_EVIDENCE_NO_RETRY",
+    "input_authorization": "FIXED_GENERATED_SCENARIOS_ONLY",
+    "network_capability_status": "UNVERIFIED_AVAILABLE_CAPABILITY",
+    "output_authorization": "SANITIZED_ENUMERATED_METADATA_ONLY",
+    "result_capture": "NO_RAW_CASE_OR_PROJECTION_CONTENT",
+    "stored_approval_package": false,
+    "stored_historical_data": false
+  },
+  "expected_attempts": [
+    {
+      "attempt_id": "P2-CE-004-P01-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P01",
+      "sequence": 1
+    },
+    {
+      "attempt_id": "P2-CE-004-P01-MUTANT-BOOL-STRING",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "INVALID_BOOLEAN",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "BOOLEAN_STRING",
+      "pair_id": "P01",
+      "sequence": 2
+    },
+    {
+      "attempt_id": "P2-CE-004-P02-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P02",
+      "sequence": 3
+    },
+    {
+      "attempt_id": "P2-CE-004-P02-MUTANT-COUNT-NAN-STRING",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "INVALID_TYPE",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "COUNT_NAN_STRING",
+      "pair_id": "P02",
+      "sequence": 4
+    },
+    {
+      "attempt_id": "P2-CE-004-P03-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P03",
+      "sequence": 5
+    },
+    {
+      "attempt_id": "P2-CE-004-P03-MUTANT-THREAT-SOURCE",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "UNAUTHORIZED_MODELED_SIGNAL",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "UNAUTHORIZED_THREAT_SOURCE",
+      "pair_id": "P03",
+      "sequence": 6
+    },
+    {
+      "attempt_id": "P2-CE-004-P04-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P04",
+      "sequence": 7
+    },
+    {
+      "attempt_id": "P2-CE-004-P04-MUTANT-BENIGN-SOURCE",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "UNAUTHORIZED_MODELED_SIGNAL",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "UNAUTHORIZED_BENIGN_SOURCE",
+      "pair_id": "P04",
+      "sequence": 8
+    },
+    {
+      "attempt_id": "P2-CE-004-P05-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P05",
+      "sequence": 9
+    },
+    {
+      "attempt_id": "P2-CE-004-P05-MUTANT-VALUE-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "FEATURE_VALUE_REHASH",
+      "pair_id": "P05",
+      "sequence": 10
+    },
+    {
+      "attempt_id": "P2-CE-004-P06-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P06",
+      "sequence": 11
+    },
+    {
+      "attempt_id": "P2-CE-004-P06-MUTANT-TRACE-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "FEATURE_TRACE_REHASH",
+      "pair_id": "P06",
+      "sequence": 12
+    },
+    {
+      "attempt_id": "P2-CE-004-P07-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P07",
+      "sequence": 13
+    },
+    {
+      "attempt_id": "P2-CE-004-P07-MUTANT-ORDER-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "INPUT_EVENT_ORDER_REHASH",
+      "pair_id": "P07",
+      "sequence": 14
+    },
+    {
+      "attempt_id": "P2-CE-004-P08-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P08",
+      "sequence": 15
+    },
+    {
+      "attempt_id": "P2-CE-004-P08-MUTANT-REPLACEMENT-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "CROSS_CASE_VALUES_REHASH",
+      "pair_id": "P08",
+      "sequence": 16
+    }
+  ],
+  "schema_version": "1.0.0"
+}

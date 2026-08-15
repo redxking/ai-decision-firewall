@@ -33,10 +33,22 @@ from adf_poc.replay.metrics import (  # noqa: E402
 from adf_poc.replay.qualification import (  # noqa: E402
     QUALIFICATION_TAXONOMY_VERSION,
 )
+from adf_poc.replay.reference_features import (  # noqa: E402
+    ReferenceFeatureAssuranceError,
+    verify_reference_feature_projections,
+)
 
 
 DEFAULT_SCHEMA = ROOT / "contracts/v0.2.0/evaluation-evidence.schema.json"
 DEFAULT_RECORD = ROOT / "contracts/v0.2.0/examples/phase2-starter-evidence-record.json"
+LEGACY_REPLAY_RECORD_FINGERPRINTS = {
+    (
+        ROOT / "contracts/v0.2.0/examples/phase2-starter-evidence-record.json"
+    ).resolve(): "b349c30fd654f8b3b09286e07a7008efe9b73e8b2ad20dd7b88f68f9123b2f4f",
+    (
+        ROOT / "contracts/v0.2.0/examples/phase2-qualification-evidence-record.json"
+    ).resolve(): "c2a623f878ba9654c893e14fa54373ca9b4bd4e1c6c118661f86d360a4a9c4fd",
+}
 QUALIFICATION_SCHEMA = ROOT / "contracts/v0.2.0/replay-qualification.schema.json"
 QUALIFICATION_EXPECTATIONS_SCHEMA = (
     ROOT / "contracts/v0.2.0/qualification-expectations.schema.json"
@@ -65,6 +77,60 @@ GATE_B_CAMPAIGN_SOURCE_PATHS = {
     "MODEL": "outputs/baseline/model.json",
     "POLICY": "config/policy.json",
 }
+FEATURE_ASSURANCE_CAMPAIGN_SCHEMA = (
+    ROOT / "contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json"
+)
+FEATURE_ASSURANCE_CAMPAIGN_PLAN = (
+    ROOT / "config/feature_assurance_ce2_campaign_plan.json"
+)
+FEATURE_ASSURANCE_CAMPAIGN_ID = "P2-CE-004-FEATURE-ASSURANCE-SYNTHETIC"
+FEATURE_ASSURANCE_CAMPAIGN_SEED = 20260815
+FEATURE_ASSURANCE_CAMPAIGN_MAX_BYTES = 256 * 1024
+
+
+def _feature_assurance_source_paths() -> dict[str, str]:
+    package_paths: dict[str, str] = {}
+    for path in sorted((ROOT / "src/adf_poc").rglob("*.py")):
+        relative = str(path.relative_to(ROOT))
+        role = "ADF_" + re.sub(r"[^A-Za-z0-9]+", "_", relative).strip("_").upper()
+        package_paths[role] = relative
+    return {
+        "CAMPAIGN_GENERATOR": "scripts/generate_feature_assurance_ce2_campaign.py",
+        "CAMPAIGN_PLAN": "config/feature_assurance_ce2_campaign_plan.json",
+        "CAMPAIGN_SCHEMA": (
+            "contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json"
+        ),
+        "CLAIM_VALIDATOR": "scripts/validate_claim_evidence.py",
+        "EVIDENCE_SCHEMA": "contracts/v0.2.0/evaluation-evidence.schema.json",
+        "EVIDENCE_TEMPLATE": (
+            "contracts/v0.2.0/examples/phase2-qualification-evidence-record.json"
+        ),
+        "QUALIFICATION_SCHEMA": ("contracts/v0.2.0/replay-qualification.schema.json"),
+        "REFERENCE_ASSURANCE_SCHEMA": (
+            "contracts/v0.2.0/reference-feature-assurance.schema.json"
+        ),
+        "REPLAY_CASE_SCHEMA": "contracts/v0.2.0/replay-case.schema.json",
+        "PROJECT_METADATA": "pyproject.toml",
+        "DEPENDENCY_DECLARATIONS": "requirements.txt",
+        **package_paths,
+    }
+
+
+FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS = _feature_assurance_source_paths()
+FEATURE_ASSURANCE_SUPPORTED_WORDING = (
+    "Across two complete executions of P2-CE-004's fixed 16-attempt synthetic "
+    "campaign and exact bound source/configuration, all 32 attempt observations "
+    "matched the 16 commit-frozen, project-controlled expected outcomes (16/16 "
+    "per run): each run produced eight clean qualification and reference-projection "
+    "matches, four typed or source-unauthorized modeled signals quarantined before "
+    "production projection, and four locally rehashed projection mutations blocked "
+    "by the separately implemented in-process reference projector. The two sanitized "
+    "result ledgers were "
+    "byte-identical. Within the scoped campaign calls, no model, policy, verifier, "
+    "decision-engine, authorization, broker, target-effect, or operational-effect "
+    "boundary was reached; this is project-controlled SELF-reviewed synthetic CE-2 "
+    "evidence only."
+)
 GATE_B_SUPPORTED_WORDING = (
     "Across two complete executions of P2-CE-003's fixed 16-attempt synthetic "
     "campaign and exact bound source/configuration, all 32 attempt observations "
@@ -167,6 +233,27 @@ EVIDENCE_PROFILES: dict[str, EvidenceValidationProfile] = {
             "synthetic Gate B outcomes matched; no broader inference authorized"
         ),
         profile_kind="GATE_B_CAMPAIGN",
+    ),
+    "P2-CE-004": EvidenceValidationProfile(
+        claim_id="P2-CE-004",
+        decision_count=0,
+        source_record_count=16,
+        accepted_record_count=12,
+        rejected_record_count=4,
+        expected_result_counts=(32, 32, 0, 0),
+        expected_record_failure_policy=None,
+        supplemental_artifact_roles=frozenset(),
+        expected_rejection_reasons=(
+            ("SEMANTICS/INVALID_BOOLEAN", 1),
+            ("SEMANTICS/INVALID_TYPE", 1),
+            ("SEMANTICS/UNAUTHORIZED_MODELED_SIGNAL", 2),
+        ),
+        result_summary=(
+            "32/32 observations across two complete executions of 16 fixed "
+            "synthetic feature-assurance outcomes matched; no broader inference "
+            "authorized"
+        ),
+        profile_kind="FEATURE_ASSURANCE_CAMPAIGN",
     ),
 }
 
@@ -454,6 +541,8 @@ def _validate_run_manifest(
         "engine_decisions": profile.decision_count,
         "audit_log": profile.decision_count * 8,
     }
+    if "reference_feature_assurance" in manifest_entries:
+        exact_role_counts["reference_feature_assurance"] = profile.decision_count
     if profile.qualification_enabled:
         exact_role_counts.update(
             {
@@ -542,6 +631,16 @@ def _validate_run_manifest(
         raise EvidenceValidationError(
             "Run manifest does not report a valid audit chain."
         )
+    if "reference_feature_assurance" in manifest_entries:
+        for key in (
+            "reference_feature_cases_checked",
+            "reference_feature_cases_matched",
+        ):
+            if assurance.get(key) != profile.decision_count:
+                raise EvidenceValidationError(
+                    f"Run manifest read-only assurance {key!r} is not "
+                    f"{profile.decision_count!r}."
+                )
     if profile.qualification_enabled:
         expected_qualification = {
             "taxonomy_version": QUALIFICATION_TAXONOMY_VERSION,
@@ -620,6 +719,29 @@ def _validate_decisions_and_audit(
         "operational_effects": 0,
         **audit_assurance,
     }
+    if "reference_feature_assurance" in artifacts:
+        try:
+            expected_reference_records = verify_reference_feature_projections(
+                normalized_cases,
+                decisions,
+            )
+        except ReferenceFeatureAssuranceError as exc:
+            raise EvidenceValidationError(
+                "Committed feature-projection evidence violates the reference contract."
+            ) from exc
+        observed_reference_records = _read_jsonl(
+            artifacts["reference_feature_assurance"]
+        )
+        if observed_reference_records != expected_reference_records:
+            raise EvidenceValidationError(
+                "Committed reference feature evidence does not match recomputation."
+            )
+        exact_manifest_assurance.update(
+            {
+                "reference_feature_cases_checked": profile.decision_count,
+                "reference_feature_cases_matched": profile.decision_count,
+            }
+        )
     if manifest.get("read_only_assurance") != exact_manifest_assurance:
         raise EvidenceValidationError(
             "Run-manifest assurance does not exactly match recomputed decision/audit evidence."
@@ -731,6 +853,11 @@ def _validate_cross_artifact_bindings(
         if profile.qualification_enabled
         else None
     )
+    reference_feature_records = (
+        _read_jsonl(artifacts["reference_feature_assurance"])
+        if "reference_feature_assurance" in artifacts
+        else None
+    )
     expected_metrics = compute_replay_metrics(
         dataset_id=str(manifest["dataset_id"]),
         data_origin=str(manifest["data_origin"]),
@@ -740,6 +867,7 @@ def _validate_cross_artifact_bindings(
         adjudications=adjudications,
         audit_assurance=audit_assurance,
         qualification_records=qualification_records,
+        reference_feature_records=reference_feature_records,
     )
     if _load_json(artifacts["replay_metrics"]) != expected_metrics:
         raise EvidenceValidationError(
@@ -1241,11 +1369,13 @@ def _validate_gate_b_campaign_evidence(
             raise EvidenceValidationError(
                 "Gate B campaign source-binding path is not canonical."
             )
-        current_path = _confined_path(repository_root, expected_relative)
         expected_digest = binding.get("sha256")
-        if expected_digest != _sha256(
-            current_path
-        ) or expected_digest != _git_blob_digest(
+        # P2-CE-003 is immutable historical evidence.  Validate its recorded
+        # bytes against the exact Git object named by the evidence, rather than
+        # against a later checkout whose implementation is expected to evolve.
+        # The closed role/path registry above and git-show failure handling keep
+        # this fail-closed when the commit or a bound blob is unavailable.
+        if expected_digest != _git_blob_digest(
             repository_root,
             commit=implementation_commit,
             relative_path=expected_relative,
@@ -1539,6 +1669,442 @@ def _validate_gate_b_campaign_evidence(
     }
 
 
+def _validate_feature_assurance_campaign_evidence(
+    record: dict[str, Any],
+    artifacts: dict[str, Path],
+    profile: EvidenceValidationProfile,
+    repository_root: Path,
+) -> dict[str, Any]:
+    """Validate the exact commit-bound P2-CE-004 CE-2 campaign bundle."""
+
+    exact_roles = {
+        "campaign_profile",
+        "campaign_results_run1",
+        "campaign_results_run2",
+        "campaign_summary",
+        "campaign_plan",
+        "campaign_schema",
+    }
+    if set(artifacts) != exact_roles:
+        raise EvidenceValidationError(
+            "Feature-assurance campaign evidence does not contain the exact six roles."
+        )
+    if artifacts["campaign_schema"] != FEATURE_ASSURANCE_CAMPAIGN_SCHEMA.resolve():
+        raise EvidenceValidationError(
+            "Feature-assurance evidence does not bind the canonical campaign schema."
+        )
+    if artifacts["campaign_plan"] != FEATURE_ASSURANCE_CAMPAIGN_PLAN.resolve():
+        raise EvidenceValidationError(
+            "Feature-assurance evidence does not bind the canonical campaign plan."
+        )
+    for role, path in artifacts.items():
+        maximum = (
+            512 * 1024
+            if role == "campaign_schema"
+            else FEATURE_ASSURANCE_CAMPAIGN_MAX_BYTES
+        )
+        try:
+            size = path.stat().st_size
+        except OSError:
+            raise EvidenceValidationError(
+                "Feature-assurance campaign artifact is unavailable."
+            ) from None
+        if size > maximum:
+            raise EvidenceValidationError(
+                "Feature-assurance campaign artifact exceeds its public size bound."
+            )
+
+    schema = _load_json(artifacts["campaign_schema"])
+    try:
+        Draft202012Validator.check_schema(schema)
+    except Exception:
+        raise EvidenceValidationError(
+            "Feature-assurance campaign schema is invalid."
+        ) from None
+    validator = Draft202012Validator(schema)
+
+    def validate_closed(value: dict[str, Any], label: str) -> None:
+        errors = sorted(validator.iter_errors(value), key=lambda item: list(item.path))
+        if errors:
+            location = ".".join(str(part) for part in errors[0].absolute_path) or "$"
+            raise EvidenceValidationError(
+                f"{label} violates the closed feature-assurance schema at {location}."
+            )
+
+    plan = _load_json(FEATURE_ASSURANCE_CAMPAIGN_PLAN)
+    campaign_profile = _load_json(artifacts["campaign_profile"])
+    results_run1 = _read_jsonl(artifacts["campaign_results_run1"])
+    results_run2 = _read_jsonl(artifacts["campaign_results_run2"])
+    campaign_summary = _load_json(artifacts["campaign_summary"])
+    validate_closed(plan, "Campaign plan")
+    validate_closed(campaign_profile, "Campaign profile")
+    validate_closed(campaign_summary, "Campaign summary")
+    for row in results_run1 + results_run2:
+        validate_closed(row, "Campaign result")
+
+    if (
+        campaign_profile.get("campaign_id") != FEATURE_ASSURANCE_CAMPAIGN_ID
+        or campaign_profile.get("claim_id") != profile.claim_id
+        or campaign_profile.get("campaign_seed") != FEATURE_ASSURANCE_CAMPAIGN_SEED
+        or campaign_profile.get("campaign_plan_sha256")
+        != _sha256(FEATURE_ASSURANCE_CAMPAIGN_PLAN)
+        or campaign_profile.get("design") != plan.get("design")
+        or campaign_profile.get("configuration_binding")
+        != plan.get("configuration_binding")
+        or campaign_profile.get("budget") != plan.get("budget")
+        or campaign_profile.get("expected_attempts") != plan.get("expected_attempts")
+        or campaign_summary.get("runtime_fingerprint")
+        != campaign_profile.get("runtime_fingerprint")
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance profile does not exactly bind the frozen plan."
+        )
+    exact_design = {
+        "actual_historical_records": 0,
+        "attempt_order_frozen": True,
+        "data_origin": "SYNTHETIC_FIXTURE",
+        "execution_authority": "NONE",
+        "failure_policy": "ABORT_WITHOUT_EVIDENCE_NO_RETRY",
+        "input_authorization": "FIXED_GENERATED_SCENARIOS_ONLY",
+        "network_capability_status": "UNVERIFIED_AVAILABLE_CAPABILITY",
+        "output_authorization": "SANITIZED_ENUMERATED_METADATA_ONLY",
+        "result_capture": "NO_RAW_CASE_OR_PROJECTION_CONTENT",
+        "stored_approval_package": False,
+        "stored_historical_data": False,
+    }
+    if campaign_profile.get("design") != exact_design:
+        raise EvidenceValidationError(
+            "Feature-assurance campaign origin and authority boundary is not exact."
+        )
+    exact_configuration = {
+        "campaign_mode": "SYNTHETIC_FEATURE_ASSURANCE",
+        "decision_engine_enabled": False,
+        "live_actions_enabled": False,
+        "projection_authority": "READ_ONLY_LOCAL_COMPARISON",
+        "qualification_api": "qualify_case_bytes",
+        "reference_projection_api": "verify_reference_feature_projections",
+        "schema_version": "0.2.0",
+        "zero_effects_required": True,
+    }
+    if (
+        campaign_profile.get("configuration_binding", {}).get("configuration")
+        != exact_configuration
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance campaign configuration is not fail-closed."
+        )
+
+    implementation_commit = campaign_profile.get("implementation_commit")
+    if not isinstance(implementation_commit, str) or not re.fullmatch(
+        r"[0-9a-f]{40}", implementation_commit
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance campaign lacks an exact implementation commit."
+        )
+    evaluated_at = campaign_profile.get("evaluated_at")
+    if (
+        not isinstance(evaluated_at, str)
+        or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", evaluated_at)
+        or campaign_summary.get("evaluated_at") != evaluated_at
+        or record.get("evaluated_at") != evaluated_at
+        or record.get("review", {}).get("reviewed_at") != evaluated_at
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance evaluation timestamp binding is not exact."
+        )
+    try:
+        evaluated_time = datetime.fromisoformat(
+            evaluated_at[:-1] + "+00:00"
+        ).astimezone(timezone.utc)
+    except ValueError:
+        raise EvidenceValidationError(
+            "Feature-assurance evaluation timestamp is invalid."
+        ) from None
+    if evaluated_time > datetime.now(timezone.utc) + timedelta(minutes=5):
+        raise EvidenceValidationError(
+            "Feature-assurance evaluation timestamp is later than validation time."
+        )
+    if evaluated_time < _git_commit_timestamp(
+        repository_root, commit=implementation_commit
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance evaluation predates its implementation commit."
+        )
+    expected_expiry = (
+        (evaluated_time + timedelta(days=90)).isoformat().replace("+00:00", "Z")
+    )
+    if record.get("review", {}).get("claim_expires_at") != expected_expiry:
+        raise EvidenceValidationError(
+            "Feature-assurance claim expiry is not derived from evaluation time."
+        )
+
+    source_reference = str(record["system_under_test"].get("source_reference", ""))
+    commit_url = (
+        "https://github.com/redxking/ai-decision-firewall/commit/"
+        + implementation_commit
+    )
+    referenced_commits = set(
+        re.findall(r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])", source_reference)
+    )
+    if (
+        f"Git commit {implementation_commit} " not in source_reference
+        or commit_url not in source_reference
+        or referenced_commits != {implementation_commit}
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance source_reference does not bind one exact commit."
+        )
+
+    bindings = campaign_profile.get("source_bindings")
+    if not isinstance(bindings, list) or len(bindings) != len(
+        FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance source-binding count is invalid."
+        )
+    bound_roles: set[str] = set()
+    for binding in bindings:
+        role = str(binding.get("role"))
+        if role in bound_roles or role not in FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS:
+            raise EvidenceValidationError(
+                "Feature-assurance source-binding role set is invalid."
+            )
+        bound_roles.add(role)
+        relative = FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS[role]
+        if binding.get("path") != relative:
+            raise EvidenceValidationError(
+                "Feature-assurance source-binding path is not canonical."
+            )
+        current = _confined_path(repository_root, relative)
+        digest = binding.get("sha256")
+        if digest != _sha256(current) or digest != _git_blob_digest(
+            repository_root,
+            commit=implementation_commit,
+            relative_path=relative,
+        ):
+            raise EvidenceValidationError(
+                "Feature-assurance sources do not match the implementation commit."
+            )
+    if bound_roles != set(FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS):
+        raise EvidenceValidationError(
+            "Feature-assurance source-binding roles are incomplete."
+        )
+
+    if len(campaign_profile.get("expected_attempts", [])) != 16 or any(
+        len(rows) != 16 for rows in (results_run1, results_run2)
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance evidence must contain two complete 16-attempt runs."
+        )
+
+    # Re-execute the frozen evaluator.  This rejects a coherent rewrite of both
+    # ledgers plus summary hashes; ledger agreement alone is not sufficient.
+    try:
+        from scripts.generate_feature_assurance_ce2_campaign import (
+            _jsonl_bytes as feature_jsonl_bytes,
+            build_summary as build_feature_summary,
+            run_campaign as run_feature_campaign,
+        )
+
+        recomputed_run1 = run_feature_campaign(campaign_profile)
+        recomputed_run2 = run_feature_campaign(campaign_profile)
+        recomputed_run1_bytes = feature_jsonl_bytes(recomputed_run1)
+        recomputed_run2_bytes = feature_jsonl_bytes(recomputed_run2)
+    except Exception as exc:
+        raise EvidenceValidationError(
+            "Feature-assurance campaign could not be freshly re-executed."
+        ) from exc
+    committed_profile_bytes = artifacts["campaign_profile"].read_bytes()
+    committed_run1_bytes = artifacts["campaign_results_run1"].read_bytes()
+    committed_run2_bytes = artifacts["campaign_results_run2"].read_bytes()
+    if (
+        committed_run1_bytes != recomputed_run1_bytes
+        or committed_run2_bytes != recomputed_run2_bytes
+        or committed_run1_bytes != committed_run2_bytes
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance ledgers do not match fresh frozen-plan execution."
+        )
+    recomputed_summary = build_feature_summary(
+        committed_profile_bytes,
+        committed_run1_bytes,
+        committed_run2_bytes,
+        recomputed_run1,
+        recomputed_run2,
+        evaluated_at=evaluated_at,
+    )
+    if campaign_summary != recomputed_summary:
+        raise EvidenceValidationError(
+            "Feature-assurance summary does not exactly recompute from the ledgers."
+        )
+
+    public_bundle = b"\n".join(
+        (
+            committed_profile_bytes,
+            committed_run1_bytes,
+            committed_run2_bytes,
+            artifacts["campaign_summary"].read_bytes(),
+        )
+    )
+    prohibited_tokens = (
+        b'"case_id"',
+        b'"events"',
+        b'"feature_trace"',
+        b'"feature_values"',
+        b'"subject_id"',
+        b'"untrusted_text"',
+        b'"raw_payload"',
+        b'"exception_text"',
+    )
+    if any(token in public_bundle for token in prohibited_tokens):
+        raise EvidenceValidationError(
+            "Feature-assurance public artifacts contain prohibited raw content."
+        )
+
+    scope = record["evaluation_scope"]
+    budget = record["budget"]
+    result = record["results"]
+    if (
+        record.get("claim_class") != "CONTROLLED_BEHAVIOR"
+        or record.get("claim_status") != "OBSERVED"
+        or scope.get("data_origin") != "SYNTHETIC_FIXTURE"
+        or scope.get("historical_case_count") != 0
+        or scope.get("case_count") != 32
+        or scope.get("adjudicated_case_count") != 0
+        or scope.get("network_access") is not True
+        or scope.get("action_credentials_present") is not False
+        or budget.get("evaluation_runs") != 2
+        or budget.get("case_evaluations") != 32
+        or budget.get("retries") != 0
+        or (
+            result.get("denominator"),
+            result.get("passed"),
+            result.get("failed"),
+            result.get("excluded"),
+        )
+        != (32, 32, 0, 0)
+        or record.get("supported_wording") != FEATURE_ASSURANCE_SUPPORTED_WORDING
+        or record.get("review", {}).get("review_type") != "SELF"
+        or record.get("review", {}).get("reviewer_role")
+        != "automated project-controlled evidence self-check"
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance record does not preserve its exact CE-2 boundary."
+        )
+    runtime = campaign_profile["runtime_fingerprint"]
+    expected_dependency_access = (
+        "Bound evaluation runtime: "
+        f"{runtime['python_implementation']} {runtime['python_version']}; "
+        f"jsonschema {runtime['jsonschema_version']}; "
+        f"NumPy {runtime['numpy_version']}; "
+        f"{runtime['platform_system']} {runtime['platform_release']} "
+        f"{runtime['platform_machine']}. Dependencies were installed before "
+        "evaluation; no package installation or plugin discovery occurred."
+    )
+    if (
+        record.get("evaluation_environment", {}).get("dependency_access")
+        != expected_dependency_access
+    ):
+        raise EvidenceValidationError(
+            "Feature-assurance record does not bind the sanitized runtime."
+        )
+
+    exact_metrics = {
+        "unique_scenarios": 16,
+        "evaluation_runs": 2,
+        "total_attempt_executions": 32,
+        "byte_identical_result_ledgers": True,
+        "clean_projection_matches": 16,
+        "qualification_quarantines": 8,
+        "reference_projection_blocks": 8,
+        "qualification_calls": 32,
+        "qualification_input_records": 32,
+        "qualification_accepted_records": 24,
+        "qualification_rejected_records": 8,
+        "production_projector_calls": 24,
+        "reference_projector_calls": 24,
+        "local_rehashes": 8,
+        "model_calls": 0,
+        "policy_calls": 0,
+        "verifier_calls": 0,
+        "engine_calls": 0,
+        "authorization_attempts": 0,
+        "broker_invocations": 0,
+        "target_effect_calls": 0,
+        "operational_effects": 0,
+        "decision_artifact_write_calls": 0,
+        "audit_artifact_write_calls": 0,
+        "run_manifest_write_calls": 0,
+        "historical_case_count": 0,
+    }
+    if result.get("metrics") != exact_metrics:
+        raise EvidenceValidationError(
+            "Feature-assurance evidence metrics are not exact."
+        )
+    if result.get("strata") != [
+        {"name": "RUN_1", "denominator": 16, "passed": 16, "failed": 0, "excluded": 0},
+        {"name": "RUN_2", "denominator": 16, "passed": 16, "failed": 0, "excluded": 0},
+    ]:
+        raise EvidenceValidationError(
+            "Feature-assurance result strata do not reconcile."
+        )
+
+    bindings_by_role = {row["role"]: row for row in bindings}
+    production = bindings_by_role["ADF_SRC_ADF_POC_FEATURES_PY"]
+    reference = bindings_by_role["ADF_SRC_ADF_POC_REPLAY_REFERENCE_FEATURES_PY"]
+    if record["system_under_test"].get("model") != {
+        "path": production["path"],
+        "sha256": production["sha256"],
+    } or record["system_under_test"].get("policy") != {
+        "path": reference["path"],
+        "sha256": reference["sha256"],
+    }:
+        raise EvidenceValidationError(
+            "Feature-assurance record projector bindings drifted."
+        )
+
+    prohibited = " ".join(record.get("prohibited_inferences", [])).lower()
+    for phrase in (
+        "historical or live",
+        "approval",
+        "privacy",
+        "os-level",
+        "network nonuse",
+        "production ready",
+        "agentic misalignment",
+        "zero risk",
+        "independent replication",
+        "exhaustive",
+        "statistical",
+    ):
+        if phrase not in prohibited:
+            raise EvidenceValidationError(
+                "Feature-assurance record omits a required prohibited inference."
+            )
+
+    return {
+        "status": "VALID",
+        "profile_id": profile.claim_id,
+        "claim_id": record["claim_id"],
+        "claim_class": record["claim_class"],
+        "data_origin": scope["data_origin"],
+        "historical_case_count": 0,
+        "artifact_count": len(artifacts),
+        "audit_record_count": 0,
+        "implementation_commit": implementation_commit,
+        "result": profile.result_summary,
+        "campaign_outcomes": {
+            "unique_scenarios": 16,
+            "evaluation_runs": 2,
+            "denominator": 32,
+            "clean_projection_matches": 16,
+            "qualification_quarantines": 8,
+            "reference_projection_blocks": 8,
+            "byte_identical_result_ledgers": True,
+        },
+    }
+
+
 def validate_evidence_record(
     record_path: Path = DEFAULT_RECORD,
     *,
@@ -1558,6 +2124,27 @@ def validate_evidence_record(
             artifacts,
             profile,
             repository_root,
+        )
+    if profile.profile_kind == "FEATURE_ASSURANCE_CAMPAIGN":
+        return _validate_feature_assurance_campaign_evidence(
+            record,
+            artifacts,
+            profile,
+            repository_root,
+        )
+    record_resolved = record_path.resolve()
+    legacy_digest = LEGACY_REPLAY_RECORD_FINGERPRINTS.get(record_resolved)
+    exact_legacy_replay_record = (
+        legacy_digest is not None
+        and profile.claim_id in {"P2-CE-001", "P2-CE-002"}
+        and _sha256(record_resolved) == legacy_digest
+    )
+    if (
+        "reference_feature_assurance" not in artifacts
+        and not exact_legacy_replay_record
+    ):
+        raise EvidenceValidationError(
+            "Nonlegacy replay evidence requires reference_feature_assurance."
         )
     manifest = _validate_run_manifest(record, artifacts, profile, repository_root)
     decisions, audit_assurance = _validate_decisions_and_audit(

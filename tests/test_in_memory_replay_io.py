@@ -81,6 +81,8 @@ class InMemoryReplayIOTests(unittest.TestCase):
                 "duplicate JSON object members",
             ),
             (b'{"value":"\xff"}\n', "Unable to read"),
+            (b'{"value":NaN}\n', "is not valid JSON"),
+            (b'{"value":1e400}\n', "non-finite JSON number"),
             (
                 json.dumps({"value": "x" * MAX_JSONL_LINE_BYTES}).encode("utf-8")
                 + b"\n",

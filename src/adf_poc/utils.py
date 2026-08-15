@@ -2,9 +2,47 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
+
+
+class StrictJSONError(ValueError):
+    """Raised when JSON contains duplicate members or non-finite numbers."""
+
+
+def _reject_duplicate_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, child in pairs:
+        if key in value:
+            raise StrictJSONError("JSON contains duplicate object members.")
+        value[key] = child
+    return value
+
+
+def _reject_nonstandard_number(_: str) -> None:
+    raise StrictJSONError("JSON contains a non-standard numeric constant.")
+
+
+def strict_json_loads(value: str | bytes) -> Any:
+    """Decode strict JSON and reject ambiguous or non-finite numeric values."""
+
+    parsed = json.loads(
+        value,
+        object_pairs_hook=_reject_duplicate_pairs,
+        parse_constant=_reject_nonstandard_number,
+    )
+    pending = [parsed]
+    while pending:
+        child = pending.pop()
+        if isinstance(child, float) and not math.isfinite(child):
+            raise StrictJSONError("JSON contains a non-finite number.")
+        if isinstance(child, dict):
+            pending.extend(child.values())
+        elif isinstance(child, list):
+            pending.extend(child)
+    return parsed
 
 
 def utc_now_iso() -> str:
@@ -12,7 +50,13 @@ def utc_now_iso() -> str:
 
 
 def canonical_json(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    )
 
 
 def sha256_json(value: Any) -> str:
@@ -30,11 +74,14 @@ def sha256_file(path: str | Path, chunk_size: int = 1024 * 1024) -> str:
 def write_json(path: str | Path, value: Any) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(json.dumps(value, indent=2, sort_keys=True), encoding="utf-8")
+    target.write_text(
+        json.dumps(value, indent=2, sort_keys=True, allow_nan=False),
+        encoding="utf-8",
+    )
 
 
 def read_json(path: str | Path) -> Any:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return strict_json_loads(Path(path).read_text(encoding="utf-8"))
 
 
 def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> int:
@@ -54,7 +101,10 @@ def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
         for line in handle:
             line = line.strip()
             if line:
-                rows.append(json.loads(line))
+                value = strict_json_loads(line)
+                if not isinstance(value, dict):
+                    raise StrictJSONError("JSONL records must be objects.")
+                rows.append(value)
     return rows
 
 

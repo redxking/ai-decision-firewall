@@ -4,7 +4,7 @@
 
 The Phase 2 architecture adds a governed replay path around the v0.1 evidence, model, policy, and verifier pipeline. It does not extend the action surface. In the built-in runner and canonical adapter, historical replay and shadow mode terminate at a recorded counterfactual decision; the tested read-only path does not construct an authorization gate, broker, or target.
 
-The current repository uses local synthetic fixtures only. `historical_case_count` is `0`, there is no approved Gate B package or live-feed adapter, and there are no production credentials or connectors. Phase 2.3 adds exact eight-stage audit conformance checks and a fixed synthetic Gate B campaign around the Phase 2.2 preflight; it does not authorize a historical pilot or advance the architecture to live or shadow-feed deployment.
+The current repository uses local synthetic fixtures only. `historical_case_count` is `0`, there is no approved Gate B package or live-feed adapter, and there are no production credentials or connectors. Phase 2.4 adds exact modeled-signal typing/source authorization, exact four-field inventory binding, and a separately implemented in-process reference projection of serialized feature values and traces. It does not authorize a historical pilot or advance the architecture to live or shadow-feed deployment.
 
 ## Logical flow
 
@@ -24,16 +24,21 @@ flowchart TD
     K -->|"fatal integrity, contamination, ambiguity, version, or bound"| R
     K --> L["Metadata-only qualification ledger and quarantined projection"]
     L -->|"accepted cases only; accounting verified"| N
-    N --> E["Evidence-quality assessment"]
+    N --> FC["Typed/source-authorized modeled-signal and exact inventory contract"]
+    FC -->|"invalid signal or context"| R
+    FC --> E["Evidence-quality assessment"]
     E --> A["Advisory risk model"]
     A --> D["Deterministic policy"]
     D --> V["Independent verifier"]
     V --> X["Read-only execution controller"]
     X --> S["Counterfactual decision and suppression record"]
     S --> O["Hash-bound final decision, boundary audit, and diagnostics"]
+    O --> RF["Separate in-process reference projection of 20 feature values and traces"]
+    RF -->|"mismatch"| RX["Stop before assurance artifact, evaluator, metrics, or completed manifest"]
+    RF -->|"exact match"| FA["Closed metadata-only reference assurance"]
     J["Separate adjudication file"] -. "exact bytes frozen but not passed or materialized beside runner" .-> I
     J -. "materialized and decoded only after decisions and audit close" .-> Q["Post-run evaluator"]
-    O --> Q
+    FA --> Q
     Q --> RI["Reverify complete input snapshot"]
     RI --> F["Qualification, comparisons, replay metrics, and completed run manifest"]
     Q -->|"invalid adjudication"| RA["Abort evaluation; retain decision and audit evidence"]
@@ -46,6 +51,9 @@ flowchart TD
 |---|---|---|
 | Execution mode | `src/adf_poc/execution.py` | Define `historical_replay` and `shadow_read_only`; reject unknown or effect-capable modes |
 | Replay contracts | `contracts/v0.2.0/` and `src/adf_poc/replay/contracts.py` | Validate versions, structure, semantics, governance, and prohibited label fields |
+| Structured decision-input contract | `src/adf_poc/feature_contract.py`, replay case schema, and qualification | Require exact types/ranges, code-authorized sources, finite JSON numbers, exact canonical inventory binding, and a network-only Boolean `source_conflict`; unrecognized attributes remain feature-opaque |
+| Reference feature projector | `src/adf_poc/replay/reference_features.py` | Separately reconstruct the 20 feature values and event traces from normalized cases and compare them with serialized decisions without importing the production calculation path |
+| Reference-assurance contract | `contracts/v0.2.0/reference-feature-assurance.schema.json` | Permit one closed metadata-only matched row per case; raw values and free-form errors are excluded |
 | Gate B preflight | `contracts/v0.2.0/gate-b-authorization.schema.json` and `src/adf_poc/replay/gate_b.py` | Require current external-role assertions, exact artifact bindings, restricted paths, frozen scope/thresholds, and sanitized outputs before historical payload access |
 | Record qualifier | `src/adf_poc/replay/qualification.py` | Qualify bounded case JSONL, sanitize outcomes, preserve exact source-occurrence metadata, and abort on code-owned fatal conditions |
 | Local snapshot adapter | `src/adf_poc/replay/adapters.py` | Read manifest-referenced local JSONL only; no network or vendor client |
@@ -53,6 +61,7 @@ flowchart TD
 | Replay harness | `src/adf_poc/replay/harness.py` | Freeze and reverify Gate B and replay inputs; independently validate qualification accounting; withhold adjudication files from the runner; enforce decision/audit binding, decision-only execution, safety checks, and artifact generation |
 | Audit validator | `src/adf_poc/audit.py` and `src/adf_poc/replay/harness.py` | Reject ambiguous JSON and require the exact canonical eight-stage per-case trace, sequence/time rules, decision bindings, suppression content, and policy action list |
 | Gate B campaign | `config/gate_b_ce2_campaign_plan.json`, `scripts/generate_gate_b_ce2_campaign.py`, and `evidence/phase2_gate_b_ce2/` | Bind fixed synthetic scenarios and expected outcomes to an implementation commit; capture only sanitized enumerated outcomes and declared boundary instrumentation |
+| Planned feature-assurance campaign | `config/feature_assurance_ce2_campaign_plan.json` and `contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json` | Freeze the intended `P2-CE-004` matrix and output shapes; no campaign execution or result evidence exists yet |
 | Replay metrics | `src/adf_poc/replay/metrics.py` | Report scope, disposition, qualification, rejection-reason, adjudication-comparison, and read-only assurance measures |
 | Phase 1 engine | `src/adf_poc/engine.py` | Supply evidence, model, policy, and verifier behavior under an explicit execution boundary |
 | Command entry point | `run_phase2.py` | Expose only read-only Phase 2 modes and local paths |
@@ -123,19 +132,31 @@ Authorization validity is rechecked before historical payload access, before and
 
 Rejected payload, source identifiers extracted from payload, exception text, and free-form error messages never enter the ledger. Source-read failure, integrity mismatch, invalid encoding, oversized lines, unsupported record versions, runtime-label contamination, duplicate identifiers, record-count overflow, and unmapped validator failures abort the complete call. This boundary prevents silent record loss; it does not make accepted records true or representative.
 
-### 4. Canonical-context boundary
+### 4. Modeled-signal and canonical-context boundary
 
-V0.1 trusts top-level `break_glass` and `asset_criticality` values. Phase 2 therefore requires cross-field validation against authoritative asset-inventory evidence. Missing or contradictory safety-critical context rejects the record; it is not resolved by choosing the less restrictive value.
+Phase 2.4 permits a modeled attribute only when its JSON type and source type match the code-owned matrix. `failed_logins` must be a finite integral JSON number in `0..1,000,000`; Boolean and string coercion, fractions, negatives, and over-bound values are rejected. Every JSON numeric value anywhere in an accepted case must be finite before engine invocation. Unrecognized attributes remain feature-opaque and cannot enter the model projection.
 
-### 5. Label boundary
+`source_conflict` is explicitly governed outside the 20-feature vector because it can change evidence-quality assessment and the downstream decision. It must be an exact JSON Boolean asserted only by `network`. Under `QUARANTINE_RECORD`, a wrong-source assertion is `SEMANTICS / UNAUTHORIZED_DECISION_SIGNAL` and a non-Boolean network assertion is `SEMANTICS / INVALID_BOOLEAN`. Reference feature agreement does not validate this input or the broader evidence-quality path.
+
+Every asset-inventory event must assert `asset_id`, `privilege_level`, `break_glass`, and `asset_criticality`, and each must exactly match the canonical case context. Missing or contradictory context rejects the record; the runtime does not vote across inventory events, choose the less restrictive value, coerce types, or infer a default. This binds the feature trace to the canonical context but does not prove that the source assertion is authentic, truthful, or complete.
+
+### 5. Reference-projection boundary
+
+After read-only decision validation, deterministic decision serialization, and the complete eight-stage audit check, the harness calls a separately implemented in-process projector. The reference implementation uses the normalized cases and serialized decisions but imports none of the production feature extractor, feature-contract implementation, engine, model, policy, verifier, harness, or metrics modules. It reconstructs only the 20 feature values and event traces.
+
+On exact agreement, the harness writes one closed metadata-only row per case containing the case identifier, normalized-case digest, expected/observed projection digests, and `matched=true`. Metrics report checked/matched/mismatched/completeness counts, and the completed run manifest binds the artifact digest and count. On mismatch, the call raises a stable code-owned error before the assurance artifact, qualification/rejection publication, adjudication loading, comparisons, metrics, or completed run manifest. Raw, normalized, and deterministic decisions plus the audit may already exist and must be handled as incomplete evidence.
+
+This is diverse implementation logic inside the same process and project, not external independence, separate custody, or an oracle for source truth, evidence quality, model probability, policy, disposition, or verifier correctness.
+
+### 6. Label boundary
 
 Runtime evidence envelopes cannot contain compromise labels, expected dispositions, ground truth, or adjudications. Exact adjudication bytes may be frozen in harness memory for integrity, but no adjudication path or file is passed to or placed beside the historical runner before decision and audit closure. The harness writes the adjudication snapshot through its retained directory descriptor and semantically decodes it only afterward. The single process is not an OS security boundary against arbitrary introspective code, and historical review outcomes are adjudications with uncertainty, not automatically ground truth.
 
-### 6. Decision-to-effect boundary
+### 7. Decision-to-effect boundary
 
 The built-in replay and shadow outputs contain recommendations and evidence traces only. The read-only engine construction has no route to the Phase 1 authorization gate or simulator and the canonical adapter has no external-system interface. This boundary is tested with exact empty authorization state, zero-token, zero-broker, zero-effect, and no-action-audit assertions. The single Python process is not an OS-enforced sandbox for arbitrary imported code; extensions require a separate trust and isolation argument.
 
-### 7. Audit boundary
+### 8. Audit boundary
 
 The current audit design is a SHA-256-linked consistency chain. For every accepted case, the harness requires exactly one row in this order: `CASE_RECEIVED`, `EVIDENCE_ASSESSED`, `MODEL_ASSESSED`, `POLICY_PROPOSED`, `INDEPENDENTLY_VERIFIED`, `EXECUTION_SUPPRESSED`, `AUTHORIZATION_EVALUATED`, and `DECISION_FINALIZED`. It rejects additional row or payload fields, missing or duplicate stages, cross-case reordering, invalid sequence or timestamp state, non-code-owned suppression content, action lists inconsistent with the exact frozen policy, and finalization identifiers or hashes inconsistent with the serialized decision.
 
@@ -164,16 +185,21 @@ This is CE-1 implementation-conformance evidence for the named code and tested m
 | Qualification ledger, source-occurrence hash, count, status, or rejection-projection mismatch | Abort before engine invocation |
 | Qualification accepts zero cases | Abort rather than emit an empty replay result |
 | Valid but out-of-order events | Sort by the canonical key and preserve `EVENT_ORDER_NORMALIZED` diagnostics |
+| Modeled attribute has an invalid type/range or appears under an unauthorized source | Fail the dataset or emit a code-owned record-local quarantine under the selected offline policy; never coerce or silently treat it as opaque |
+| Non-finite JSON number occurs anywhere in a case, including an opaque attribute | Reject before engine invocation; never allow nonstandard numeric semantics to reach evidence, model, or policy code |
+| `source_conflict` is not a JSON Boolean or is asserted outside `network` | Fail/quarantine under the selected offline policy before evidence assessment |
+| Asset-inventory event omits or disagrees on canonical `asset_id`, `privilege_level`, `break_glass`, or `asset_criticality` | Reject before feature extraction; never infer, vote, or choose a permissive value |
 | Unknown execution mode or action-enabling configuration | Fail closed before engine construction |
 | Policy proposes containment in a read-only mode | Record counterfactual actions and suppress authorization and execution |
 | Audit row contains an unknown record type | Reject the decision/audit evidence boundary |
 | Missing, duplicate, reordered, malformed, or extra-field eight-stage audit record; invalid sequence/time; forged suppression/policy action; or mismatched final decision/hash | Abort before completed run evidence is emitted |
+| Reference feature value/trace, case set, normalized-case binding, or projection digest mismatch | Abort before reference assurance, qualification/rejection publication, adjudication loading, comparisons, metrics, or completed manifest; retain any earlier decision/audit files only as incomplete evidence |
 | Malformed or inconsistent adjudication | Abort post-run evaluation before comparisons, metrics, or completed run manifest; retain decision and audit evidence |
 
 ## Deployment view
 
-The current code is an offline, single-host development harness. `shadow_read_only` is a semantic execution mode, not a deployed service and not a connection to live telemetry. `QUARANTINE_RECORD` is intentionally unavailable in that mode. Any Phase 3 live shadow deployment requires a separately approved architecture with a read-only service identity, network and tenant controls, data-retention rules, ingestion stop conditions, monitoring, and incident response. Phase 2.3 provides no evidence that those gates are met, and none of those future controls grants action authority.
+The current code is an offline, single-host development harness. `shadow_read_only` is a semantic execution mode, not a deployed service and not a connection to live telemetry. `QUARANTINE_RECORD` is intentionally unavailable in that mode. Any Phase 3 live shadow deployment requires a separately approved architecture with a read-only service identity, network and tenant controls, data-retention rules, ingestion stop conditions, monitoring, and incident response. Phase 2.4 provides no evidence that those gates are met, and none of those future controls grants action authority.
 
 ## Architectural nonclaims
 
-The starter does not demonstrate process isolation between policy and verification, sandboxing against arbitrary same-process code, cryptographic evidence provenance, externally anchored audit custody, privacy effectiveness, vendor semantics, production-scale availability, agentic alignment or misalignment behavior, monitor effectiveness, or safe operational action. `P2-CE-003` additionally does not establish a real approval, actual historical-data handling, OS-level nonaccess/non-egress, target-side effect proof, exhaustive defect coverage, an operational failure rate, independent replication, or efficacy. Those are future validation obligations, not implicit capabilities.
+The starter does not demonstrate process isolation between policy and verification, sandboxing against arbitrary same-process code, cryptographic evidence provenance, externally anchored audit custody, privacy effectiveness, vendor semantics, production-scale availability, agentic alignment/misalignment or sabotage-robustness behavior, monitor effectiveness, or safe operational action. Phase 2.4 separately checks only feature values and traces; it does not prove source truth, full source-to-decision correctness, model probability, policy/disposition correctness, external custody, external independence, exhaustive coverage, a bounded failure rate, or production readiness. `P2-CE-004` is planned and not evaluated. `P2-CE-003` additionally does not establish a real approval, actual historical-data handling, OS-level nonaccess/non-egress, target-side effect proof, independent replication, or efficacy. Those are future validation obligations, not implicit capabilities.

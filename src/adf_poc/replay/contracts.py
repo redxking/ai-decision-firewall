@@ -10,6 +10,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, TextIO
 
+from ..feature_contract import (
+    FeatureContractError,
+    select_evidence_attributes,
+    select_modeled_attributes,
+    validate_canonical_case_feature_context,
+)
+
 
 CONTRACT_VERSION = "0.2.0"
 MAX_CONTROL_DOCUMENT_BYTES = 1024 * 1024
@@ -274,16 +281,19 @@ def _load_json_object_with_digest(path: Path, label: str) -> tuple[dict[str, Any
                 f"{label} exceeds the {MAX_CONTROL_DOCUMENT_BYTES}-byte control-document limit."
             )
         value = json.loads(
-            raw.decode("utf-8"), object_pairs_hook=_reject_duplicate_json_pairs
+            raw.decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_json_pairs,
+            parse_constant=_reject_nonstandard_json_number,
         )
     except _DuplicateJSONMember:
         raise ContractValidationError(
             f"{label} contains duplicate JSON object members."
         ) from None
-    except (OSError, UnicodeError, json.JSONDecodeError):
+    except (OSError, UnicodeError, json.JSONDecodeError, _NonstandardJSONNumber):
         raise ContractValidationError(f"Unable to read {label}.") from None
     if not isinstance(value, dict):
         raise ContractValidationError(f"{label} must be a JSON object.")
+    _require_finite_json_numbers(value, label)
     return value, hashlib.sha256(raw).hexdigest()
 
 
@@ -372,6 +382,7 @@ def detect_runtime_label_leakage(value: Any, path: str = "case") -> list[str]:
 def validate_case_record(record: dict[str, Any]) -> None:
     if not isinstance(record, dict):
         raise ContractValidationError("Replay case record must be a JSON object.")
+    _require_finite_json_numbers(record, "replay case")
     leaks = detect_runtime_label_leakage(record)
     if leaks:
         raise ContractValidationError(
@@ -426,34 +437,16 @@ def validate_case_record(record: dict[str, Any]) -> None:
         raise ContractValidationError(
             f"Case {case_id!r} requires at least one asset_inventory event."
         )
-    for event in inventory_events:
-        attributes = event["attributes"]
-        if "break_glass" not in attributes or "asset_criticality" not in attributes:
-            raise ContractValidationError(
-                "asset_inventory attributes must include break_glass and asset_criticality."
-            )
-        inventory_break_glass = _require_boolean(
-            attributes["break_glass"], "asset_inventory.attributes.break_glass"
+    try:
+        validate_canonical_case_feature_context(
+            asset_id=record["asset_id"],
+            privilege_level=record["privilege_level"],
+            break_glass=break_glass,
+            asset_criticality=criticality,
+            inventory_attributes=(event["attributes"] for event in inventory_events),
         )
-        inventory_criticality = _require_unit_interval(
-            attributes["asset_criticality"],
-            "asset_inventory.attributes.asset_criticality",
-        )
-        if inventory_break_glass is not break_glass:
-            raise ContractValidationError(
-                "Canonical break_glass must equal asset_inventory.attributes.break_glass."
-            )
-        if not math.isclose(
-            inventory_criticality, criticality, rel_tol=0.0, abs_tol=1e-12
-        ):
-            raise ContractValidationError(
-                "Canonical asset_criticality must equal "
-                "asset_inventory.attributes.asset_criticality."
-            )
-        if "asset_id" in attributes and attributes["asset_id"] != record["asset_id"]:
-            raise ContractValidationError(
-                "Canonical asset_id must equal asset_inventory.attributes.asset_id when present."
-            )
+    except FeatureContractError as exc:
+        raise ContractValidationError(str(exc)) from None
 
 
 def _validate_event_record(event: Any, label: str, case_id: str) -> None:
@@ -512,15 +505,36 @@ def _validate_event_record(event: Any, label: str, case_id: str) -> None:
         seen_refs.add(parsed)
     if not isinstance(event.get("attributes"), dict):
         raise ContractValidationError(f"{label}.attributes must be a JSON object.")
-    attributes_size = len(
-        json.dumps(
-            event["attributes"], separators=(",", ":"), ensure_ascii=True
-        ).encode("utf-8")
-    )
+    try:
+        attributes_size = len(
+            json.dumps(
+                event["attributes"],
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("utf-8")
+        )
+    except (TypeError, ValueError):
+        raise ContractValidationError(
+            f"{label}.attributes must contain canonical JSON values."
+        ) from None
     if attributes_size > MAX_ATTRIBUTES_BYTES:
         raise ContractValidationError(
             f"{label}.attributes exceeds the {MAX_ATTRIBUTES_BYTES}-byte limit."
         )
+    try:
+        select_modeled_attributes(
+            event["source_type"],
+            event["attributes"],
+            label=f"{label}.attributes",
+        )
+        select_evidence_attributes(
+            event["source_type"],
+            event["attributes"],
+            label=f"{label}.attributes",
+        )
+    except FeatureContractError as exc:
+        raise ContractValidationError(str(exc)) from None
     if not isinstance(event.get("untrusted_text"), str):
         raise ContractValidationError(f"{label}.untrusted_text must be a string.")
     if len(event["untrusted_text"]) > MAX_UNTRUSTED_TEXT_CHARS:
@@ -643,15 +657,20 @@ def _load_jsonl_text(handle: TextIO, *, label: str) -> list[dict[str, Any]]:
         if not line.strip():
             continue
         try:
-            value = json.loads(line, object_pairs_hook=_reject_duplicate_json_pairs)
+            value = json.loads(
+                line,
+                object_pairs_hook=_reject_duplicate_json_pairs,
+                parse_constant=_reject_nonstandard_json_number,
+            )
         except _DuplicateJSONMember:
             raise ContractValidationError(
                 f"{label} line {line_number} contains duplicate JSON object members."
             ) from None
-        except json.JSONDecodeError as exc:
+        except (json.JSONDecodeError, _NonstandardJSONNumber) as exc:
             raise ContractValidationError(
                 f"{label} line {line_number} is not valid JSON: {exc}"
             ) from exc
+        _require_finite_json_numbers(value, label)
         if not isinstance(value, dict):
             raise ContractValidationError(
                 f"{label} line {line_number} must be a JSON object."
@@ -666,6 +685,40 @@ def _load_jsonl_text(handle: TextIO, *, label: str) -> list[dict[str, Any]]:
 
 class _DuplicateJSONMember(ValueError):
     """Internal marker for ambiguous duplicate JSON object members."""
+
+
+class _NonstandardJSONNumber(ValueError):
+    """Internal marker for NaN and infinity spellings prohibited by JSON."""
+
+
+def _reject_nonstandard_json_number(_: str) -> None:
+    raise _NonstandardJSONNumber("non-standard numeric constant")
+
+
+def _require_finite_json_numbers(value: Any, label: str) -> None:
+    """Reject floats that cannot be represented as finite canonical JSON.
+
+    Python's JSON decoder accepts exponent overflow as ``inf`` even though the
+    source spelling is otherwise standard JSON. This bounded iterative walk
+    closes that gap for opaque nested values as well as decision-driving fields.
+    """
+
+    pending = [value]
+    seen_containers: set[int] = set()
+    while pending:
+        child = pending.pop()
+        if isinstance(child, float) and not math.isfinite(child):
+            raise ContractValidationError(f"{label} contains a non-finite JSON number.")
+        if isinstance(child, dict):
+            if id(child) in seen_containers:
+                continue
+            seen_containers.add(id(child))
+            pending.extend(child.values())
+        elif isinstance(child, list):
+            if id(child) in seen_containers:
+                continue
+            seen_containers.add(id(child))
+            pending.extend(child)
 
 
 def _reject_duplicate_json_pairs(

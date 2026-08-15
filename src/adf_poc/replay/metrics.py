@@ -53,17 +53,38 @@ def compute_replay_metrics(
     adjudications: list[dict[str, Any]],
     audit_assurance: dict[str, Any],
     qualification_records: list[dict[str, Any]] | None = None,
+    reference_feature_records: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     counts = Counter(row["final_disposition"] for row in decisions)
     comparisons = build_comparisons(decisions, adjudications)
     labels = [1 if row["compromised"] else 0 for row in comparisons]
     scores = [float(row["compromise_probability"]) for row in comparisons]
     predictions = [1 if score >= 0.5 else 0 for score in scores]
-    tp = sum(1 for truth, prediction in zip(labels, predictions, strict=True) if truth and prediction)
-    tn = sum(1 for truth, prediction in zip(labels, predictions, strict=True) if not truth and not prediction)
-    fp = sum(1 for truth, prediction in zip(labels, predictions, strict=True) if not truth and prediction)
-    fn = sum(1 for truth, prediction in zip(labels, predictions, strict=True) if truth and not prediction)
-    brier = mean((score - truth) ** 2 for score, truth in zip(scores, labels, strict=True)) if labels else None
+    tp = sum(
+        1
+        for truth, prediction in zip(labels, predictions, strict=True)
+        if truth and prediction
+    )
+    tn = sum(
+        1
+        for truth, prediction in zip(labels, predictions, strict=True)
+        if not truth and not prediction
+    )
+    fp = sum(
+        1
+        for truth, prediction in zip(labels, predictions, strict=True)
+        if not truth and prediction
+    )
+    fn = sum(
+        1
+        for truth, prediction in zip(labels, predictions, strict=True)
+        if truth and not prediction
+    )
+    brier = (
+        mean((score - truth) ** 2 for score, truth in zip(scores, labels, strict=True))
+        if labels
+        else None
+    )
 
     authorization_count = sum(
         1 for row in decisions if bool(row.get("authorization", {}).get("issued"))
@@ -77,7 +98,9 @@ def compute_replay_metrics(
         for row in decisions
     )
     action_results = sum(len(row.get("action_results", [])) for row in decisions)
-    counterfactual_actions = sum(len(row.get("counterfactual_actions", [])) for row in decisions)
+    counterfactual_actions = sum(
+        len(row.get("counterfactual_actions", [])) for row in decisions
+    )
     agreement_count = sum(1 for row in comparisons if row["disposition_match"])
 
     result = {
@@ -89,7 +112,9 @@ def compute_replay_metrics(
         "scope": {
             "cases_evaluated": len(decisions),
             "adjudicated_cases": len(comparisons),
-            "adjudication_coverage": round(_safe_div(len(comparisons), len(decisions)), 6),
+            "adjudication_coverage": round(
+                _safe_div(len(comparisons), len(decisions)), 6
+            ),
         },
         "decisions": {
             "disposition_counts": {name: counts.get(name, 0) for name in DISPOSITIONS},
@@ -132,9 +157,7 @@ def compute_replay_metrics(
             "authorization_evaluated_records": audit_assurance[
                 "authorization_evaluated_records"
             ],
-            "decision_finalized_records": audit_assurance[
-                "decision_finalized_records"
-            ],
+            "decision_finalized_records": audit_assurance["decision_finalized_records"],
             "action_executed_audit_records": audit_assurance[
                 "action_executed_audit_records"
             ],
@@ -169,6 +192,25 @@ def compute_replay_metrics(
             "denominator_note": (
                 "Qualification counts use every governed nonblank source case; "
                 "decision and adjudication measures use accepted records only."
+            ),
+        }
+    if reference_feature_records is not None:
+        matched_records = sum(
+            row.get("matched") is True for row in reference_feature_records
+        )
+        result["reference_feature_assurance"] = {
+            "cases_checked": len(reference_feature_records),
+            "matched_cases": matched_records,
+            "mismatched_cases": len(reference_feature_records) - matched_records,
+            "complete": (
+                len(reference_feature_records) == len(decisions)
+                and matched_records == len(decisions)
+            ),
+            "assurance_boundary": (
+                "A separately implemented reference projection agrees with serialized "
+                "decision "
+                "feature values and event traces; model, policy, source truth, and "
+                "external custody are not independently validated."
             ),
         }
     return result

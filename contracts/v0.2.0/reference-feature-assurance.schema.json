@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/reference-feature-assurance.schema.json",
+  "title": "AI Decision Firewall Phase 2 Reference Feature Assurance Record",
+  "description": "Metadata-only result for a matched, deterministic reference feature projection. A mismatch emits no record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "normalized_case_sha256",
+    "expected_projection_sha256",
+    "observed_projection_sha256",
+    "matched"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.2.0" },
+    "case_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "normalized_case_sha256": { "$ref": "#/$defs/sha256" },
+    "expected_projection_sha256": { "$ref": "#/$defs/sha256" },
+    "observed_projection_sha256": { "$ref": "#/$defs/sha256" },
+    "matched": { "const": true }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

@@ -328,10 +328,18 @@ def _classify_contract_failure(
         return "SEMANTICS", "INVALID_TIMESTAMP"
     if "must be a boolean" in message:
         return "SEMANTICS", "INVALID_BOOLEAN"
+    if "must be an integer" in message:
+        return "SEMANTICS", "INVALID_TYPE"
     if "must be numeric" in message:
         return "SEMANTICS", "INVALID_TYPE"
-    if "finite and within [0, 1]" in message:
+    if "must be finite and within [" in message:
         return "SEMANTICS", "NUMERIC_OUT_OF_RANGE"
+    if "contains a non-finite JSON number" in message:
+        return "SEMANTICS", "NUMERIC_OUT_OF_RANGE"
+    if ".source_conflict is not authorized for this source_type" in message:
+        return "SEMANTICS", "UNAUTHORIZED_DECISION_SIGNAL"
+    if "is not authorized for this source_type" in message:
+        return "SEMANTICS", "UNAUTHORIZED_MODELED_SIGNAL"
     if ".case_id" in message and "does not match parent case" in message:
         return "SEMANTICS", "CASE_EVENT_ID_MISMATCH"
     if ".collected_at cannot precede observed_at" in message:
@@ -344,7 +352,11 @@ def _classify_contract_failure(
         return "SEMANTICS", "CANONICAL_CONTEXT_MISMATCH"
     if ".entity_refs contains duplicate" in message:
         return "SEMANTICS", "DUPLICATE_ENTITY_REFERENCE"
-    if "must be a non-empty string" in message or "must match ^" in message:
+    if (
+        "must be a non-empty string" in message
+        or "must match ^" in message
+        or "must be an identifier" in message
+    ):
         return "SEMANTICS", "INVALID_IDENTIFIER"
     if ".events must be a non-empty array" in message:
         if not isinstance(record.get("events"), list):
@@ -359,6 +371,7 @@ def _classify_contract_failure(
             "must be a JSON object",
             ".entity_refs must be an array",
             ".untrusted_text must be a string",
+            ".attributes must contain canonical JSON values",
         )
     ):
         return "SEMANTICS", "INVALID_TYPE"

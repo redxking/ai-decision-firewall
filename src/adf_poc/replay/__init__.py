@@ -29,6 +29,10 @@ from .qualification import (
     qualify_case_bytes,
     qualify_case_file,
 )
+from .reference_features import (
+    ReferenceFeatureAssuranceError,
+    verify_reference_feature_projections,
+)
 
 __all__ = [
     "ALLOWED_REPLAY_MODES",
@@ -49,11 +53,13 @@ __all__ = [
     "ManifestControl",
     "QualificationFatalError",
     "QualificationResult",
+    "ReferenceFeatureAssuranceError",
     "qualify_case_bytes",
     "qualify_case_file",
     "evaluate_qualification_stop_conditions",
     "load_gate_b_authorization",
     "load_manifest_control",
     "validate_gate_b_current",
+    "verify_reference_feature_projections",
     "load_and_validate_manifest",
 ]

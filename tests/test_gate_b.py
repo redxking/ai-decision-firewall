@@ -5,6 +5,7 @@ import os
 import shutil
 import tempfile
 import unittest
+from copy import deepcopy
 from contextlib import contextmanager
 from dataclasses import replace
 from decimal import Decimal
@@ -14,6 +15,7 @@ from unittest.mock import patch
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from adf_poc.audit import AuditLogger
 from adf_poc.replay import ReplayHarness, ReplaySafetyViolation
 from adf_poc.replay import contracts as replay_contracts
 from adf_poc.replay import gate_b as gate_b_module
@@ -38,6 +40,11 @@ from adf_poc.replay.secure_output import (
     HistoricalOutputError,
     HistoricalOutputGuard,
 )
+from adf_poc.replay.reference_features import (
+    ReferenceFeatureAssuranceError,
+    verify_reference_feature_projections,
+)
+from adf_poc.utils import sha256_json
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -1376,6 +1383,101 @@ class GateBIntegrationTests(unittest.TestCase):
             self.assertEqual(snapshot_dir.stat().st_mode & 0o077, 0)
             for path in snapshot_dir.iterdir():
                 self.assertEqual(path.stat().st_mode & 0o077, 0)
+
+    def test_coherent_feature_and_audit_forgery_fails_before_historical_results(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path, _, _, _ = make_gate_b_repository(root)
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            built_in_runner = harness._default_record_engine_runner()
+            captured_decisions: list[dict[str, Any]] = []
+            captured_audit_rows: list[dict[str, Any]] = []
+            captured_cases: list[dict[str, Any]] = []
+            captured_execution_mode = None
+
+            def coherent_forgery_runner(**kwargs):
+                nonlocal captured_execution_mode
+                decisions, audit_rows = built_in_runner(**kwargs)
+                forged = decisions[0]
+                feature_values = forged["model_assessment"]["feature_values"]
+                original = feature_values["new_device"]
+                feature_values["new_device"] = 0.0 if original == 1.0 else 1.0
+                forged.pop("decision_record_hash")
+                forged["decision_record_hash"] = sha256_json(forged)
+
+                for row in audit_rows:
+                    payload = row["payload"]
+                    if payload["case_id"] != forged["case_id"]:
+                        continue
+                    if row["record_type"] == "MODEL_ASSESSED":
+                        payload["feature_values"]["new_device"] = feature_values[
+                            "new_device"
+                        ]
+                    elif row["record_type"] == "DECISION_FINALIZED":
+                        payload["decision_record_hash"] = forged["decision_record_hash"]
+
+                previous_hash = "0" * 64
+                rechained: list[dict[str, Any]] = []
+                for row in audit_rows:
+                    body = deepcopy(row)
+                    body.pop("record_hash")
+                    body["previous_hash"] = previous_hash
+                    body["record_hash"] = sha256_json(body)
+                    previous_hash = body["record_hash"]
+                    rechained.append(body)
+                self.assertEqual(AuditLogger.verify_rows(rechained), (True, []))
+
+                captured_decisions.extend(deepcopy(decisions))
+                captured_audit_rows.extend(deepcopy(rechained))
+                captured_cases.extend(deepcopy(kwargs["cases"]))
+                captured_execution_mode = kwargs["execution_mode"]
+                return decisions, rechained
+
+            with patch.object(
+                harness,
+                "_default_record_engine_runner",
+                return_value=coherent_forgery_runner,
+            ):
+                with self.assertRaises(ReplaySafetyViolation):
+                    harness.run()
+
+            self.assertIsNotNone(captured_execution_mode)
+            ReplayHarness._validate_read_only_decisions(
+                captured_decisions,
+                expected_case_ids={row["case_id"] for row in captured_decisions},
+                execution_mode=captured_execution_mode,
+            )
+            ReplayHarness._validate_audit_assurance(
+                root / "unused-audit-path.jsonl",
+                decisions=captured_decisions,
+                audit_rows=captured_audit_rows,
+                autonomous_actions=ReplayHarness._autonomous_actions_from_policy_bytes(
+                    (root / "config" / "policy.json").read_bytes()
+                ),
+            )
+            with self.assertRaisesRegex(
+                ReferenceFeatureAssuranceError,
+                "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+            ):
+                verify_reference_feature_projections(
+                    captured_cases,
+                    captured_decisions,
+                )
+            output_dir = root / "outputs" / "replay" / "gate-b-test"
+            for artifact_name in (
+                "engine_decisions.jsonl",
+                "replay_audit.jsonl",
+                "replay_decisions.jsonl",
+            ):
+                self.assertTrue((output_dir / artifact_name).exists())
+            for artifact_name in (
+                "reference_feature_assurance.jsonl",
+                "replay_metrics.json",
+                "replay_run_manifest.json",
+            ):
+                self.assertFalse((output_dir / artifact_name).exists())
 
     def test_post_qualification_scope_gates_stop_before_engine(self) -> None:
         for mutation in ("quarantine_threshold", "case_window"):

@@ -6,7 +6,7 @@ Run from the repository root:
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The 101-test suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. It covers the original abstention, break-glass, human-authority, authorization, label-separation, and audit-tamper controls plus the Phase 2 read-only execution boundary, replay contracts, path confinement, canonical-context consistency, frozen input snapshots, descriptor-bound historical output, in-memory historical decision processing, temporal normalization, post-decision adjudication decoding, deterministic artifacts, exact eight-stage decision/audit binding, Gate B campaign evidence, exact authorization-state rejection, zero token/broker/effect assertions, and the three narrow claim-evidence records.
+The 143-test suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. It covers the original abstention, break-glass, human-authority, authorization, label-separation, and audit-tamper controls plus the Phase 2 read-only execution boundary, replay contracts, path confinement, canonical-context consistency, frozen input snapshots, descriptor-bound historical output, in-memory historical decision processing, temporal normalization, post-decision adjudication decoding, deterministic artifacts, exact eight-stage decision/audit binding, Gate B campaign evidence, typed/source-authorized features, separate reference projection, exact authorization-state rejection, zero token/broker/effect assertions, and the three current narrow claim-evidence records.
 
 Phase 2.1 qualification coverage includes:
 
@@ -50,3 +50,23 @@ That coverage is CE-1 implementation-conformance evidence only. It cross-checks 
 The `P2-CE-003` controlled-behavior tests validate the closed campaign plan, schema, profile, result rows, summary, and exact evidence record. The published result contains two complete repetitions of 16 fixed synthetic scenarios (32/32 project-controlled expected-outcome matches), including two validate-only passes, 28 structural pre-payload blocks, and two post-qualification/pre-engine threshold blocks. The two sanitized result ledgers are byte-identical. During the 28 structural-block harness invocations, no governed payload-role open/read attempt was observed by the declared `Path`/`os.open` hooks; across all 32 attempts, no engine, authorization, broker, or target-effect boundary was reached and no completed run manifest, decision artifact, or audit artifact was observed.
 
 Negative claim-evidence tests reject extra or reordered results, missing attempts, outcome drift, nonzero boundary counters, source-binding changes, duplicate JSON members, and authorization-canary disclosure. The result remains a SELF automated project-controlled synthetic check. It includes no real approval or actual historical data, and it does not establish independent/statistical trials, external preregistration, OS-level nonaccess/non-egress, target-side proof, exhaustive coverage, a bounded failure rate, efficacy, live safety, or alignment/misalignment behavior.
+
+Phase 2.4 feature-assurance coverage additionally verifies:
+
+- exact JSON Boolean handling and source authorization for all modeled Boolean attributes;
+- finite integral `failed_logins` values in `0..1,000,000`, including accepted `10.0` and rejected Boolean, string, fractional, non-finite, negative, and over-bound forms;
+- mandatory exact equality of `asset_id`, `privilege_level`, `break_glass`, and `asset_criticality` across the case and every asset-inventory event;
+- opaque-attribute feature-projection invariance and event-order metamorphic behavior;
+- rejection of non-finite JSON numbers anywhere in an accepted case and exact Boolean/network-only handling of decision-driving `source_conflict`, which is outside reference feature recomputation; under `QUARANTINE_RECORD`, wrong source is `SEMANTICS / UNAUTHORIZED_DECISION_SIGNAL` and wrong type is `SEMANTICS / INVALID_BOOLEAN`;
+- exact normalized-case digest binding: SHA-256 over UTF-8 canonical JSON generated with sorted keys, compact separators, `ensure_ascii=True`, `allow_nan=False`, and no trailing newline;
+- a separately implemented standard-library-only projector for all 20 feature values and feature-to-event traces;
+- exact/unique case-set and normalized-case hash binding;
+- closed metadata-only assurance rows, duplicate-member-aware persisted JSONL validation, and run-manifest/metrics count and digest bindings;
+- failure before evaluator loading, qualification/rejection publication, comparisons, metrics, or completed run-manifest finalization; and
+- coherent feature-value, feature-trace, source-context, decision-hash, and fully rechained-audit forgeries that pass the legacy validators but are rejected by the reference projector.
+
+On a reference mismatch, earlier raw/normalized/deterministic decisions and audit artifacts may remain and are intentionally incomplete; no `reference_feature_assurance.jsonl`, metrics, or completed run manifest exists. These tests are CE-1 implementation-conformance evidence for the current checkout. They do not prove source truth, evidence quality, model probability, policy/disposition or verifier correctness, external custody, external independence, exhaustive coverage, a bounded failure rate, production readiness, or alignment/misalignment/sabotage robustness.
+
+The committed `P2-CE-001` and `P2-CE-002` bundles were generated before alpha.5 and contain no reference-assurance artifact. Their original version-bound claims remain validated as recorded and were not retroactively upgraded; newly generated alpha.5 replay evidence must include the artifact.
+
+The frozen `P2-CE-004` plan calls for two 16-attempt synthetic repetitions, each containing eight clean matches, four qualification quarantines, and four reference-projector blocks, with zero retries or exclusions. The campaign has not been executed. No result ledger, observed 32-attempt denominator, repeatability evidence, claim-evidence record, Commit-B release result, or GitHub CI conclusion exists.

@@ -15,7 +15,13 @@ from jsonschema import Draft202012Validator
 
 from adf_poc.audit import AuditLogger
 from adf_poc.execution import ExecutionMode
-from adf_poc.utils import read_jsonl, sha256_json, write_json, write_jsonl
+from adf_poc.utils import (
+    canonical_json,
+    read_jsonl,
+    sha256_json,
+    write_json,
+    write_jsonl,
+)
 
 from .adapters import AdapterCaseBatch, get_adapter
 from .contracts import (
@@ -29,6 +35,7 @@ from .contracts import (
     ReplayManifest,
     count_jsonl_records,
     load_jsonl_bytes,
+    load_jsonl_objects,
     load_and_validate_manifest,
     sha256_file,
     validate_adjudication_records,
@@ -50,6 +57,10 @@ from .qualification import (
     QUALIFICATION_TAXONOMY_VERSION,
     qualify_case_bytes,
     qualify_case_file,
+)
+from .reference_features import (
+    ReferenceFeatureAssuranceError,
+    verify_reference_feature_projections,
 )
 from .secure_output import HistoricalOutputError, HistoricalOutputGuard
 
@@ -187,6 +198,7 @@ class ReplayRunResult:
     normalization_diagnostics_path: Path
     raw_decisions_path: Path
     deterministic_decisions_path: Path
+    reference_feature_assurance_path: Path
     comparisons_path: Path
     metrics_path: Path
     audit_path: Path
@@ -582,6 +594,7 @@ class ReplayHarness:
         diagnostics_path = output_dir / "normalization_diagnostics.json"
         raw_decisions_path = output_dir / "engine_decisions.jsonl"
         deterministic_path = output_dir / "replay_decisions.jsonl"
+        reference_features_path = output_dir / "reference_feature_assurance.jsonl"
         comparisons_path = output_dir / "adjudication_comparison.jsonl"
         metrics_path = output_dir / "replay_metrics.json"
         audit_path = output_dir / "replay_audit.jsonl"
@@ -592,6 +605,11 @@ class ReplayHarness:
         write_jsonl(normalized_path, normalized_cases)
         write_json(diagnostics_path, normalization_diagnostics)
         self._assert_historical_output_identity(output_dir, output_identity)
+        normalized_artifact_sha256 = self._verify_bound_jsonl_artifact(
+            normalized_path,
+            expected_rows=normalized_cases,
+            label="normalized cases",
+        )
 
         execution_mode = ExecutionMode[self.config.execution_mode]
         self._verify_snapshot_integrity(input_snapshots)
@@ -609,6 +627,12 @@ class ReplayHarness:
         self._assert_historical_output_identity(output_dir, output_identity)
         self._verify_snapshot_integrity(input_snapshots)
         self._revalidate_gate_b_snapshot(input_snapshots, expected=gate_b)
+        self._verify_bound_jsonl_artifact(
+            normalized_path,
+            expected_rows=normalized_cases,
+            label="normalized cases",
+            expected_sha256=normalized_artifact_sha256,
+        )
         if not raw_decisions_path.exists():
             raise ReplaySafetyViolation(
                 "The decision engine did not produce its declared output."
@@ -635,6 +659,27 @@ class ReplayHarness:
                     expected_sha256=input_snapshots.sha256["policy"],
                 )
             ),
+        )
+        try:
+            reference_feature_records = verify_reference_feature_projections(
+                normalized_cases,
+                decisions,
+            )
+        except ReferenceFeatureAssuranceError:
+            raise ReplaySafetyViolation(
+                "Reference feature assurance rejected the replay decisions."
+            ) from None
+        self._validate_reference_feature_records(
+            reference_feature_records,
+            expected_case_ids=expected_case_ids,
+        )
+        self._assert_historical_output_identity(output_dir, output_identity)
+        write_jsonl(reference_features_path, reference_feature_records)
+        self._assert_historical_output_identity(output_dir, output_identity)
+        reference_artifact_sha256 = self._verify_bound_jsonl_artifact(
+            reference_features_path,
+            expected_rows=reference_feature_records,
+            label="reference feature assurance",
         )
         if qualification_enabled:
             # The engine never receives qualification artifact paths. Emit the
@@ -696,9 +741,20 @@ class ReplayHarness:
                 if qualification_enabled
                 else None
             ),
+            reference_feature_records=reference_feature_records,
         )
         if gate_b_summary is not None:
             metrics["gate_b_preflight"] = deepcopy(gate_b_summary)
+        reference_assurance = metrics.get("reference_feature_assurance", {})
+        if (
+            reference_assurance.get("cases_checked") != len(normalized_cases)
+            or reference_assurance.get("matched_cases") != len(normalized_cases)
+            or reference_assurance.get("mismatched_cases") != 0
+            or reference_assurance.get("complete") is not True
+        ):
+            raise ReplaySafetyViolation(
+                "Replay metrics do not preserve complete reference feature assurance."
+            )
         assurance = metrics["read_only_assurance"]
         if any(
             assurance[name] != 0
@@ -724,6 +780,18 @@ class ReplayHarness:
                 expected_accounting=case_batch.qualification_records,
                 expected_rejections=case_batch.rejection_records,
             )
+        self._verify_bound_jsonl_artifact(
+            normalized_path,
+            expected_rows=normalized_cases,
+            label="normalized cases",
+            expected_sha256=normalized_artifact_sha256,
+        )
+        self._verify_bound_jsonl_artifact(
+            reference_features_path,
+            expected_rows=reference_feature_records,
+            label="reference feature assurance",
+            expected_sha256=reference_artifact_sha256,
+        )
 
         artifact_manifest = self._build_run_manifest(
             manifest=manifest,
@@ -732,12 +800,14 @@ class ReplayHarness:
             normalized_path=normalized_path,
             diagnostics_path=diagnostics_path,
             deterministic_path=deterministic_path,
+            reference_features_path=reference_features_path,
             comparisons_path=comparisons_path,
             metrics_path=metrics_path,
             raw_decisions_path=raw_decisions_path,
             audit_path=audit_path,
             normalized_count=len(normalized_cases),
             decision_count=len(deterministic_decisions),
+            reference_feature_count=len(reference_feature_records),
             comparison_count=len(comparisons),
             audit_assurance=audit_assurance,
             input_snapshots=input_snapshots,
@@ -746,10 +816,38 @@ class ReplayHarness:
             qualification_count=len(case_batch.qualification_records),
             rejection_count=len(case_batch.rejection_records),
             gate_b_summary=gate_b_summary,
+            expected_artifact_sha256={
+                normalized_path: normalized_artifact_sha256,
+                reference_features_path: reference_artifact_sha256,
+            },
+        )
+        self._verify_bound_jsonl_artifact(
+            normalized_path,
+            expected_rows=normalized_cases,
+            label="normalized cases",
+            expected_sha256=normalized_artifact_sha256,
+        )
+        self._verify_bound_jsonl_artifact(
+            reference_features_path,
+            expected_rows=reference_feature_records,
+            label="reference feature assurance",
+            expected_sha256=reference_artifact_sha256,
         )
         self._assert_historical_output_identity(output_dir, output_identity)
         write_json(run_manifest_path, artifact_manifest)
         self._assert_historical_output_identity(output_dir, output_identity)
+        self._verify_bound_jsonl_artifact(
+            normalized_path,
+            expected_rows=normalized_cases,
+            label="normalized cases",
+            expected_sha256=normalized_artifact_sha256,
+        )
+        self._verify_bound_jsonl_artifact(
+            reference_features_path,
+            expected_rows=reference_feature_records,
+            label="reference feature assurance",
+            expected_sha256=reference_artifact_sha256,
+        )
         return ReplayRunResult(
             dataset_id=manifest.dataset_id,
             data_origin=manifest.data_origin,
@@ -760,6 +858,7 @@ class ReplayHarness:
             normalization_diagnostics_path=diagnostics_path,
             raw_decisions_path=raw_decisions_path,
             deterministic_decisions_path=deterministic_path,
+            reference_feature_assurance_path=reference_features_path,
             comparisons_path=comparisons_path,
             metrics_path=metrics_path,
             audit_path=audit_path,
@@ -892,6 +991,9 @@ class ReplayHarness:
             diagnostics_path = guard.display_path_for("normalization_diagnostics.json")
             raw_decisions_path = guard.display_path_for("engine_decisions.jsonl")
             deterministic_path = guard.display_path_for("replay_decisions.jsonl")
+            reference_features_path = guard.display_path_for(
+                "reference_feature_assurance.jsonl"
+            )
             comparisons_path = guard.display_path_for("adjudication_comparison.jsonl")
             metrics_path = guard.display_path_for("replay_metrics.json")
             audit_path = guard.display_path_for("replay_audit.jsonl")
@@ -902,6 +1004,12 @@ class ReplayHarness:
             rejections_path = guard.display_path_for("rejections.jsonl")
 
             guard.write_jsonl("normalized_cases.jsonl", normalized_cases)
+            normalized_artifact_sha256 = self._verify_bound_jsonl_artifact(
+                normalized_path,
+                expected_rows=normalized_cases,
+                label="normalized cases",
+                output_guard=guard,
+            )
             guard.write_json(
                 "normalization_diagnostics.json", normalization_diagnostics
             )
@@ -930,6 +1038,13 @@ class ReplayHarness:
                     "Historical decision processing failed."
                 ) from None
             validate_gate_b_current(gate_b)
+            self._verify_bound_jsonl_artifact(
+                normalized_path,
+                expected_rows=normalized_cases,
+                label="normalized cases",
+                expected_sha256=normalized_artifact_sha256,
+                output_guard=guard,
+            )
             guard.write_jsonl("engine_decisions.jsonl", decisions)
             guard.write_jsonl("replay_audit.jsonl", audit_rows)
             decisions = guard.read_jsonl("engine_decisions.jsonl")
@@ -951,6 +1066,29 @@ class ReplayHarness:
                 autonomous_actions=self._autonomous_actions_from_policy_bytes(
                     bytes(gate_b.policy_bytes)
                 ),
+            )
+            try:
+                reference_feature_records = verify_reference_feature_projections(
+                    normalized_cases,
+                    decisions,
+                )
+            except ReferenceFeatureAssuranceError:
+                raise ReplaySafetyViolation(
+                    "Reference feature assurance rejected the replay decisions."
+                ) from None
+            self._validate_reference_feature_records(
+                reference_feature_records,
+                expected_case_ids=expected_case_ids,
+            )
+            guard.write_jsonl(
+                "reference_feature_assurance.jsonl",
+                reference_feature_records,
+            )
+            reference_artifact_sha256 = self._verify_bound_jsonl_artifact(
+                reference_features_path,
+                expected_rows=reference_feature_records,
+                label="reference feature assurance",
+                output_guard=guard,
             )
 
             guard.write_jsonl(
@@ -1007,8 +1145,19 @@ class ReplayHarness:
                 adjudications=adjudications,
                 audit_assurance=audit_assurance,
                 qualification_records=list(case_batch.qualification_records),
+                reference_feature_records=reference_feature_records,
             )
             metrics["gate_b_preflight"] = deepcopy(gate_b_summary)
+            reference_assurance = metrics.get("reference_feature_assurance", {})
+            if (
+                reference_assurance.get("cases_checked") != len(normalized_cases)
+                or reference_assurance.get("matched_cases") != len(normalized_cases)
+                or reference_assurance.get("mismatched_cases") != 0
+                or reference_assurance.get("complete") is not True
+            ):
+                raise ReplaySafetyViolation(
+                    "Replay metrics do not preserve complete reference feature assurance."
+                )
             assurance = metrics["read_only_assurance"]
             if any(
                 assurance[name] != 0
@@ -1037,6 +1186,20 @@ class ReplayHarness:
                 expected_accounting=case_batch.qualification_records,
                 expected_rejections=case_batch.rejection_records,
             )
+            self._verify_bound_jsonl_artifact(
+                normalized_path,
+                expected_rows=normalized_cases,
+                label="normalized cases",
+                expected_sha256=normalized_artifact_sha256,
+                output_guard=guard,
+            )
+            self._verify_bound_jsonl_artifact(
+                reference_features_path,
+                expected_rows=reference_feature_records,
+                label="reference feature assurance",
+                expected_sha256=reference_artifact_sha256,
+                output_guard=guard,
+            )
             validate_gate_b_current(gate_b)
 
             artifact_manifest = self._build_run_manifest(
@@ -1046,12 +1209,14 @@ class ReplayHarness:
                 normalized_path=normalized_path,
                 diagnostics_path=diagnostics_path,
                 deterministic_path=deterministic_path,
+                reference_features_path=reference_features_path,
                 comparisons_path=comparisons_path,
                 metrics_path=metrics_path,
                 raw_decisions_path=raw_decisions_path,
                 audit_path=audit_path,
                 normalized_count=len(normalized_cases),
                 decision_count=len(deterministic_decisions),
+                reference_feature_count=len(reference_feature_records),
                 comparison_count=len(comparisons),
                 audit_assurance=audit_assurance,
                 input_snapshots=snapshots,
@@ -1061,9 +1226,41 @@ class ReplayHarness:
                 rejection_count=len(case_batch.rejection_records),
                 gate_b_summary=gate_b_summary,
                 output_guard=guard,
+                expected_artifact_sha256={
+                    normalized_path: normalized_artifact_sha256,
+                    reference_features_path: reference_artifact_sha256,
+                },
+            )
+            self._verify_bound_jsonl_artifact(
+                normalized_path,
+                expected_rows=normalized_cases,
+                label="normalized cases",
+                expected_sha256=normalized_artifact_sha256,
+                output_guard=guard,
+            )
+            self._verify_bound_jsonl_artifact(
+                reference_features_path,
+                expected_rows=reference_feature_records,
+                label="reference feature assurance",
+                expected_sha256=reference_artifact_sha256,
+                output_guard=guard,
             )
             validate_gate_b_current(gate_b)
             guard.write_json("replay_run_manifest.json", artifact_manifest)
+            self._verify_bound_jsonl_artifact(
+                normalized_path,
+                expected_rows=normalized_cases,
+                label="normalized cases",
+                expected_sha256=normalized_artifact_sha256,
+                output_guard=guard,
+            )
+            self._verify_bound_jsonl_artifact(
+                reference_features_path,
+                expected_rows=reference_feature_records,
+                label="reference feature assurance",
+                expected_sha256=reference_artifact_sha256,
+                output_guard=guard,
+            )
             guard.verify_bindings()
             return ReplayRunResult(
                 dataset_id=manifest.dataset_id,
@@ -1075,6 +1272,7 @@ class ReplayHarness:
                 normalization_diagnostics_path=diagnostics_path,
                 raw_decisions_path=raw_decisions_path,
                 deterministic_decisions_path=deterministic_path,
+                reference_feature_assurance_path=reference_features_path,
                 comparisons_path=comparisons_path,
                 metrics_path=metrics_path,
                 audit_path=audit_path,
@@ -1311,6 +1509,107 @@ class ReplayHarness:
         ):
             raise ReplaySafetyViolation(
                 "Historical qualification artifacts do not match verified accounting."
+            )
+
+    def _verify_bound_jsonl_artifact(
+        self,
+        path: Path,
+        *,
+        expected_rows: list[dict[str, Any]],
+        label: str,
+        expected_sha256: str | None = None,
+        output_guard: HistoricalOutputGuard | None = None,
+    ) -> str:
+        """Strictly bind a persisted JSONL artifact to its in-memory rows.
+
+        The expected digest is derived from the same finite, sorted canonical
+        serialization used by both ordinary and descriptor-bound writers. The
+        artifact is parsed with duplicate-member and non-finite-number rejection,
+        compared structurally, and digest-checked at every finalization boundary.
+        """
+
+        try:
+            expected_bytes = b"".join(
+                (canonical_json(row) + "\n").encode("utf-8") for row in expected_rows
+            )
+        except (TypeError, ValueError):
+            raise ReplaySafetyViolation(
+                f"{label.capitalize()} contains a noncanonical in-memory value."
+            ) from None
+        canonical_sha256 = hashlib.sha256(expected_bytes).hexdigest()
+        if expected_sha256 is not None and expected_sha256 != canonical_sha256:
+            raise ReplaySafetyViolation(
+                f"{label.capitalize()} expected digest is inconsistent."
+            )
+
+        try:
+            if output_guard is None:
+                persisted_rows = load_jsonl_objects(path, label=label)
+                actual_sha256 = sha256_file(path)
+            else:
+                relative = path.relative_to(output_guard.display_path).as_posix()
+                persisted_rows = output_guard.read_jsonl(relative)
+                actual_sha256 = output_guard.sha256(relative)
+        except (ContractValidationError, HistoricalOutputError, OSError, ValueError):
+            raise ReplaySafetyViolation(
+                f"{label.capitalize()} artifact is invalid or unavailable."
+            ) from None
+        if persisted_rows != expected_rows or actual_sha256 != canonical_sha256:
+            raise ReplaySafetyViolation(
+                f"{label.capitalize()} artifact changed after validation."
+            )
+        return canonical_sha256
+
+    def _validate_reference_feature_records(
+        self,
+        records: list[dict[str, Any]],
+        *,
+        expected_case_ids: set[str],
+    ) -> None:
+        """Fail closed on incomplete or payload-bearing reference output."""
+
+        schema_path = (
+            self.repository_root
+            / "contracts"
+            / "v0.2.0"
+            / "reference-feature-assurance.schema.json"
+        )
+        try:
+            schema = json.loads(schema_path.read_text(encoding="utf-8"))
+            Draft202012Validator.check_schema(schema)
+            validator = Draft202012Validator(schema)
+        except Exception:
+            raise ReplaySafetyViolation(
+                "Reference feature assurance schema is unavailable or invalid."
+            ) from None
+
+        if len(records) != len(expected_case_ids):
+            raise ReplaySafetyViolation(
+                "Reference feature assurance must cover every normalized case."
+            )
+        observed_case_ids: set[str] = set()
+        for record in records:
+            if not isinstance(record, dict) or list(validator.iter_errors(record)):
+                raise ReplaySafetyViolation(
+                    "Reference feature assurance contains a noncanonical record."
+                )
+            case_id = record.get("case_id")
+            if (
+                not isinstance(case_id, str)
+                or case_id not in expected_case_ids
+                or case_id in observed_case_ids
+            ):
+                raise ReplaySafetyViolation(
+                    "Reference feature assurance has an unknown or duplicate case binding."
+                )
+            if record.get("matched") is not True:
+                raise ReplaySafetyViolation(
+                    "Reference feature assurance contains a projection mismatch."
+                )
+            observed_case_ids.add(case_id)
+        if observed_case_ids != expected_case_ids:
+            raise ReplaySafetyViolation(
+                "Reference feature assurance case bindings are incomplete."
             )
 
     def _validate_qualification_batch(
@@ -2452,12 +2751,14 @@ class ReplayHarness:
         normalized_path: Path,
         diagnostics_path: Path,
         deterministic_path: Path,
+        reference_features_path: Path,
         comparisons_path: Path,
         metrics_path: Path,
         raw_decisions_path: Path,
         audit_path: Path,
         normalized_count: int,
         decision_count: int,
+        reference_feature_count: int,
         comparison_count: int,
         audit_assurance: dict[str, Any],
         input_snapshots: RunInputSnapshots,
@@ -2467,13 +2768,22 @@ class ReplayHarness:
         rejection_count: int,
         gate_b_summary: dict[str, Any] | None,
         output_guard: HistoricalOutputGuard | None = None,
+        expected_artifact_sha256: dict[Path, str] | None = None,
     ) -> dict[str, Any]:
         output_dir = paths["output_dir"]
+        expected_artifact_sha256 = expected_artifact_sha256 or {}
 
         def artifact_digest(path: Path) -> str:
             if output_guard is None:
-                return sha256_file(path)
-            return output_guard.sha256(path.relative_to(output_dir).as_posix())
+                actual = sha256_file(path)
+            else:
+                actual = output_guard.sha256(path.relative_to(output_dir).as_posix())
+            expected = expected_artifact_sha256.get(path)
+            if expected is not None and actual != expected:
+                raise ReplaySafetyViolation(
+                    "A bound replay artifact changed during manifest construction."
+                )
+            return actual
 
         def deterministic_artifact(
             path: Path, record_count: int | None
@@ -2532,6 +2842,9 @@ class ReplayHarness:
                 "replay_decisions": deterministic_artifact(
                     deterministic_path, decision_count
                 ),
+                "reference_feature_assurance": deterministic_artifact(
+                    reference_features_path, reference_feature_count
+                ),
                 "adjudication_comparison": deterministic_artifact(
                     comparisons_path, comparison_count
                 ),
@@ -2553,6 +2866,8 @@ class ReplayHarness:
                 "authorization_tokens_issued": 0,
                 "broker_invocations": 0,
                 "operational_effects": 0,
+                "reference_feature_cases_checked": reference_feature_count,
+                "reference_feature_cases_matched": reference_feature_count,
                 **audit_assurance,
             },
         }

@@ -4,7 +4,7 @@
 
 Validation must establish whether the built-in Phase 2 path can reject untrusted or ungoverned replay inputs, produce traceable counterfactual decisions from accepted records, account for every input, and maintain zero authorization-token issuance, zero broker invocation, and zero operational effects under the exact tested configuration.
 
-The current evidence base contains only synthetic fixtures with `historical_case_count=0`: the three-case starter, the seven-record Phase 2.1 qualification campaign, and the ephemeral test-only inputs used by the fixed Phase 2.3 Gate B campaign. Historical efficacy, historical calibration, historical acceptance rates, and analyst-agreement claims are therefore unavailable.
+The current evidence base contains only synthetic fixtures with `historical_case_count=0`: the three-case starter, the seven-record Phase 2.1 qualification campaign, and the ephemeral test-only inputs used by the fixed Phase 2.3 Gate B campaign. Phase 2.4 adds CE-1 implementation tests for typed/source-authorized features and reference projection. Its `P2-CE-004` campaign is frozen as a plan/scaffold but has not been executed and supplies no result evidence. Historical efficacy, historical calibration, historical acceptance rates, and analyst-agreement claims are therefore unavailable.
 
 ## Evidence hierarchy
 
@@ -50,6 +50,11 @@ The contract-validation plan covers the following cases. Implemented versus rema
 - missing historical approval or de-identification attestation;
 - embedded labels, expected dispositions, ground truth, or adjudication;
 - canonical break-glass and asset-criticality disagreement;
+- missing or mismatched canonical asset ID, privilege level, break-glass state, or asset criticality in any asset-inventory event;
+- wrong-type, non-finite, fractional, negative, or over-bound modeled values and modeled keys asserted by unauthorized sources;
+- unrecognized opaque attributes that must not change the 20-feature values or traces;
+- Boolean/network-only `source_conflict` handling as an explicit evidence-quality input outside reference feature recomputation;
+- non-finite JSON numbers at any nesting depth, including otherwise opaque attributes;
 - valid out-of-order events that normalize with a retained warning;
 - absolute, traversal, symlink-escape, and otherwise out-of-scope paths;
 - case or adjudication digest and record-count mismatch.
@@ -103,6 +108,28 @@ The published campaign observed 32/32 matches with no exclusions: two validate-o
 
 This is a CE-2 `CONTROLLED_BEHAVIOR` result under `SELF` automated project-controlled review. It uses no real approval or actual historical data and authorizes no live feed or action. The two executions are repetitions, not independent or statistically representative trials; Commit A is a public project-controlled freeze, not external preregistration; the mutation set is not exhaustive; the open/read hooks do not establish OS-level nonaccess or non-egress; boundary counters do not provide target-side proof; and 32/32 does not estimate an operational failure probability, demonstrate efficacy, or establish alignment/misalignment behavior.
 
+### Phase 2.4 feature-assurance tests and planned campaign
+
+`tests/test_feature_contract.py`, `tests/test_reference_features.py`, and the replay-harness tests establish the following CE-1 implementation-conformance boundary in the current checkout:
+
+- every modeled Boolean requires an exact JSON Boolean and a code-authorized source role;
+- `failed_logins` requires a finite integral JSON number in `0..1,000,000`, accepting integral representations such as `10.0` while rejecting Boolean, string, fractional, non-finite, negative, and over-bound values;
+- every asset-inventory event contains and exactly matches canonical `asset_id`, `privilege_level`, `break_glass`, and `asset_criticality`;
+- bounded opaque attributes do not alter the 20-feature values or traces;
+- `source_conflict` is accepted only as a network Boolean and remains explicitly outside the projector's evidence-quality scope; `QUARANTINE_RECORD` assigns `SEMANTICS / UNAUTHORIZED_DECISION_SIGNAL` to a wrong-source assertion and `SEMANTICS / INVALID_BOOLEAN` to a non-Boolean network assertion;
+- valid event permutations normalize to the same projection and canonical trace;
+- the separately implemented in-process projector reconstructs all 20 feature values and traces without importing the production feature/contract/engine/model/policy/verifier/harness/metrics calculation path;
+- exact/unique case sets and normalized-case bindings are required; and
+- coherent feature-value, feature-trace, source-context, decision-hash, and fully rechained audit mutations that pass the legacy read-only/audit validators are rejected before evaluation completion.
+
+The reference check runs only after read-only decision validation, deterministic decision serialization, and complete eight-stage audit validation. On mismatch, no `reference_feature_assurance.jsonl`, qualification/rejection publication, adjudication comparison, metrics, or completed run manifest is emitted. Earlier raw/normalized/deterministic decisions and audit may remain and must be classified as incomplete evidence. On success, a closed metadata-only row is emitted per case and the run manifest hash/count-binds it and its checked/matched counts.
+
+Each assurance row binds the normalized case with SHA-256 over the UTF-8 bytes of `json.dumps(normalized_case, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False)` and no trailing newline. Accepted cases have already passed the all-number finiteness gate.
+
+The frozen `P2-CE-004` plan is **not current evidence**. It specifies two deterministic same-process 16-attempt repetitions, each containing eight clean matches, four qualification quarantines (`INVALID_BOOLEAN`, `INVALID_TYPE`, and two `UNAUTHORIZED_MODELED_SIGNAL` cases), and four `REFERENCE_FEATURE_PROJECTION_MISMATCH` blocks covering feature-value, feature-trace, input-event-order, and cross-case named-feature-value rehashes. The failure policy is `ABORT_WITHOUT_EVIDENCE_NO_RETRY`; retries and exclusions are zero, and any final mismatch yields no result/evidence package. There are no observed outcomes, result ledgers, repeatability result, claim-evidence record, or CE-2 conclusion. The intended repetitions are neither independent nor fresh statistical trials.
+
+The committed `P2-CE-001` and `P2-CE-002` bundles predate alpha.5 and omit the new reference-assurance artifact. Their original narrow claims remain version-bound and validated as recorded; they are not Phase 2.4 evidence. Any new alpha.5 replay must emit and bind `reference_feature_assurance.jsonl` before the replay is complete.
+
 ### Replay-harness tests
 
 `tests/test_replay_harness.py` is the required starter evidence for:
@@ -147,6 +174,9 @@ The Phase 2 starter is acceptable for public release only when the implemented g
 | Historical label boundary | Adjudication bytes may be frozen within the harness, but are neither passed nor made path-discoverable to the built-in runner and are decoded only after decisions close | Required for Phase 2.2; same-process isolation limitation retained |
 | Traceability | Every accepted decision's cited and feature-linked event IDs resolve to accepted input events | Required |
 | Audit | Exactly one canonical, ordered eight-stage trace exists per accepted case; decision/policy bindings and the presented hash chain verify | Required CE-1 implementation conformance, with independent-recomputation, time, and custody limitations |
+| Typed structured-input boundary | Exact type/range and source authority for modeled attributes; all case numbers finite; network-only Boolean `source_conflict`; exact four-field inventory binding; unrecognized opaque attributes remain feature-inert | Required CE-1 implementation conformance for Phase 2.4 |
+| Reference feature projection | One separate 20-feature value/trace match per accepted case; mismatch stops before evaluator, metrics, and completed manifest; matched artifact is closed and bound | Required CE-1 implementation conformance for Phase 2.4; not full source-to-decision validation |
+| Feature-assurance controlled behavior | Fixed, commit-bound 16-attempt x two-repetition campaign with raw artifacts, repeatability, and claim record | `P2-CE-004` planned / `NOT_EVALUATED`; no observed denominator or CE-2 result |
 | Gate B controlled behavior | Fixed, commit-bound synthetic positive/negative campaign reports raw denominators, boundary observations, repeatability, and nonclaims | `P2-CE-003`: 32/32 project-controlled expected-outcome matches across two repetitions; CE-2 only |
 | Compatibility | All Phase 1 tests continue to pass | Required |
 | Claim discipline | A schema-valid evidence record states the exact supported wording, data origin, validity status, limitations, and prohibited inferences | Required |
@@ -169,6 +199,7 @@ The implemented `replay_metrics.json` reports:
 - operational-effect count;
 - action-result count and the two label-separation assertions recorded by the harness;
 - enforced audit validation, presented-chain validity, total audit records, execution-suppression, authorization-evaluation, and decision-finalization record counts, and `ACTION_EXECUTED` record count.
+- reference-feature cases checked, matched, mismatched, and completeness status, with a narrow statement that the boundary covers only serialized feature values and traces.
 
 The implemented `normalization_diagnostics.json` reports case and event counts, source-mapping warning count, temporal-reordering warning count, total warning count, and case-specific warning records. The run manifest records digests for every snapshotted input and deterministic artifact and binds the current run's volatile raw decisions and audit log with separate digests and counts. Those volatile digests vary across runs because their records contain timestamps, UUIDs, latency, and chain values. Audit-chain verification is separate evidence and retains the custody limitation below.
 
@@ -189,7 +220,7 @@ Future results must be stratified by synthetic versus historical origin and must
 
 ## Claim and adversarial-evaluation rules
 
-Passing tests support only the claim those tests were designed to evaluate. Every release result must use the claim class, evidence-record fields, statistical rules, and prohibited wording in [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md). The machine-readable contract is `contracts/v0.2.0/evaluation-evidence.schema.json`. `P2-CE-001` covers the three-case synthetic starter, `P2-CE-002` covers only the fixed seven-record qualification campaign and its accepted subset's read-only invariants, and `P2-CE-003` covers only the fixed two-repetition synthetic Gate B registry and declared instrumentation. All three are CE-2 controlled-behavior records; none is historical, operational, alignment, or production evidence. The separate eight-stage audit hardening remains a CE-1 implementation-conformance claim because it cross-checks presented decisions and policy actions but does not independently recompute the full decision path or provide external time/custody evidence.
+Passing tests support only the claim those tests were designed to evaluate. Every release result must use the claim class, evidence-record fields, statistical rules, and prohibited wording in [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md). The machine-readable contract is `contracts/v0.2.0/evaluation-evidence.schema.json`. `P2-CE-001` covers the three-case synthetic starter, `P2-CE-002` covers only the fixed seven-record qualification campaign and its accepted subset's read-only invariants, and `P2-CE-003` covers only the fixed two-repetition synthetic Gate B registry and declared instrumentation. All three are CE-2 controlled-behavior records; none is historical, operational, alignment, or production evidence. The eight-stage audit and Phase 2.4 feature-assurance implementation are CE-1: the new projector separately recomputes feature values/traces, but not the complete source-to-decision path, and it provides no external time/custody or independence evidence. `P2-CE-004` remains CE-0 / not evaluated until a commit-bound campaign is executed and its result record validates.
 
 The adversarial matrix in that standard derives future test families from Anthropic and OpenAI research: goal conflict, evaluation awareness, instruction/evidence poisoning, reward and test hacking, code sabotage, oversight undermining, sandbagging, hidden-objective audit, long-horizon state manipulation, human-decision sabotage, monitor effectiveness, and independent operational-effect proof. The current deterministic POC implements only a subset. It contains no autonomous generative-language-model agent, so it makes no claim about alignment, scheming, sabotage resistance, or monitor recall.
 
@@ -201,7 +232,7 @@ For any later repeated behavioral evaluation, report raw numerators and denomina
 
 Required evidence:
 
-- all Phase 1, Phase 2 starter, Phase 2.1 qualification, Phase 2.2 Gate B, and Phase 2.3 audit/campaign tests pass;
+- all Phase 1, Phase 2 starter, Phase 2.1 qualification, Phase 2.2 Gate B, Phase 2.3 audit/campaign, and Phase 2.4 feature-assurance tests pass;
 - no credential or production endpoint is present;
 - fixture provenance and synthetic status are documented;
 - public files contain no historical or direct-identifier data;
@@ -246,4 +277,4 @@ Phase 2 may recommend whether the privileged-identity use case warrants further 
 
 ## Exit conditions and nonclaims
 
-The current increment exits validation when all implemented requirements have passing evidence, planned requirements are not mislabeled as complete, every unavailable metric is explicit, and each public claim is no broader than its evidence record. Success establishes narrow controlled synthetic results for the built-in test-harness path, not historical efficacy, historical data quality, safe future autonomy, privacy compliance, production readiness, live-shadow readiness, agentic alignment/misalignment behavior, monitor effectiveness, OS-level nonaccess/non-egress, target-side proof, exhaustive coverage, an operational failure rate, or independent audit custody.
+The current increment exits implementation validation when all implemented requirements have passing evidence, planned requirements are not mislabeled as complete, every unavailable metric is explicit, and each public claim is no broader than its evidence record. The 143 passing local tests support a narrow CE-1 Phase 2.4 implementation-conformance statement; they are not a `P2-CE-004` campaign result or GitHub CI conclusion. Success establishes no historical efficacy, historical data quality, source truth, full decision correctness, safe future autonomy, privacy compliance, production readiness, live-shadow readiness, agentic alignment/misalignment or sabotage robustness, monitor effectiveness, OS-level isolation/non-egress, target-side proof, exhaustive coverage, bounded operational failure rate, external independence, or independent audit custody.

@@ -10,7 +10,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from jsonschema import Draft202012Validator
 
@@ -27,6 +27,20 @@ from scripts.generate_gate_b_ce2_campaign import (
     check_artifacts,
     generate_artifacts,
     load_and_validate_plan,
+)
+from scripts.generate_feature_assurance_ce2_campaign import (
+    CAMPAIGN_PLAN as FEATURE_CAMPAIGN_PLAN,
+    CAMPAIGN_SCHEMA as FEATURE_CAMPAIGN_SCHEMA,
+    CAMPAIGN_SEED as FEATURE_CAMPAIGN_SEED,
+    CAMPAIGN_SOURCE_PATHS as FEATURE_CAMPAIGN_SOURCE_PATHS,
+    PROHIBITED_PUBLIC_FIELDS as FEATURE_PROHIBITED_PUBLIC_FIELDS,
+    CampaignGenerationError as FeatureCampaignGenerationError,
+    _base_case as build_seeded_feature_case,
+    _require_clean_generation_commit as require_clean_feature_commit,
+    build_campaign_artifacts as build_feature_campaign_artifacts,
+    check_artifacts as check_feature_campaign_artifacts,
+    generate_artifacts as generate_feature_campaign_artifacts,
+    load_and_validate_plan as load_and_validate_feature_plan,
 )
 
 
@@ -61,6 +75,7 @@ def _copy_qualification_run_inputs(repository_root: Path) -> None:
         "config/policy.json",
         "outputs/baseline/model.json",
         "contracts/v0.2.0/replay-qualification.schema.json",
+        "contracts/v0.2.0/reference-feature-assurance.schema.json",
         "data/phase2_qualification/manifest.json",
         "data/phase2_qualification/cases.jsonl",
         "data/phase2_qualification/adjudications.jsonl",
@@ -352,6 +367,68 @@ def _validate_gate_b_test_record(record_path: Path) -> dict:
         )
 
 
+def _build_feature_campaign_evidence(
+    temporary_root: Path,
+) -> tuple[Path, Path]:
+    output_dir = temporary_root / "evidence/phase2_feature_assurance_ce2"
+    record_path = temporary_root / "phase2-feature-assurance-ce2-record.json"
+    generate_feature_campaign_artifacts(
+        output_dir,
+        implementation_commit="1" * 40,
+        evaluated_at="2026-08-15T00:00:00Z",
+        record_path=record_path,
+    )
+    return record_path, output_dir
+
+
+def _validate_feature_campaign_test_record(record_path: Path) -> dict:
+    def committed_digest(
+        repository_root: Path,
+        *,
+        commit: str,
+        relative_path: str,
+    ) -> str:
+        del repository_root, commit
+        return _sha256(ROOT / relative_path)
+
+    with (
+        patch(
+            "scripts.validate_claim_evidence._git_blob_digest",
+            side_effect=committed_digest,
+        ),
+        patch(
+            "scripts.validate_claim_evidence._git_commit_timestamp",
+            return_value=datetime(2026, 8, 14, tzinfo=timezone.utc),
+        ),
+    ):
+        return validate_evidence_record(
+            record_path,
+            repository_root=ROOT,
+            profile_id="P2-CE-004",
+        )
+
+
+def _refresh_feature_campaign_record(
+    record_path: Path,
+    output_dir: Path,
+) -> None:
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    for role, filename in (
+        ("campaign_results_run1", "campaign_results_run1.jsonl"),
+        ("campaign_results_run2", "campaign_results_run2.jsonl"),
+        ("campaign_summary", "campaign_summary.json"),
+    ):
+        artifact = _artifact_by_role(record, role)
+        path = output_dir / filename
+        artifact["sha256"] = _sha256(path)
+        if role.startswith("campaign_results"):
+            artifact["record_count"] = sum(
+                bool(line.strip())
+                for line in path.read_text(encoding="utf-8").splitlines()
+            )
+    _write_json(record_path, record)
+
+
 class ClaimEvidenceContractTests(unittest.TestCase):
     def test_starter_record_preserves_narrow_synthetic_claim_boundary(self) -> None:
         schema = json.loads(
@@ -439,7 +516,7 @@ class ClaimEvidenceContractTests(unittest.TestCase):
 
         self.assertEqual(validated["status"], "VALID")
         self.assertEqual(validated["profile_id"], "P2-CE-002")
-        self.assertEqual(validated["artifact_count"], 17)
+        self.assertEqual(validated["artifact_count"], 18)
         self.assertEqual(validated["audit_record_count"], 24)
         self.assertEqual(
             validated["record_qualification"],
@@ -694,7 +771,7 @@ class ClaimEvidenceContractTests(unittest.TestCase):
                 repository_root=repository_root,
             )
 
-        self.assertEqual(validated["artifact_count"], 18)
+        self.assertEqual(validated["artifact_count"], 19)
 
     def test_gate_b_campaign_plan_and_core_outputs_are_closed_and_sanitized(
         self,
@@ -856,6 +933,56 @@ class ClaimEvidenceContractTests(unittest.TestCase):
             },
         )
 
+    def test_committed_gate_b_evidence_validates_historical_commit_bytes(self) -> None:
+        record_path = (
+            ROOT / "contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json"
+        )
+        profile = json.loads(
+            (ROOT / "evidence/phase2_gate_b_ce2/campaign_profile.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        validator_binding = next(
+            binding
+            for binding in profile["source_bindings"]
+            if binding["role"] == "CLAIM_VALIDATOR"
+        )
+
+        # The working checkout contains Phase 2.4 changes.  The historical
+        # P2-CE-003 record must remain verifiable without claiming those newer
+        # bytes were part of its implementation.
+        self.assertNotEqual(
+            validator_binding["sha256"],
+            _sha256(ROOT / validator_binding["path"]),
+        )
+        validated = validate_evidence_record(
+            record_path,
+            repository_root=ROOT,
+            profile_id="P2-CE-003",
+        )
+        self.assertEqual(validated["status"], "VALID")
+        self.assertEqual(validated["profile_id"], "P2-CE-003")
+
+    def test_committed_gate_b_evidence_rejects_wrong_historical_blob(self) -> None:
+        record_path = (
+            ROOT / "contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json"
+        )
+        with (
+            patch(
+                "scripts.validate_claim_evidence._git_blob_digest",
+                return_value="0" * 64,
+            ),
+            self.assertRaisesRegex(
+                EvidenceValidationError,
+                "source bytes do not match the implementation commit",
+            ),
+        ):
+            validate_evidence_record(
+                record_path,
+                repository_root=ROOT,
+                profile_id="P2-CE-003",
+            )
+
     def test_gate_b_campaign_check_preserves_recorded_runtime_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory(
             prefix=".gate-b-ce2-runtime-check-",
@@ -988,6 +1115,338 @@ class ClaimEvidenceContractTests(unittest.TestCase):
 
                 with self.assertRaises(EvidenceValidationError):
                     _validate_gate_b_test_record(record_path)
+
+    def test_feature_campaign_plan_and_sanitized_results_are_exact(self) -> None:
+        plan = load_and_validate_feature_plan()
+        self.assertEqual(plan["campaign_seed"], FEATURE_CAMPAIGN_SEED)
+        self.assertEqual(
+            plan["budget"],
+            {
+                "attempts_per_run": 16,
+                "engine_call_budget": 0,
+                "evaluation_runs": 2,
+                "retries": 0,
+                "total_attempt_executions": 32,
+            },
+        )
+        self.assertEqual(
+            plan["design"]["failure_policy"],
+            "ABORT_WITHOUT_EVIDENCE_NO_RETRY",
+        )
+        self.assertEqual(plan["design"]["actual_historical_records"], 0)
+        self.assertFalse(plan["design"]["stored_approval_package"])
+
+        profile_bytes, run1_bytes, run2_bytes, summary_bytes = (
+            build_feature_campaign_artifacts(
+                "1" * 40,
+                "2026-08-15T00:00:00Z",
+            )
+        )
+        self.assertEqual(run1_bytes, run2_bytes)
+        public = profile_bytes + run1_bytes + run2_bytes + summary_bytes
+        for token in FEATURE_PROHIBITED_PUBLIC_FIELDS:
+            self.assertNotIn(token, public)
+
+        schema = json.loads(FEATURE_CAMPAIGN_SCHEMA.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+        profile = json.loads(profile_bytes)
+        rows = [json.loads(line) for line in run1_bytes.splitlines()]
+        summary = json.loads(summary_bytes)
+        validator.validate(profile)
+        validator.validate(summary)
+        for row in rows:
+            validator.validate(row)
+        self.assertEqual(
+            len(profile["source_bindings"]),
+            len(FEATURE_CAMPAIGN_SOURCE_PATHS),
+        )
+        self.assertEqual(len(rows), 16)
+        self.assertEqual(
+            [row["observed_outcome"] for row in rows].count(
+                "ACCEPTED_PROJECTION_MATCH"
+            ),
+            8,
+        )
+        self.assertEqual(
+            [row["observed_outcome"] for row in rows].count("QUARANTINED"),
+            4,
+        )
+        self.assertEqual(
+            [row["observed_outcome"] for row in rows].count(
+                "BLOCKED_REFERENCE_PROJECTION"
+            ),
+            4,
+        )
+        self.assertTrue(all(row["matched"] for row in rows))
+        self.assertEqual(
+            summary["stage_outcomes"],
+            {
+                "accepted_projection_match": 16,
+                "blocked_reference_projection": 8,
+                "quarantined": 8,
+            },
+        )
+        for row in rows:
+            for field in (
+                "model_calls",
+                "policy_calls",
+                "verifier_calls",
+                "engine_calls",
+                "authorization_attempts",
+                "broker_invocations",
+                "target_effect_calls",
+                "operational_effects",
+                "decision_artifact_write_calls",
+                "audit_artifact_write_calls",
+                "run_manifest_write_calls",
+            ):
+                self.assertEqual(row[field], 0, (row["attempt_id"], field))
+
+    def test_feature_campaign_seed_changes_private_synthetic_identifiers(self) -> None:
+        original = build_seeded_feature_case("P2-CE-004-P01-CLEAN", "P01")
+        with patch(
+            "scripts.generate_feature_assurance_ce2_campaign.CAMPAIGN_SEED",
+            FEATURE_CAMPAIGN_SEED + 1,
+        ):
+            changed = build_seeded_feature_case("P2-CE-004-P01-CLEAN", "P01")
+        self.assertNotEqual(original["case_id"], changed["case_id"])
+        self.assertNotEqual(
+            json.dumps(original, sort_keys=True),
+            json.dumps(changed, sort_keys=True),
+        )
+
+    def test_feature_campaign_plan_loader_rejects_ambiguous_json(self) -> None:
+        original = FEATURE_CAMPAIGN_PLAN.read_text(encoding="utf-8")
+        mutations = (
+            original.replace(
+                '"campaign_seed": 20260815,',
+                '"campaign_seed": 20260815,\n  "campaign_seed": 20260815,',
+                1,
+            ),
+            original.replace('"campaign_seed": 20260815', '"campaign_seed": NaN', 1),
+        )
+        for index, payload in enumerate(mutations):
+            with (
+                self.subTest(index=index),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                path = Path(directory) / "plan.json"
+                path.write_text(payload, encoding="utf-8")
+                with (
+                    patch(
+                        "scripts.generate_feature_assurance_ce2_campaign.CAMPAIGN_PLAN",
+                        path,
+                    ),
+                    self.assertRaises(FeatureCampaignGenerationError),
+                ):
+                    load_and_validate_feature_plan()
+
+    def test_feature_campaign_final_generation_requires_exact_clean_freeze(
+        self,
+    ) -> None:
+        commit = "1" * 40
+        with (
+            patch(
+                "scripts.generate_feature_assurance_ce2_campaign._git_output",
+                side_effect=[commit, "?? shadow.py"],
+            ),
+            patch(
+                "scripts.generate_feature_assurance_ce2_campaign.subprocess.run",
+                return_value=Mock(returncode=1),
+            ),
+            self.assertRaisesRegex(
+                FeatureCampaignGenerationError,
+                "clean tree including untracked files",
+            ),
+        ):
+            require_clean_feature_commit(commit, "2026-08-15T01:00:00Z")
+
+        with (
+            patch(
+                "scripts.generate_feature_assurance_ce2_campaign._git_output",
+                return_value=commit,
+            ),
+            patch(
+                "scripts.generate_feature_assurance_ce2_campaign.subprocess.run",
+                return_value=Mock(returncode=0),
+            ),
+            self.assertRaisesRegex(
+                FeatureCampaignGenerationError,
+                "detached implementation commit",
+            ),
+        ):
+            require_clean_feature_commit(commit, "2026-08-15T01:00:00Z")
+
+        with (
+            patch(
+                "scripts.generate_feature_assurance_ce2_campaign._git_output",
+                side_effect=[
+                    commit,
+                    "",
+                    "2026-08-15T02:00:00+00:00",
+                ],
+            ),
+            patch(
+                "scripts.generate_feature_assurance_ce2_campaign.subprocess.run",
+                return_value=Mock(returncode=1),
+            ),
+            self.assertRaisesRegex(
+                FeatureCampaignGenerationError,
+                "cannot predate",
+            ),
+        ):
+            require_clean_feature_commit(commit, "2026-08-15T01:00:00Z")
+
+    def test_feature_campaign_profile_validates_exact_ce2_boundary(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix=".feature-ce2-test-",
+            dir=ROOT,
+        ) as directory:
+            record_path, _ = _build_feature_campaign_evidence(Path(directory))
+            validated = _validate_feature_campaign_test_record(record_path)
+        self.assertEqual(validated["status"], "VALID")
+        self.assertEqual(validated["profile_id"], "P2-CE-004")
+        self.assertEqual(validated["artifact_count"], 6)
+        self.assertEqual(validated["historical_case_count"], 0)
+        self.assertEqual(
+            validated["campaign_outcomes"],
+            {
+                "unique_scenarios": 16,
+                "evaluation_runs": 2,
+                "denominator": 32,
+                "clean_projection_matches": 16,
+                "qualification_quarantines": 8,
+                "reference_projection_blocks": 8,
+                "byte_identical_result_ledgers": True,
+            },
+        )
+
+    def test_feature_campaign_check_preserves_recorded_runtime(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix=".feature-ce2-runtime-",
+            dir=ROOT,
+        ) as directory:
+            record_path, output_dir = _build_feature_campaign_evidence(Path(directory))
+            with patch(
+                "scripts.generate_feature_assurance_ce2_campaign._runtime_fingerprint",
+                return_value={
+                    "python_implementation": "DifferentPython",
+                    "python_version": "0.0.0",
+                    "jsonschema_version": "0.0.0",
+                    "numpy_version": "0.0.0",
+                    "platform_system": "DifferentOS",
+                    "platform_release": "different",
+                    "platform_machine": "different",
+                },
+            ):
+                check_feature_campaign_artifacts(
+                    output_dir,
+                    implementation_commit="1" * 40,
+                    evaluated_at="2026-08-15T00:00:00Z",
+                    record_path=record_path,
+                )
+
+    def test_feature_campaign_rejects_coherently_rehashed_both_ledgers(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix=".feature-ce2-forgery-",
+            dir=ROOT,
+        ) as directory:
+            record_path, output_dir = _build_feature_campaign_evidence(Path(directory))
+            for filename in (
+                "campaign_results_run1.jsonl",
+                "campaign_results_run2.jsonl",
+            ):
+                path = output_dir / filename
+                rows = [json.loads(line) for line in path.read_text().splitlines()]
+                rows[0]["synthetic_input_sha256"] = "f" * 64
+                _write_jsonl(path, rows)
+            run1_path = output_dir / "campaign_results_run1.jsonl"
+            run2_path = output_dir / "campaign_results_run2.jsonl"
+            summary_path = output_dir / "campaign_summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["artifact_bindings"]["campaign_results_run1_sha256"] = _sha256(
+                run1_path
+            )
+            summary["artifact_bindings"]["campaign_results_run2_sha256"] = _sha256(
+                run2_path
+            )
+            summary["run_receipts"][0]["result_ledger_sha256"] = _sha256(run1_path)
+            summary["run_receipts"][1]["result_ledger_sha256"] = _sha256(run2_path)
+            _write_json(summary_path, summary)
+            _refresh_feature_campaign_record(record_path, output_dir)
+
+            with self.assertRaisesRegex(
+                EvidenceValidationError,
+                "fresh frozen-plan execution",
+            ):
+                _validate_feature_campaign_test_record(record_path)
+
+    def test_qualification_profile_recomputes_reference_assurance_after_rehash(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository_root = Path(directory)
+            record_path, record = _build_qualification_evidence(repository_root)
+            artifact = _artifact_by_role(record, "reference_feature_assurance")
+            path = repository_root / artifact["path"]
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+            rows[0]["expected_projection_sha256"] = "0" * 64
+            rows[0]["observed_projection_sha256"] = "0" * 64
+            _write_jsonl(path, rows)
+            _refresh_manifest_artifact_binding(
+                repository_root,
+                record,
+                "reference_feature_assurance",
+            )
+            _write_json(record_path, record)
+            with self.assertRaisesRegex(
+                EvidenceValidationError,
+                "does not match recomputation",
+            ):
+                validate_evidence_record(
+                    record_path,
+                    repository_root=repository_root,
+                )
+
+    def test_nonlegacy_replay_cannot_strip_and_rehash_reference_assurance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository_root = Path(directory)
+            record_path, record = _build_qualification_evidence(repository_root)
+            manifest_artifact = _artifact_by_role(record, "run_manifest")
+            manifest_path = repository_root / manifest_artifact["path"]
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["deterministic_artifacts"].pop("reference_feature_assurance")
+
+            metrics_artifact = _artifact_by_role(record, "replay_metrics")
+            metrics_path = repository_root / metrics_artifact["path"]
+            metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+            metrics.pop("reference_feature_assurance")
+            _write_json(metrics_path, metrics)
+            metrics_digest = _sha256(metrics_path)
+            manifest["deterministic_artifacts"]["replay_metrics"][
+                "sha256"
+            ] = metrics_digest
+            _write_json(manifest_path, manifest)
+
+            record["evidence_artifacts"] = [
+                artifact
+                for artifact in record["evidence_artifacts"]
+                if artifact["artifact_role"] != "reference_feature_assurance"
+            ]
+            _artifact_by_role(record, "replay_metrics")["sha256"] = metrics_digest
+            _artifact_by_role(record, "run_manifest")["sha256"] = _sha256(manifest_path)
+            _write_json(record_path, record)
+
+            with self.assertRaisesRegex(
+                EvidenceValidationError,
+                "Nonlegacy replay evidence requires reference_feature_assurance",
+            ):
+                validate_evidence_record(
+                    record_path,
+                    repository_root=repository_root,
+                )
 
     def test_standard_cites_primary_research_and_states_nonclaim(self) -> None:
         standard = (ROOT / "docs/phase2/CLAIM_EVIDENCE_STANDARD.md").read_text(
