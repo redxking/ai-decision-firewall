@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/redxking/ai-decision-firewall/contracts/v0.2.0/public-site-data.schema.json",
+  "title": "AI Decision Firewall public website data",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "updated_through",
+    "site_status",
+    "boundary",
+    "scenarios",
+    "claims",
+    "model_snapshot",
+    "non_inferences"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "updated_through": { "type": "string", "format": "date-time" },
+    "site_status": { "$ref": "#/$defs/siteStatus" },
+    "boundary": { "$ref": "#/$defs/boundary" },
+    "scenarios": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/scenario" }
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/claim" }
+    },
+    "model_snapshot": { "$ref": "#/$defs/modelSnapshot" },
+    "non_inferences": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 8,
+      "items": { "type": "string", "minLength": 1, "maxLength": 240 }
+    }
+  },
+  "$defs": {
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "url": { "type": "string", "pattern": "^https://github\\.com/redxking/ai-decision-firewall/(blob|commit)/[0-9a-f]{40}(/.*)?$" },
+    "evidenceBaseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "version", "publication_commit", "latest_claim_id", "evaluated_at", "source_url"],
+      "properties": {
+        "label": { "const": "Published evidence baseline" },
+        "version": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(-alpha\\.[0-9]+)?$" },
+        "publication_commit": { "$ref": "#/$defs/commit" },
+        "latest_claim_id": { "type": "string", "pattern": "^P2-CE-[0-9]{3}$" },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "source_url": { "$ref": "#/$defs/url" }
+      }
+    },
+    "candidate": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["label", "version", "design_commit", "claim_id", "evaluation"],
+      "properties": {
+        "label": { "const": "Design candidate" },
+        "version": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(-alpha\\.[0-9]+)?$" },
+        "design_commit": { "$ref": "#/$defs/commit" },
+        "claim_id": { "type": "string", "pattern": "^P2-CE-[0-9]{3}$" },
+        "evaluation": { "const": "NOT_EVALUATED" }
+      }
+    },
+    "siteStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_baseline", "candidate"],
+      "properties": {
+        "evidence_baseline": { "$ref": "#/$defs/evidenceBaseline" },
+        "candidate": { "$ref": "#/$defs/candidate" }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["data_origin", "historical_case_count", "execution_mode", "live_actions_enabled", "operational_authority", "review_type"],
+      "properties": {
+        "data_origin": { "const": "SYNTHETIC_FIXTURE" },
+        "historical_case_count": { "const": 0 },
+        "execution_mode": { "const": "OFFLINE_READ_ONLY_REPLAY" },
+        "live_actions_enabled": { "const": false },
+        "operational_authority": { "const": "NONE" },
+        "review_type": { "const": "SELF" }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "stance"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "stance": { "enum": ["SUPPORTING", "BENIGN", "CONFLICTING", "CONTROL"] }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compromise_probability", "evidence_quality", "label"],
+      "properties": {
+        "compromise_probability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "evidence_quality": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "label": { "const": "ADVISORY_ONLY" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disposition", "label", "policy_rule", "explanation", "counterfactual_actions"],
+      "properties": {
+        "disposition": { "enum": ["NO_ACTION", "INVESTIGATE", "CONTAIN_REVERSIBLE", "ESCALATE_HUMAN"] },
+        "label": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "policy_rule": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "explanation": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "counterfactual_actions": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "type": "string", "minLength": 1, "maxLength": 80 }
+        }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "authorization_issued", "broker_invocations", "operational_effects", "explanation"],
+      "properties": {
+        "status": { "enum": ["NOT_ATTEMPTED_READ_ONLY", "VERIFIED", "FAILED", "UNKNOWN"] },
+        "authorization_issued": { "type": "boolean" },
+        "broker_invocations": { "type": "integer", "minimum": 0 },
+        "operational_effects": { "type": "integer", "minimum": 0 },
+        "explanation": { "type": "string", "minLength": 1, "maxLength": 240 }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "label", "expected_disposition", "explanation"],
+      "properties": {
+        "status": { "enum": ["MATCHED_EXPECTATION", "MISMATCHED_EXPECTATION", "NOT_EVALUATED"] },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "expected_disposition": { "type": ["string", "null"], "enum": ["NO_ACTION", "INVESTIGATE", "CONTAIN_REVERSIBLE", "ESCALATE_HUMAN", null] },
+        "explanation": { "type": "string", "minLength": 1, "maxLength": 240 }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "summary", "phase", "signals", "model", "decision", "effect", "evaluation", "source_url"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 180 },
+        "phase": { "enum": ["PHASE_2_READ_ONLY", "V0_1_SYNTHETIC_SIMULATOR"] },
+        "signals": { "type": "array", "minItems": 2, "maxItems": 6, "items": { "$ref": "#/$defs/signal" } },
+        "model": { "$ref": "#/$defs/model" },
+        "decision": { "$ref": "#/$defs/decision" },
+        "effect": { "$ref": "#/$defs/effect" },
+        "evaluation": { "$ref": "#/$defs/evaluation" },
+        "source_url": { "$ref": "#/$defs/url" }
+      }
+    },
+    "claimResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["denominator", "passed", "failed", "excluded"],
+      "properties": {
+        "denominator": { "type": "integer", "minimum": 1 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "excluded": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "title", "evidence_level", "claim_class", "status", "version", "implementation_commit", "publication_commit", "evaluated_at", "review_type", "data_origin", "historical_case_count", "results", "highlights", "limitation", "source_url"],
+      "properties": {
+        "claim_id": { "type": "string", "pattern": "^P2-CE-[0-9]{3}$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "evidence_level": { "enum": ["CE-1", "CE-2"] },
+        "claim_class": { "const": "CONTROLLED_BEHAVIOR" },
+        "status": { "const": "OBSERVED" },
+        "version": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(-alpha\\.[0-9]+)?$" },
+        "implementation_commit": { "$ref": "#/$defs/commit" },
+        "publication_commit": { "$ref": "#/$defs/commit" },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "review_type": { "const": "SELF" },
+        "data_origin": { "const": "SYNTHETIC_FIXTURE" },
+        "historical_case_count": { "const": 0 },
+        "results": { "$ref": "#/$defs/claimResults" },
+        "highlights": { "type": "array", "minItems": 2, "maxItems": 6, "items": { "type": "string", "minLength": 1, "maxLength": 120 } },
+        "limitation": { "type": "string", "minLength": 1, "maxLength": 280 },
+        "source_url": { "$ref": "#/$defs/url" }
+      }
+    },
+    "modelMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accuracy_at_0_5", "brier_score", "roc_auc", "expected_disposition_match_rate", "false_containment_count", "post_action_verification_pass_rate"],
+      "properties": {
+        "accuracy_at_0_5": { "type": "number", "minimum": 0, "maximum": 1 },
+        "brier_score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "roc_auc": { "type": "number", "minimum": 0, "maximum": 1 },
+        "expected_disposition_match_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "false_containment_count": { "type": "integer", "minimum": 0 },
+        "post_action_verification_pass_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "dispositionCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["NO_ACTION", "INVESTIGATE", "CONTAIN_REVERSIBLE", "ESCALATE_HUMAN"],
+      "properties": {
+        "NO_ACTION": { "type": "integer", "minimum": 0 },
+        "INVESTIGATE": { "type": "integer", "minimum": 0 },
+        "CONTAIN_REVERSIBLE": { "type": "integer", "minimum": 0 },
+        "ESCALATE_HUMAN": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "modelSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "version", "data_origin", "evaluated_cases", "operational_validity", "metrics", "disposition_counts", "interpretation", "source_url"],
+      "properties": {
+        "label": { "const": "V0.1 synthetic mechanics baseline" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "data_origin": { "const": "SYNTHETIC_GENERATOR" },
+        "evaluated_cases": { "type": "integer", "minimum": 1 },
+        "operational_validity": { "const": "NOT_ESTABLISHED" },
+        "metrics": { "$ref": "#/$defs/modelMetrics" },
+        "disposition_counts": { "$ref": "#/$defs/dispositionCounts" },
+        "interpretation": { "type": "string", "minLength": 1, "maxLength": 320 },
+        "source_url": { "$ref": "#/$defs/url" }
+      }
+    }
+  }
+}

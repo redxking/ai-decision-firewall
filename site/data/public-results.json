@@ -1,0 +1,311 @@
+{
+  "boundary": {
+    "data_origin": "SYNTHETIC_FIXTURE",
+    "execution_mode": "OFFLINE_READ_ONLY_REPLAY",
+    "historical_case_count": 0,
+    "live_actions_enabled": false,
+    "operational_authority": "NONE",
+    "review_type": "SELF"
+  },
+  "claims": [
+    {
+      "claim_class": "CONTROLLED_BEHAVIOR",
+      "claim_id": "P2-CE-003",
+      "data_origin": "SYNTHETIC_FIXTURE",
+      "evaluated_at": "2026-08-15T03:12:44Z",
+      "evidence_level": "CE-2",
+      "highlights": [
+        "28 attempts blocked before governed payload access",
+        "2 attempts blocked after qualification and before the engine",
+        "2 test-only validation passes",
+        "0 operational effects"
+      ],
+      "historical_case_count": 0,
+      "implementation_commit": "e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b",
+      "limitation": "No internal-independent or external-independent replication has occurred.",
+      "publication_commit": "c9e7e63d9cd1d6abe80cd813a061e3bad64c1e43",
+      "results": {
+        "denominator": 32,
+        "excluded": 0,
+        "failed": 0,
+        "passed": 32
+      },
+      "review_type": "SELF",
+      "source_url": "https://github.com/redxking/ai-decision-firewall/blob/c9e7e63d9cd1d6abe80cd813a061e3bad64c1e43/contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json",
+      "status": "OBSERVED",
+      "title": "Gate B fail-closed campaign",
+      "version": "v0.2.0-alpha.4"
+    },
+    {
+      "claim_class": "CONTROLLED_BEHAVIOR",
+      "claim_id": "P2-CE-004",
+      "data_origin": "SYNTHETIC_FIXTURE",
+      "evaluated_at": "2026-08-15T12:13:03Z",
+      "evidence_level": "CE-2",
+      "highlights": [
+        "16 clean projection matches",
+        "8 malformed or unauthorized records quarantined",
+        "8 altered projections blocked by the reference path",
+        "0 operational effects"
+      ],
+      "historical_case_count": 0,
+      "implementation_commit": "53e409d6ffa4af98ea892bc1a81302bf30870693",
+      "limitation": "No internal-independent or external-independent replication occurred.",
+      "publication_commit": "f7f6b5c4933de72d730411ba34fe08d01a559657",
+      "results": {
+        "denominator": 32,
+        "excluded": 0,
+        "failed": 0,
+        "passed": 32
+      },
+      "review_type": "SELF",
+      "source_url": "https://github.com/redxking/ai-decision-firewall/blob/f7f6b5c4933de72d730411ba34fe08d01a559657/contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json",
+      "status": "OBSERVED",
+      "title": "Feature-boundary assurance campaign",
+      "version": "v0.2.0-alpha.5"
+    }
+  ],
+  "model_snapshot": {
+    "data_origin": "SYNTHETIC_GENERATOR",
+    "disposition_counts": {
+      "CONTAIN_REVERSIBLE": 112,
+      "ESCALATE_HUMAN": 63,
+      "INVESTIGATE": 64,
+      "NO_ACTION": 161
+    },
+    "evaluated_cases": 400,
+    "interpretation": "These generator-consistent synthetic results validate POC mechanics, not operational detection accuracy, real-world error rates, or production safety.",
+    "label": "V0.1 synthetic mechanics baseline",
+    "metrics": {
+      "accuracy_at_0_5": 0.98,
+      "brier_score": 0.020594,
+      "expected_disposition_match_rate": 0.9875,
+      "false_containment_count": 0,
+      "post_action_verification_pass_rate": 0.928571,
+      "roc_auc": 0.998368
+    },
+    "operational_validity": "NOT_ESTABLISHED",
+    "source_url": "https://github.com/redxking/ai-decision-firewall/blob/470f7747d52100d2d645bdbff346cb8e231813bd/outputs/baseline/metrics.json",
+    "version": "synthetic-logistic-v0.1"
+  },
+  "non_inferences": [
+    "Synthetic results do not establish performance on historical or live identity incidents.",
+    "A matched fixed campaign does not establish zero risk or a bounded operational failure rate.",
+    "SELF review does not establish independent replication, independent custody, or external assurance.",
+    "The current POC is not approved for production integration, operational decisions, or live containment.",
+    "A counterfactual action in read-only replay is not an authorization, broker call, or operational effect."
+  ],
+  "scenarios": [
+    {
+      "decision": {
+        "counterfactual_actions": [],
+        "disposition": "NO_ACTION",
+        "explanation": "Risk remains below the no-action threshold and the available context supports benign activity.",
+        "label": "No action",
+        "policy_rule": "RISK-BELOW-NO-ACTION-THRESHOLD"
+      },
+      "effect": {
+        "authorization_issued": false,
+        "broker_invocations": 0,
+        "explanation": "Authorization and execution were structurally suppressed in offline read-only replay.",
+        "operational_effects": 0,
+        "status": "NOT_ATTEMPTED_READ_ONLY"
+      },
+      "evaluation": {
+        "expected_disposition": "NO_ACTION",
+        "explanation": "The decision matched the project-authored synthetic expectation.",
+        "label": "Matched expectation",
+        "status": "MATCHED_EXPECTATION"
+      },
+      "id": "approved-maintenance",
+      "model": {
+        "compromise_probability": 0.00558222,
+        "evidence_quality": 0.986286,
+        "label": "ADVISORY_ONLY"
+      },
+      "phase": "PHASE_2_READ_ONLY",
+      "signals": [
+        {
+          "label": "Approved maintenance window",
+          "stance": "BENIGN"
+        },
+        {
+          "label": "Strong authentication",
+          "stance": "BENIGN"
+        },
+        {
+          "label": "Evidence integrity verified",
+          "stance": "CONTROL"
+        }
+      ],
+      "source_url": "https://github.com/redxking/ai-decision-firewall/blob/b3a4c89450cc76576d463ae4006228a98603e260/evidence/phase2_starter/replay_decisions.jsonl",
+      "summary": "After-hours activity is explained by an approved maintenance window and strong authentication.",
+      "title": "Approved maintenance"
+    },
+    {
+      "decision": {
+        "counterfactual_actions": [],
+        "disposition": "INVESTIGATE",
+        "explanation": "Conflicting evidence prevents automation, so the firewall abstains and requests more evidence.",
+        "label": "Investigate",
+        "policy_rule": "EVIDENCE-NOT-DECISION-GRADE"
+      },
+      "effect": {
+        "authorization_issued": false,
+        "broker_invocations": 0,
+        "explanation": "Authorization and execution were structurally suppressed in offline read-only replay.",
+        "operational_effects": 0,
+        "status": "NOT_ATTEMPTED_READ_ONLY"
+      },
+      "evaluation": {
+        "expected_disposition": "INVESTIGATE",
+        "explanation": "The system correctly treated abstention as the expected safe outcome.",
+        "label": "Matched expectation",
+        "status": "MATCHED_EXPECTATION"
+      },
+      "id": "conflicting-telemetry",
+      "model": {
+        "compromise_probability": 0.33143631,
+        "evidence_quality": 0.886286,
+        "label": "ADVISORY_ONLY"
+      },
+      "phase": "PHASE_2_READ_ONLY",
+      "signals": [
+        {
+          "label": "Impossible-travel indicator",
+          "stance": "SUPPORTING"
+        },
+        {
+          "label": "New device observed",
+          "stance": "SUPPORTING"
+        },
+        {
+          "label": "Independent sources conflict",
+          "stance": "CONFLICTING"
+        }
+      ],
+      "source_url": "https://github.com/redxking/ai-decision-firewall/blob/b3a4c89450cc76576d463ae4006228a98603e260/evidence/phase2_starter/replay_decisions.jsonl",
+      "summary": "A suspicious sign appears, but independent telemetry disagrees with it.",
+      "title": "Conflicting telemetry"
+    },
+    {
+      "decision": {
+        "counterfactual_actions": [
+          "revoke active sessions",
+          "force step up auth",
+          "increase monitoring"
+        ],
+        "disposition": "CONTAIN_REVERSIBLE",
+        "explanation": "Risk, evidence quality, corroboration, and the action boundary satisfy the reversible-containment policy.",
+        "label": "Contain reversibly",
+        "policy_rule": "RISK-AUTO-CONTAIN-THRESHOLD"
+      },
+      "effect": {
+        "authorization_issued": false,
+        "broker_invocations": 0,
+        "explanation": "Authorization and execution were structurally suppressed in offline read-only replay.",
+        "operational_effects": 0,
+        "status": "NOT_ATTEMPTED_READ_ONLY"
+      },
+      "evaluation": {
+        "expected_disposition": "CONTAIN_REVERSIBLE",
+        "explanation": "The decision matched expectation, while read-only replay prevented authorization and execution.",
+        "label": "Matched expectation",
+        "status": "MATCHED_EXPECTATION"
+      },
+      "id": "suspicious-token-reuse",
+      "model": {
+        "compromise_probability": 0.99255394,
+        "evidence_quality": 0.986286,
+        "label": "ADVISORY_ONLY"
+      },
+      "phase": "PHASE_2_READ_ONLY",
+      "signals": [
+        {
+          "label": "Token reuse",
+          "stance": "SUPPORTING"
+        },
+        {
+          "label": "Threat-listed address",
+          "stance": "SUPPORTING"
+        },
+        {
+          "label": "Unusual administrative action",
+          "stance": "SUPPORTING"
+        },
+        {
+          "label": "Four-source corroboration",
+          "stance": "CONTROL"
+        }
+      ],
+      "source_url": "https://github.com/redxking/ai-decision-firewall/blob/b3a4c89450cc76576d463ae4006228a98603e260/evidence/phase2_starter/replay_decisions.jsonl",
+      "summary": "Token reuse, a threat-listed address, and an unusual administrative action corroborate one another.",
+      "title": "Suspicious token reuse"
+    },
+    {
+      "decision": {
+        "counterfactual_actions": [],
+        "disposition": "CONTAIN_REVERSIBLE",
+        "explanation": "The synthetic-simulation compatibility path authorized three reversible simulator actions.",
+        "label": "Contain reversibly",
+        "policy_rule": "RISK-AUTO-CONTAIN-THRESHOLD"
+      },
+      "effect": {
+        "authorization_issued": true,
+        "broker_invocations": 3,
+        "explanation": "Post-action verification detected that forced step-up authentication did not reach the intended simulator state.",
+        "operational_effects": 2,
+        "status": "FAILED"
+      },
+      "evaluation": {
+        "expected_disposition": null,
+        "explanation": "This demonstrates failure reporting in the v0.1 synthetic simulator; it is not current operational evidence.",
+        "label": "Effect failure detected",
+        "status": "NOT_EVALUATED"
+      },
+      "id": "simulated-effect-failure",
+      "model": {
+        "compromise_probability": 0.99855006,
+        "evidence_quality": 0.986286,
+        "label": "ADVISORY_ONLY"
+      },
+      "phase": "V0_1_SYNTHETIC_SIMULATOR",
+      "signals": [
+        {
+          "label": "High-confidence synthetic case",
+          "stance": "SUPPORTING"
+        },
+        {
+          "label": "Reversible actions authorized",
+          "stance": "CONTROL"
+        },
+        {
+          "label": "Step-up state unchanged",
+          "stance": "CONFLICTING"
+        }
+      ],
+      "source_url": "https://github.com/redxking/ai-decision-firewall/blob/470f7747d52100d2d645bdbff346cb8e231813bd/outputs/baseline/decisions.jsonl",
+      "summary": "A synthetic action command is accepted, but one intended state change does not occur.",
+      "title": "Simulated downstream failure"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "site_status": {
+    "candidate": {
+      "claim_id": "P2-CE-005",
+      "design_commit": "08ce203c0965e8d43b7653454d4ea8315996021f",
+      "evaluation": "NOT_EVALUATED",
+      "label": "Design candidate",
+      "version": "v0.2.0-alpha.6"
+    },
+    "evidence_baseline": {
+      "evaluated_at": "2026-08-15T12:13:03Z",
+      "label": "Published evidence baseline",
+      "latest_claim_id": "P2-CE-004",
+      "publication_commit": "f7f6b5c4933de72d730411ba34fe08d01a559657",
+      "source_url": "https://github.com/redxking/ai-decision-firewall/blob/f7f6b5c4933de72d730411ba34fe08d01a559657/contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json",
+      "version": "v0.2.0-alpha.5"
+    }
+  },
+  "updated_through": "2026-08-15T12:13:03Z"
+}
