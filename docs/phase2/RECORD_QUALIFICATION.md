@@ -184,7 +184,7 @@ Any later controlled-action experiment belongs to a separately authorized phase 
 
 ## Gate for the first historical pilot
 
-Synthetic acceptance does not authorize historical processing. Before the first historical qualification attempt, Gate B in the Phase 2 validation plan must be approved and extended with a signed pilot protocol that establishes:
+Synthetic acceptance does not authorize historical processing. Before the first historical qualification attempt, accountable external authorities must authenticate and freeze the complete Gate B package described in the [`historical-pilot guide`](GATE_B_HISTORICAL_PILOT.md), using the public [`pilot`](templates/GATE_B_PILOT_PROTOCOL_TEMPLATE.md), [`source-mapping`](templates/SOURCE_MAPPING_TEMPLATE.csv), and [`adjudication`](templates/ADJUDICATION_PROTOCOL_TEMPLATE.md) templates only as non-authorizing starting points. The machine preflight must first pass its authority, binding, time, path, resource, and declared-count checks before any payload access; accepted-case window and observed quarantine-rate checks then run after authorized qualification but before normalization or engine invocation. The restricted package must establish:
 
 1. data owner, mission owner, security, privacy/legal, and records-management authority for the exact source, purpose, population, time window, environment, and personnel;
 2. documented de-identification and re-identification-risk testing, including handling for pseudonymous identifiers, free text, rare events, and linkable hashes;

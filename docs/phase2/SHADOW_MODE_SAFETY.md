@@ -18,7 +18,7 @@ This CE-2 controlled-behavior claim applies only to the repository-controlled pa
 | Zero effects | Authorization attempts, broker invocations, and operational effects remain zero |
 | Fail-closed configuration | Unknown modes and action-enabling settings fail before case processing |
 | Governed input only | Historical records without approval and de-identification attestation are rejected |
-| No label leakage | Adjudications remain outside runtime evidence and load only after decisions close |
+| No label leakage | Adjudications remain outside runtime evidence; historical label bytes are integrity-frozen inside the harness but their path and contents are withheld from the runner, and semantic loading occurs only after decisions close |
 | Audited suppression and finalization | Each read-only decision has exactly one suppression record, one no-authorization record, and one finalization record bound to the recomputed decision hash |
 
 An operator cannot convert a replay decision into an action by changing a threshold, policy disposition, evidence score, or input field. The code path itself must lack the objects needed to authorize or execute.
@@ -73,7 +73,7 @@ The engine audit includes execution-suppression, no-authorization, and decision-
 | Input tampering or time-of-check/time-of-use replacement | Evaluate substituted evidence, model, policy, or labels | Copy all declared inputs into a run snapshot; verify digests/counts on copy, after engine execution, and before finalization; load only snapshot bytes | Mutable source files and the repository manifest still require an external custody record for approved work |
 | Direct identifiers in replay data | Privacy or operational exposure | Approval, attestation, field prohibitions, access and retention controls | De-identification attestation is not proof against reidentification |
 | Canonical-context disagreement | Understate break-glass or mission criticality | Fail-closed cross-field validation before the decision engine | Source authority can be ambiguous in real environments |
-| Embedded label or hindsight | Artificially improve decisions or contaminate evaluation | Runtime label prohibition and post-decision adjudication loading | Operational context can indirectly reveal outcomes |
+| Embedded label or hindsight | Artificially improve decisions or contaminate evaluation | Runtime label prohibition; adjudication bytes frozen inside the harness but withheld from runner arguments and paths until post-decision semantic loading | Same-process isolation is not an OS security boundary, and operational context can indirectly reveal outcomes |
 | Poisoned free text | Influence an agent or operator | Preserve v0.1 untrusted-text isolation and abstention rules | Pattern-based detection is incomplete |
 | Audit rewriting | Conceal changes after execution | Hash-chain validation and artifact digests | Current chain lacks independent signature, external anchor, or WORM storage |
 | Resource exhaustion | Prevent evaluation or distort availability | File and record limits, bounded parsing, explicit failure accounting | Starter performance limits do not establish production capacity |

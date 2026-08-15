@@ -2,7 +2,7 @@
 
 ## Contract objective and status
 
-Phase 2 defines a narrow, versioned boundary between an untrusted local evidence snapshot and the v0.1 decision engine. It accepts canonical JSONL, validates integrity and record counts across the complete declaration, and decodes separately stored adjudications only after decision processing and read-only safety checks finish. The Phase 2.1 path can also qualify bounded case records into accepted and quarantined sets before normalization, with exact metadata-only accounting.
+Phase 2 defines a narrow, versioned boundary between an untrusted local evidence snapshot and the v0.1 decision engine. It accepts canonical JSONL, validates integrity and record counts, and decodes separately stored adjudications only after decision processing and read-only safety checks finish. Phase 2.1 qualifies bounded case records into accepted and quarantined sets with exact metadata-only accounting. Phase 2.2 adds a separate Gate B authority, custody, and binding contract before historical payload access.
 
 The implemented contract version is `0.2.0`. The executable Python validation in `src/adf_poc/replay/contracts.py` is the runtime authority; the schemas under `contracts/v0.2.0/` document and independently constrain the same public shape. Unknown fields are rejected rather than silently ignored. These starter contracts do not certify source semantics, legal authority, de-identification effectiveness, or production fitness.
 
@@ -17,10 +17,13 @@ The datasets under `data/phase2_starter/` and `data/phase2_qualification/` are s
 - `contracts/v0.2.0/replay-rejection.schema.json`
 - `contracts/v0.2.0/qualification-expectations.schema.json`
 - `contracts/v0.2.0/evaluation-evidence.schema.json`
+- `contracts/v0.2.0/gate-b-authorization.schema.json`
+- `contracts/v0.2.0/examples/gate-b-authorization-draft.json`
 - `contracts/v0.2.0/examples/phase2-starter-evidence-record.json`
 - `contracts/v0.2.0/README.md`
 - `src/adf_poc/replay/contracts.py`
 - `src/adf_poc/replay/qualification.py`
+- `src/adf_poc/replay/gate_b.py`
 - `src/adf_poc/replay/adapters.py`
 
 ## Replay configuration and record-failure policy
@@ -33,6 +36,8 @@ The optional `record_failure_policy` configuration field is code-owned:
 | `QUARANTINE_RECORD` | Qualify the `cases` role record by record, but only in offline `HISTORICAL_REPLAY`. Reviewed record-local defects are quarantined; fatal conditions abort the complete qualification call. |
 
 `QUARANTINE_RECORD` with `SHADOW_READ_ONLY` is rejected during configuration loading. There is no unreviewed policy value and no configuration option to downgrade a fatal condition. Both policies retain `live_actions_enabled: false`, `zero_effects_required: true`, confined local paths, and the same decision-to-effect suppression boundary.
+
+The optional `gate_b_authorization` configuration field is forbidden for nonhistorical input and mandatory for `HISTORICAL_DEIDENTIFIED`. It must be a confined nonsymlink path under ignored `local/gate_b/`. Historical output must be a new run-specific directory under ignored `outputs/replay/`. The runtime creates it owner-only and keeps all snapshot and artifact operations bound to retained directory descriptors; it does not use the display path as write authority. No real historical configuration or approval package is committed.
 
 ## Replay manifest
 
@@ -61,9 +66,9 @@ Each file entry has exactly:
 | `record_count` | Nonnegative count of nonblank JSONL source records, whether or not each record later parses or qualifies |
 | `adapter` | `canonical_jsonl_v0.2` |
 
-A cases file is always required. `HISTORICAL_REPLAY` also requires a physically separate adjudications file. Before any decision processing, the loader resolves every path, verifies that it is a file inside the manifest directory, recomputes every declared digest, enforces file and line bounds, and compares the count of nonblank records with the declaration. The harness then copies the exact configuration, manifest, model, policy, cases, and adjudications into a new run-owned input snapshot; verifies every copied digest and declared count; and loads only from that snapshot. It verifies the snapshot again after engine execution and before final artifacts are produced.
+A cases file is always required. `HISTORICAL_REPLAY` also requires a physically separate, single-link adjudications file; case and adjudication file identities cannot alias. For synthetic input, the loader verifies the complete declaration before decisions. For historical origin, it first reads only manifest control bytes and completes Gate B. It then freezes both sources, qualifies the frozen case bytes, and keeps exact adjudication bytes in harness-owned memory. The runner receives only accepted case objects plus bound model and policy bytes. The adjudication file is not placed beside or passed to the runner; it is materialized through the retained output descriptor only after decisions and boundary-audit checks close. Snapshot digests and counts are rechecked before final artifacts.
 
-Under `FAIL_DATASET`, the case adapter decodes and semantically validates every snapshotted case as one unit. Under `QUARANTINE_RECORD`, the qualifier first verifies the frozen source digest and accounts for every nonblank source occurrence; only accepted cases proceed. Evaluator-only adjudication bytes are snapshotted, integrity-checked, and counted before decisions but deliberately not decoded until read-only decisions and boundary-audit validation have closed. Digest, count, path, governance, or fatal qualification failures abort before the engine runs.
+Under `FAIL_DATASET`, the case adapter decodes and semantically validates every snapshotted case as one unit. Under `QUARANTINE_RECORD`, the qualifier first verifies the frozen source digest and accounts for every nonblank source occurrence; only accepted cases proceed. Evaluator-only adjudication bytes are integrity-frozen before decisions but deliberately neither exposed as a runner input nor decoded until read-only decisions and boundary-audit validation close. Digest, count, path, governance, or fatal qualification failures abort before the engine runs.
 
 The manifest is not an independent trust anchor. A party able to replace the files can also replace the manifest and recompute its digests. Approved historical work therefore requires an externally controlled manifest digest, approval record, and chain of custody.
 
@@ -190,13 +195,17 @@ The implemented `attestations` object has exactly these fields:
 
 The synthetic fixture uses a synthetic-by-construction attestation. This is metadata about how the fixture was produced, not evidence that a historical de-identification process was applied.
 
-The manifest gate is necessary but insufficient for historical use. Before a historical dataset is created or processed, external Gate B approval must establish the data owner, authorized purpose, source scope, privacy/legal and mission review, de-identification method and validation, access, retention, deletion, incident response, source mapping, and custody. The public repository must remain synthetic-only. Pseudonymous values may still be sensitive or linkable.
+The manifest gate is necessary but insufficient for historical use. Before a historical payload is accessed, the closed Gate B package must be top-level `APPROVED`; contain exactly one approval each from `DATA_OWNER`, `MISSION_OWNER`, `SECURITY`, `PRIVACY_LEGAL`, and `RECORDS_MANAGEMENT`; contain an approved review whose asserted reviewer identity differs from every asserted approver identity; require `window_end <= custody.frozen_at <= valid_from`; and bind the exact dataset manifest, contract, adapter, model, policy, source mapping, adjudication protocol, and pilot protocol. Critical controls, validity, complete-intake/sample counts, custody references, temporal holdout, and frozen thresholds must also pass. Purpose, population, identity, independence, and authority are external assertions; the runtime checks their bounded structural representation, not their truth or legal sufficiency.
+
+This is a two-stage gate. Structural authority, binding, time, path, resource, and declared-count checks occur before any historical payload access. After authorized case qualification—but still before normalization or engine invocation—the harness checks accepted-case `opened_at` values and observed overall/category quarantine rates against the frozen window and thresholds. A manifest, schema, or nonempty reference cannot by itself prove authority, identity, a signature, effective de-identification, or custody truth.
+
+The public repository remains synthetic-only. Actual Gate B files and protocol/mapping artifacts belong under ignored `local/gate_b/`; historical output belongs under ignored owner-only `outputs/replay/<run>/`. Pseudonymous values and hashes may still be sensitive or linkable.
 
 ## Label and adjudication separation
 
 Runtime case validation recursively rejects keys including `adjudication`, `adjudicated_disposition`, `compromised`, `expected_disposition`, `ground_truth`, `is_malicious`, `label`, `malicious`, `outcome_label`, and `scenario`. This is a structural leakage guard, not proof that free text or correlated features contain no hindsight.
 
-Adjudications reside in a separate JSONL file. The harness runs the engine against accepted frozen case/model/policy inputs, validates read-only decisions and their finalization audit bindings, and closes decision processing before decoding the frozen adjudication snapshot. Each adjudication has exactly:
+Adjudications reside in a separate JSONL file. The harness integrity-freezes their exact bytes outside the runner inputs, runs the engine against accepted case/model/policy inputs, validates read-only decisions and finalization audit bindings, and only then materializes and decodes the adjudication snapshot. This is a harness-enforced interface boundary, not an OS sandbox against arbitrary same-process introspection. Each adjudication has exactly:
 
 - `schema_version` equal to `0.2.0`;
 - unique `adjudication_id` and a `case_id` that resolves to an accepted case;
@@ -208,7 +217,7 @@ Only one adjudication per case is accepted by this starter. These records are ev
 
 ## Path confinement and input surface
 
-Configuration paths are repository-relative and resolved beneath the supplied repository root. Manifest file paths are relative to—and resolved beneath—the manifest directory. Absolute paths, parent traversal, and symlink resolution outside the allowed root fail closed. Declared inputs must exist as files.
+Configuration paths are repository-relative and resolved beneath the supplied repository root. Manifest file paths are relative to—and resolved beneath—the manifest directory. Absolute paths, parent traversal, and symlink resolution outside the allowed root fail closed. Gate B authorization and bound protocols additionally require the ignored `local/gate_b/` root and reject symlink components; historical output requires ignored `outputs/replay/<run>/`. Declared inputs must exist as files.
 
 The canonical adapter does not fetch URLs, call vendor APIs, expand archives, execute plugins, or discover inputs with wildcards. This is an offline local-snapshot interface, not a live connector.
 
@@ -220,7 +229,11 @@ The starter fails closed on inputs that exceed these code-owned limits:
 |---|---:|
 | Declared file size | 512 MiB |
 | Configuration or manifest document | 1 MiB |
+| Gate B authorization or manifest-control JSON nesting | 128 levels |
+| Each Gate B mapping or protocol artifact | 2 MiB |
+| Gate B model or policy input | 64 MiB |
 | Nonblank records per JSONL file | 100,000 |
+| Records per descriptor-bound historical JSONL output artifact | 1,000,000 |
 | Encoded JSONL physical-line size, including LF or CRLF | 1 MiB |
 | JSON object/array nesting depth during qualification | 128 levels |
 | Events per case | 10,000 |
@@ -237,6 +250,6 @@ These are defensive parser bounds, not demonstrated throughput or production cap
 
 The seven-record campaign demonstrates `7 = 3 accepted + 4 quarantined` and three downstream decisions. The four reasons are exactly one each of `SYNTAX / INVALID_JSON`, `STRUCTURE / MISSING_REQUIRED_FIELD`, `SEMANTICS / INVALID_TIMESTAMP`, and `SEMANTICS / CANONICAL_CONTEXT_MISMATCH`. These results are synthetic test evidence, not estimates of historical source quality or model efficacy.
 
-Adjudication JSON and semantics are intentionally evaluated later. A malformed or inconsistent adjudication aborts the evaluation after read-only decisions and their boundary audit exist, but before comparison metrics or a completed run manifest are emitted. This ordering preserves runtime/evaluator separation; the nonempty output-directory guard preserves the partial evidence rather than silently overwriting it.
+Adjudication JSON and semantics are intentionally evaluated later. Duplicate JSON object members, malformed content, or an inconsistent adjudication abort the evaluation after read-only decisions and their boundary audit exist, but before comparison metrics or a completed run manifest are emitted. This ordering preserves runtime/evaluator separation; the nonempty output-directory guard preserves the partial evidence rather than silently overwriting it.
 
 For both included fixtures, historical efficacy, historical calibration, and historical acceptance rates are unavailable because `historical_case_count=0`. Unavailable adjudication metrics are represented as `null`; they must not be described as measured zero performance. Model measures computed on accepted cases are conditional on qualification and cannot be generalized to the complete source population without explicit missingness and survivorship-bias analysis.

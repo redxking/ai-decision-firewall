@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import math
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, TextIO
 
 
 CONTRACT_VERSION = "0.2.0"
@@ -85,10 +86,14 @@ class ReplayManifest:
     def file_for_role(self, role: str, *, required: bool = True) -> ManifestFile | None:
         matches = [entry for entry in self.files if entry.role == role]
         if len(matches) > 1:
-            raise ManifestValidationError(f"Manifest declares role {role!r} more than once.")
+            raise ManifestValidationError(
+                f"Manifest declares role {role!r} more than once."
+            )
         if not matches:
             if required:
-                raise ManifestValidationError(f"Manifest does not declare required role {role!r}.")
+                raise ManifestValidationError(
+                    f"Manifest does not declare required role {role!r}."
+                )
             return None
         return matches[0]
 
@@ -106,6 +111,7 @@ class ReplayConfig:
     deterministic_outputs: bool
     zero_effects_required: bool
     record_failure_policy: str
+    gate_b_authorization: str | None
     path: Path
     source_sha256: str
 
@@ -127,7 +133,7 @@ class ReplayConfig:
             "deterministic_outputs",
             "zero_effects_required",
         }
-        allowed = required | {"record_failure_policy"}
+        allowed = required | {"record_failure_policy", "gate_b_authorization"}
         missing = sorted(required - set(value))
         unexpected = sorted(set(value) - allowed)
         if missing:
@@ -150,24 +156,27 @@ class ReplayConfig:
                 f"execution_mode must be one of {allowed_modes}; received {mode!r}."
             )
         if value.get("live_actions_enabled") is not False:
-            raise ReplayConfigurationError("live_actions_enabled must be exactly false.")
+            raise ReplayConfigurationError(
+                "live_actions_enabled must be exactly false."
+            )
         if value.get("contract_adapter") != "canonical_jsonl_v0.2":
             raise ReplayConfigurationError(
                 "contract_adapter must be 'canonical_jsonl_v0.2' for the Phase 2 starter."
             )
         if value.get("deterministic_outputs") is not True:
-            raise ReplayConfigurationError("deterministic_outputs must be exactly true.")
+            raise ReplayConfigurationError(
+                "deterministic_outputs must be exactly true."
+            )
         if value.get("zero_effects_required") is not True:
-            raise ReplayConfigurationError("zero_effects_required must be exactly true.")
+            raise ReplayConfigurationError(
+                "zero_effects_required must be exactly true."
+            )
         record_failure_policy = value.get("record_failure_policy", "FAIL_DATASET")
         if record_failure_policy not in RECORD_FAILURE_POLICIES:
             raise ReplayConfigurationError(
                 "record_failure_policy must be FAIL_DATASET or QUARANTINE_RECORD."
             )
-        if (
-            record_failure_policy == "QUARANTINE_RECORD"
-            and mode != "HISTORICAL_REPLAY"
-        ):
+        if record_failure_policy == "QUARANTINE_RECORD" and mode != "HISTORICAL_REPLAY":
             raise ReplayConfigurationError(
                 "QUARANTINE_RECORD is limited to offline HISTORICAL_REPLAY; "
                 "shadow input remains fail-dataset."
@@ -175,9 +184,28 @@ class ReplayConfig:
         for name in ("dataset_manifest", "model_path", "policy_path", "output_dir"):
             _require_nonempty_string(value.get(name), f"replay configuration.{name}")
             if Path(str(value[name])).is_absolute():
-                raise ReplayConfigurationError(f"{name} must be a repository-relative path.")
+                raise ReplayConfigurationError(
+                    f"{name} must be a repository-relative path."
+                )
         normalized = dict(value)
         normalized["record_failure_policy"] = record_failure_policy
+        gate_b_authorization = value.get("gate_b_authorization")
+        if gate_b_authorization is not None:
+            _require_nonempty_string(
+                gate_b_authorization,
+                "replay configuration.gate_b_authorization",
+            )
+            gate_b_path = Path(str(gate_b_authorization))
+            if (
+                "\\" in str(gate_b_authorization)
+                or str(gate_b_authorization) != gate_b_path.as_posix()
+                or gate_b_path.is_absolute()
+                or any(part in {"", ".", ".."} for part in gate_b_path.parts)
+            ):
+                raise ReplayConfigurationError(
+                    "gate_b_authorization must be a confined repository-relative path."
+                )
+        normalized["gate_b_authorization"] = gate_b_authorization
         return cls(path=target, source_sha256=source_sha256, **normalized)
 
     def resolve_paths(self, repository_root: str | Path) -> dict[str, Path]:
@@ -198,6 +226,38 @@ class ReplayConfig:
         }
         if resolved["output_dir"] == root:
             raise ReplayConfigurationError("output_dir cannot be the repository root.")
+        if self.gate_b_authorization is not None:
+            if Path(self.gate_b_authorization).parts[:2] != ("local", "gate_b"):
+                raise ReplayConfigurationError(
+                    "gate_b_authorization must use the restricted local/gate_b root."
+                )
+            unresolved = root / self.gate_b_authorization
+            current = root
+            for part in Path(self.gate_b_authorization).parts:
+                if part in {"", ".", ".."}:
+                    raise ReplayConfigurationError(
+                        "gate_b_authorization path is not confined."
+                    )
+                current = current / part
+                if current.is_symlink():
+                    raise ReplayConfigurationError(
+                        "gate_b_authorization path cannot use symlinks."
+                    )
+            if unresolved.is_symlink():
+                raise ReplayConfigurationError(
+                    "gate_b_authorization path cannot use symlinks."
+                )
+            try:
+                resolved["gate_b_authorization"] = resolve_confined_path(
+                    root,
+                    self.gate_b_authorization,
+                    label="gate_b_authorization",
+                    must_exist=True,
+                )
+            except ManifestValidationError:
+                raise ReplayConfigurationError(
+                    "gate_b_authorization is unavailable or not confined."
+                ) from None
         return resolved
 
 
@@ -206,18 +266,22 @@ def _load_json_object(path: Path, label: str) -> dict[str, Any]:
     return value
 
 
-def _load_json_object_with_digest(
-    path: Path, label: str
-) -> tuple[dict[str, Any], str]:
+def _load_json_object_with_digest(path: Path, label: str) -> tuple[dict[str, Any], str]:
     try:
         raw = path.read_bytes()
         if len(raw) > MAX_CONTROL_DOCUMENT_BYTES:
             raise ContractValidationError(
                 f"{label} exceeds the {MAX_CONTROL_DOCUMENT_BYTES}-byte control-document limit."
             )
-        value = json.loads(raw.decode("utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise ContractValidationError(f"Unable to read {label} at {path}: {exc}") from exc
+        value = json.loads(
+            raw.decode("utf-8"), object_pairs_hook=_reject_duplicate_json_pairs
+        )
+    except _DuplicateJSONMember:
+        raise ContractValidationError(
+            f"{label} contains duplicate JSON object members."
+        ) from None
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise ContractValidationError(f"Unable to read {label}.") from None
     if not isinstance(value, dict):
         raise ContractValidationError(f"{label} must be a JSON object.")
     return value, hashlib.sha256(raw).hexdigest()
@@ -227,7 +291,9 @@ def _require_exact_fields(value: dict[str, Any], allowed: set[str], label: str) 
     missing = sorted(allowed - set(value))
     unexpected = sorted(set(value) - allowed)
     if missing:
-        raise ContractValidationError(f"{label} is missing required fields: {', '.join(missing)}.")
+        raise ContractValidationError(
+            f"{label} is missing required fields: {', '.join(missing)}."
+        )
     if unexpected:
         raise ContractValidationError(
             f"{label} contains unsupported fields: {', '.join(unexpected)}."
@@ -281,7 +347,9 @@ def parse_timestamp(value: Any, label: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(candidate.replace("Z", "+00:00"))
     except ValueError as exc:
-        raise ContractValidationError(f"{label} must be an ISO-8601 timestamp.") from exc
+        raise ContractValidationError(
+            f"{label} must be an ISO-8601 timestamp."
+        ) from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ContractValidationError(f"{label} must include an explicit UTC offset.")
     return parsed
@@ -307,7 +375,8 @@ def validate_case_record(record: dict[str, Any]) -> None:
     leaks = detect_runtime_label_leakage(record)
     if leaks:
         raise ContractValidationError(
-            "Runtime label leakage is prohibited; forbidden fields found at " + ", ".join(leaks)
+            "Runtime label leakage is prohibited; forbidden fields found at "
+            + ", ".join(leaks)
         )
     required = {
         "schema_version",
@@ -367,13 +436,16 @@ def validate_case_record(record: dict[str, Any]) -> None:
             attributes["break_glass"], "asset_inventory.attributes.break_glass"
         )
         inventory_criticality = _require_unit_interval(
-            attributes["asset_criticality"], "asset_inventory.attributes.asset_criticality"
+            attributes["asset_criticality"],
+            "asset_inventory.attributes.asset_criticality",
         )
         if inventory_break_glass is not break_glass:
             raise ContractValidationError(
                 "Canonical break_glass must equal asset_inventory.attributes.break_glass."
             )
-        if not math.isclose(inventory_criticality, criticality, rel_tol=0.0, abs_tol=1e-12):
+        if not math.isclose(
+            inventory_criticality, criticality, rel_tol=0.0, abs_tol=1e-12
+        ):
             raise ContractValidationError(
                 "Canonical asset_criticality must equal "
                 "asset_inventory.attributes.asset_criticality."
@@ -414,7 +486,9 @@ def _validate_event_record(event: Any, label: str, case_id: str) -> None:
     observed = parse_timestamp(event.get("observed_at"), f"{label}.observed_at")
     collected = parse_timestamp(event.get("collected_at"), f"{label}.collected_at")
     if collected < observed:
-        raise ContractValidationError(f"{label}.collected_at cannot precede observed_at.")
+        raise ContractValidationError(
+            f"{label}.collected_at cannot precede observed_at."
+        )
     if event.get("integrity") not in {"verified", "unverified", "failed"}:
         raise ContractValidationError(
             f"{label}.integrity must be verified, unverified, or failed."
@@ -432,14 +506,16 @@ def _validate_event_record(event: Any, label: str, case_id: str) -> None:
     for reference in entity_refs:
         parsed = _require_identifier(reference, f"{label}.entity_refs[]")
         if parsed in seen_refs:
-            raise ContractValidationError(f"{label}.entity_refs contains duplicate {parsed!r}.")
+            raise ContractValidationError(
+                f"{label}.entity_refs contains duplicate {parsed!r}."
+            )
         seen_refs.add(parsed)
     if not isinstance(event.get("attributes"), dict):
         raise ContractValidationError(f"{label}.attributes must be a JSON object.")
     attributes_size = len(
-        json.dumps(event["attributes"], separators=(",", ":"), ensure_ascii=True).encode(
-            "utf-8"
-        )
+        json.dumps(
+            event["attributes"], separators=(",", ":"), ensure_ascii=True
+        ).encode("utf-8")
     )
     if attributes_size > MAX_ATTRIBUTES_BYTES:
         raise ContractValidationError(
@@ -465,7 +541,9 @@ def validate_case_records(records: Iterable[dict[str, Any]]) -> list[dict[str, A
         validate_case_record(record)
         case_id = str(record["case_id"])
         if case_id in case_ids:
-            raise ContractValidationError(f"Duplicate case_id {case_id!r} across the case file.")
+            raise ContractValidationError(
+                f"Duplicate case_id {case_id!r} across the case file."
+            )
         case_ids.add(case_id)
         for event in record["events"]:
             event_id = str(event["event_id"])
@@ -537,7 +615,9 @@ def validate_adjudication_records(
                 f"Duplicate adjudication_id {adjudication_id!r}."
             )
         if case_id in adjudicated_case_ids:
-            raise ContractValidationError(f"Case {case_id!r} has multiple adjudications.")
+            raise ContractValidationError(
+                f"Case {case_id!r} has multiple adjudications."
+            )
         if known_case_ids is not None and case_id not in known_case_ids:
             raise ContractValidationError(
                 f"Adjudication {adjudication_id!r} references unknown case {case_id!r}."
@@ -547,42 +627,88 @@ def validate_adjudication_records(
     return materialized
 
 
+def _load_jsonl_text(handle: TextIO, *, label: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    line_number = 0
+    while True:
+        line = handle.readline(MAX_JSONL_LINE_BYTES + 1)
+        if not line:
+            break
+        line_number += 1
+        if len(line.encode("utf-8")) > MAX_JSONL_LINE_BYTES:
+            raise ContractValidationError(
+                f"{label} line {line_number} exceeds the "
+                f"{MAX_JSONL_LINE_BYTES}-byte limit."
+            )
+        if not line.strip():
+            continue
+        try:
+            value = json.loads(line, object_pairs_hook=_reject_duplicate_json_pairs)
+        except _DuplicateJSONMember:
+            raise ContractValidationError(
+                f"{label} line {line_number} contains duplicate JSON object members."
+            ) from None
+        except json.JSONDecodeError as exc:
+            raise ContractValidationError(
+                f"{label} line {line_number} is not valid JSON: {exc}"
+            ) from exc
+        if not isinstance(value, dict):
+            raise ContractValidationError(
+                f"{label} line {line_number} must be a JSON object."
+            )
+        rows.append(value)
+        if len(rows) > MAX_RECORDS_PER_FILE:
+            raise ContractValidationError(
+                f"{label} exceeds the {MAX_RECORDS_PER_FILE}-record limit."
+            )
+    return rows
+
+
+class _DuplicateJSONMember(ValueError):
+    """Internal marker for ambiguous duplicate JSON object members."""
+
+
+def _reject_duplicate_json_pairs(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, child in pairs:
+        if key in value:
+            raise _DuplicateJSONMember
+        value[key] = child
+    return value
+
+
 def load_jsonl_objects(path: str | Path, *, label: str) -> list[dict[str, Any]]:
     target = Path(path)
-    rows: list[dict[str, Any]] = []
     try:
         with target.open("r", encoding="utf-8") as handle:
-            line_number = 0
-            while True:
-                line = handle.readline(MAX_JSONL_LINE_BYTES + 1)
-                if not line:
-                    break
-                line_number += 1
-                if len(line.encode("utf-8")) > MAX_JSONL_LINE_BYTES:
-                    raise ContractValidationError(
-                        f"{label} line {line_number} exceeds the "
-                        f"{MAX_JSONL_LINE_BYTES}-byte limit."
-                    )
-                if not line.strip():
-                    continue
-                try:
-                    value = json.loads(line)
-                except json.JSONDecodeError as exc:
-                    raise ContractValidationError(
-                        f"{label} line {line_number} is not valid JSON: {exc}"
-                    ) from exc
-                if not isinstance(value, dict):
-                    raise ContractValidationError(
-                        f"{label} line {line_number} must be a JSON object."
-                    )
-                rows.append(value)
-                if len(rows) > MAX_RECORDS_PER_FILE:
-                    raise ContractValidationError(
-                        f"{label} exceeds the {MAX_RECORDS_PER_FILE}-record limit."
-                    )
+            return _load_jsonl_text(handle, label=label)
     except (OSError, UnicodeError) as exc:
-        raise ContractValidationError(f"Unable to read {label} at {target}: {exc}") from exc
-    return rows
+        raise ContractValidationError(
+            f"Unable to read {label} at {target}: {exc}"
+        ) from exc
+
+
+def load_jsonl_bytes(content: bytes, *, label: str) -> list[dict[str, Any]]:
+    """Load bounded JSON objects from already-custodied JSONL bytes.
+
+    The text wrapper deliberately uses the same UTF-8 decoding, universal-newline
+    behavior, line bound, object requirement, and record bound as
+    :func:`load_jsonl_objects`.  This entry point lets a caller validate bytes
+    obtained through a descriptor-bound channel without reopening a pathname.
+    """
+
+    if not isinstance(content, bytes):
+        raise TypeError("content must be bytes.")
+    try:
+        with io.BytesIO(content) as raw_handle:
+            with io.TextIOWrapper(raw_handle, encoding="utf-8") as handle:
+                return _load_jsonl_text(handle, label=label)
+    except UnicodeError as exc:
+        raise ContractValidationError(
+            f"Unable to read {label} from byte content: {exc}"
+        ) from exc
 
 
 def resolve_confined_path(
@@ -595,16 +721,14 @@ def resolve_confined_path(
     root_path = Path(root).resolve()
     candidate = Path(relative_path)
     if candidate.is_absolute():
-        raise ManifestValidationError(f"{label} must be relative to {root_path}.")
+        raise ManifestValidationError(f"{label} must be relative to its allowed root.")
     resolved = (root_path / candidate).resolve()
     try:
         resolved.relative_to(root_path)
     except ValueError as exc:
-        raise ManifestValidationError(
-            f"{label} escapes its allowed root: {relative_path!s}."
-        ) from exc
+        raise ManifestValidationError(f"{label} escapes its allowed root.") from exc
     if must_exist and (not resolved.exists() or not resolved.is_file()):
-        raise ManifestValidationError(f"{label} does not resolve to a file: {resolved}.")
+        raise ManifestValidationError(f"{label} does not resolve to a file.")
     return resolved
 
 
@@ -654,9 +778,18 @@ def count_jsonl_records(path: str | Path) -> int:
     return count
 
 
-def load_and_validate_manifest(path: str | Path) -> ReplayManifest:
+def load_and_validate_manifest(
+    path: str | Path,
+    *,
+    expected_source_sha256: str | None = None,
+    defer_adjudication_content_validation: bool = False,
+) -> ReplayManifest:
     target = Path(path).resolve()
     value, source_sha256 = _load_json_object_with_digest(target, "dataset manifest")
+    if expected_source_sha256 is not None and source_sha256 != expected_source_sha256:
+        raise ManifestValidationError(
+            "Dataset manifest changed after control-document preflight."
+        )
     required = {
         "schema_version",
         "dataset_id",
@@ -669,7 +802,9 @@ def load_and_validate_manifest(path: str | Path) -> ReplayManifest:
     }
     _require_exact_fields(value, required, "dataset manifest")
     _require_version(value.get("schema_version"), "dataset manifest")
-    dataset_id = _require_identifier(value.get("dataset_id"), "dataset manifest.dataset_id")
+    dataset_id = _require_identifier(
+        value.get("dataset_id"), "dataset manifest.dataset_id"
+    )
     data_origin = value.get("data_origin")
     if data_origin not in ALLOWED_DATA_ORIGINS:
         raise ManifestValidationError(
@@ -700,7 +835,9 @@ def load_and_validate_manifest(path: str | Path) -> ReplayManifest:
     assert isinstance(attestations, dict)
     raw_files = value.get("files")
     if not isinstance(raw_files, list) or not raw_files:
-        raise ManifestValidationError("dataset manifest.files must be a non-empty array.")
+        raise ManifestValidationError(
+            "dataset manifest.files must be a non-empty array."
+        )
 
     manifest_root = target.parent
     parsed_files: list[ManifestFile] = []
@@ -710,7 +847,9 @@ def load_and_validate_manifest(path: str | Path) -> ReplayManifest:
         label = f"dataset manifest.files[{index}]"
         if not isinstance(entry, dict):
             raise ManifestValidationError(f"{label} must be an object.")
-        _require_exact_fields(entry, {"role", "path", "sha256", "record_count", "adapter"}, label)
+        _require_exact_fields(
+            entry, {"role", "path", "sha256", "record_count", "adapter"}, label
+        )
         role = _require_identifier(entry.get("role"), f"{label}.role")
         if role not in {"cases", "adjudications"}:
             raise ManifestValidationError(f"{label}.role {role!r} is unsupported.")
@@ -721,15 +860,24 @@ def load_and_validate_manifest(path: str | Path) -> ReplayManifest:
             manifest_root, relative_path, label=f"{label}.path", must_exist=True
         )
         if resolved in paths:
-            raise ManifestValidationError(f"Manifest path {relative_path!r} is duplicated.")
-        if resolved.stat().st_size > MAX_DECLARED_FILE_BYTES:
+            raise ManifestValidationError(
+                f"Manifest path {relative_path!r} is duplicated."
+            )
+        defer_content = (
+            defer_adjudication_content_validation and role == "adjudications"
+        )
+        if not defer_content and resolved.stat().st_size > MAX_DECLARED_FILE_BYTES:
             raise ManifestValidationError(
                 f"Manifest path {relative_path!r} exceeds the "
                 f"{MAX_DECLARED_FILE_BYTES}-byte file limit."
             )
         declared_digest = entry.get("sha256")
-        if not isinstance(declared_digest, str) or not _SHA256_PATTERN.fullmatch(declared_digest):
-            raise ManifestValidationError(f"{label}.sha256 must be a lowercase SHA-256 digest.")
+        if not isinstance(declared_digest, str) or not _SHA256_PATTERN.fullmatch(
+            declared_digest
+        ):
+            raise ManifestValidationError(
+                f"{label}.sha256 must be a lowercase SHA-256 digest."
+            )
         record_count = entry.get("record_count")
         if (
             isinstance(record_count, bool)
@@ -745,16 +893,19 @@ def load_and_validate_manifest(path: str | Path) -> ReplayManifest:
             raise ManifestValidationError(
                 f"{label}.adapter must be 'canonical_jsonl_v0.2'."
             )
-        actual_digest = sha256_file(resolved)
-        if actual_digest != declared_digest:
-            raise ManifestValidationError(
-                f"SHA-256 mismatch for {relative_path}: declared {declared_digest}, actual {actual_digest}."
-            )
-        actual_count = count_jsonl_records(resolved)
-        if actual_count != record_count:
-            raise ManifestValidationError(
-                f"Record-count mismatch for {relative_path}: declared {record_count}, actual {actual_count}."
-            )
+        if not defer_content:
+            actual_digest = sha256_file(resolved)
+            if actual_digest != declared_digest:
+                raise ManifestValidationError(
+                    f"SHA-256 mismatch for {relative_path}: declared {declared_digest}, "
+                    f"actual {actual_digest}."
+                )
+            actual_count = count_jsonl_records(resolved)
+            if actual_count != record_count:
+                raise ManifestValidationError(
+                    f"Record-count mismatch for {relative_path}: declared {record_count}, "
+                    f"actual {actual_count}."
+                )
         parsed_files.append(
             ManifestFile(
                 role=role,
@@ -797,7 +948,9 @@ def load_and_validate_manifest(path: str | Path) -> ReplayManifest:
 
 def _validate_attestations(value: Any, intended_mode: str) -> None:
     if not isinstance(value, dict):
-        raise ManifestValidationError("dataset manifest.attestations must be an object.")
+        raise ManifestValidationError(
+            "dataset manifest.attestations must be an object."
+        )
     required = {
         "approved_for_replay",
         "approval_reference",
@@ -842,8 +995,8 @@ def _validate_attestations(value: Any, intended_mode: str) -> None:
             f"{intended_mode} requires approved_for_replay=true."
         )
     if intended_mode == "HISTORICAL_REPLAY" and not deidentified:
-        raise ManifestValidationError(
-            "HISTORICAL_REPLAY requires deidentified=true."
-        )
+        raise ManifestValidationError("HISTORICAL_REPLAY requires deidentified=true.")
     if not deidentified:
-        raise ManifestValidationError("Phase 2 inputs must be attested as deidentified.")
+        raise ManifestValidationError(
+            "Phase 2 inputs must be attested as deidentified."
+        )

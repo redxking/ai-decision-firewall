@@ -71,6 +71,25 @@ The contract-validation plan covers the following cases. Implemented versus rema
 
 `tests/test_qualification_fixture_generator.py` separately verifies that the reviewed fixture source is hashed from the single byte string that is parsed, and that symbolic-link directory redirection and hard-linked target overwrite attempts fail closed.
 
+### Gate B preflight tests
+
+`tests/test_gate_b.py` verifies the Phase 2.2 implementation boundary with test-only control packages and no organizational historical data:
+
+- missing, DRAFT, expired, malformed, mismatched, nonhistorical, and unsafe packages abort before any case or adjudication open, hash, count, decode, or parse in both validation and run paths;
+- exactly one `APPROVED` assertion is required for each of `DATA_OWNER`, `MISSION_OWNER`, `SECURITY`, `PRIVACY_LEGAL`, and `RECORDS_MANAGEMENT`, together with an `APPROVED` review whose asserted reviewer identifier differs from all asserted approver identifiers;
+- every critical Boolean, manifest/model/policy/contract/adapter binding, protocol digest, count, time relation (including `window_end <= custody.frozen_at <= valid_from`), status, and review state fails closed when mutated;
+- schema and runtime agree on integral JSON numbers, whitespace, path syntax and length, and declared bounds;
+- control JSON nesting, mapping/protocol size, model/policy size, confined-path, nonsymlink, no-hardlink, and output-custody limits are enforced;
+- resolved artifacts are opened without following a swapped final-component symlink, and frozen controls are revalidated before and after the runner;
+- injected paths, digests, operating-system errors, unexpected member names, and values are absent from public error surfaces;
+- missing private configuration paths, missing qualification schemas, and post-preflight integrity failures are converted to bounded historical errors in both validate-only and run paths;
+- historical output is restricted to an ignored `outputs/replay/<run>/` directory with owner-only directory and file permissions; descriptor-bound writes reject ancestor relocation, run-directory substitution, symlink targets, and hard-linked artifacts rather than following a changed display path;
+- after authorized qualification, accepted-case windows and exact-decimal overall/category quarantine thresholds stop the run before normalization or engine invocation; and
+- duplicate JSON object members are rejected in governed control and JSONL inputs, and authorization expiry at a staged runner boundary prevents a completed run manifest;
+- the historical runner receives only in-memory accepted cases, model bytes, policy bytes, and the read-only execution mode; label bytes and all filesystem/output paths are excluded until decision/audit closure, while the completed test path retains zero authorization attempts/tokens, broker invocations, action results, and operational effects.
+
+These tests support the CE-1 statement that the preflight controls exist in the identified commit. They are not a committed CE-2 Gate B campaign and do not establish real approver authority, signature validity, de-identification effectiveness, custody truth, organizational authorization, or historical performance.
+
 ### Replay-harness tests
 
 `tests/test_replay_harness.py` is the required starter evidence for:
@@ -79,10 +98,10 @@ The contract-validation plan covers the following cases. Implemented versus rema
 - `historical_case_count=0` retained in the run evidence;
 - a manifest-integrity failure aborts before any decision is emitted;
 - the exact configuration, manifest, model, policy, cases, and adjudications are frozen in a run snapshot and reverified after execution;
-- decisions are closed before adjudications are loaded;
+- historical adjudication bytes may be integrity-frozen inside the harness, but their path and contents are withheld from the runner and they are decoded and semantically loaded only after decisions and boundary-audit checks close;
 - every accepted case retains evidence-ID traceability;
 - semantically equivalent runs produce equivalent decisions after excluding time, latency, UUID, and run-ID fields;
-- the output audit chain verifies, every final decision hash is recomputed and bound to exactly one finalization record, and ordinary record tampering is detected;
+- the output audit chain verifies, every final decision hash is recomputed and bound to exactly one finalization record, unknown audit record types fail closed, and ordinary record tampering is detected;
 - token/decision-hash residue and any non-applicable post-action success claim are rejected;
 - authorization, broker, and operational-effect counters remain zero.
 
@@ -111,6 +130,8 @@ The Phase 2 starter is acceptable for public release only when the implemented g
 | Whole-dataset accounting | Every declared file count and accepted case-to-decision count reconciles | Required |
 | Qualification accounting | Under `QUARANTINE_RECORD`, `input_records = accepted_records + quarantined_records`, the rejection artifact is the exact quarantined projection, and accepted cases equal decisions | Required for Phase 2.1; observed as 7 = 3 + 4 in the synthetic campaign |
 | Qualification privacy | Ledger, rejection, expectation, and fatal-error surfaces contain metadata only and do not echo source payload or raw validator text | Required for Phase 2.1 |
+| Historical preflight | Historical origin requires a current, exact Gate B package and owner-only ignored paths before payload access; observed window/rate gates pass after qualification but before the engine | Required for Phase 2.2 implementation; no real package or pilot is approved |
+| Historical label boundary | Adjudication bytes may be frozen within the harness, but are neither passed nor made path-discoverable to the built-in runner and are decoded only after decisions close | Required for Phase 2.2; same-process isolation limitation retained |
 | Traceability | Every accepted decision's cited and feature-linked event IDs resolve to accepted input events | Required |
 | Audit | One suppression, no-authorization, and hash-bound finalization record exists per case and the presented hash chain verifies | Required, with custody limitation |
 | Compatibility | All Phase 1 tests continue to pass | Required |
@@ -166,7 +187,7 @@ For any later repeated behavioral evaluation, report raw numerators and denomina
 
 Required evidence:
 
-- all Phase 1, Phase 2 starter, and Phase 2.1 qualification tests pass;
+- all Phase 1, Phase 2 starter, Phase 2.1 qualification, and Phase 2.2 Gate B tests pass;
 - no credential or production endpoint is present;
 - fixture provenance and synthetic status are documented;
 - public files contain no historical or direct-identifier data;
@@ -178,24 +199,22 @@ Passing Gate A authorizes only publication of the starter code and synthetic fix
 
 ### Gate B: Approved historical replay
 
-Before any historical record is processed, require:
+Before any historical record is processed, the structural Gate B preflight requires:
 
-- data-owner authorization and approved use;
-- privacy/legal, security, and mission-owner review;
-- documented de-identification, access, retention, deletion, and incident-response procedures;
-- source-field mapping and provenance review;
-- a frozen model, policy, contract, and adapter baseline;
-- manifest and dataset custody outside the mutable replay directory;
-- temporal holdout design and safeguards against hindsight, selection, and adjudication bias;
-- an approved plan for handling disagreement and indeterminate outcomes.
-- predeclared overall and category-specific quarantine thresholds, fatal stop conditions, escalation ownership, complete-intake reporting, and survivorship-bias analysis;
-- restricted handling for source and raw-line hashes, which remain linkable even though the ledger is metadata-only.
+- top-level `APPROVED` status, an `APPROVED` independent review, and exactly one approved assertion from each of `DATA_OWNER`, `MISSION_OWNER`, `SECURITY`, `PRIVACY_LEGAL`, and `RECORDS_MANAGEMENT`;
+- documented external de-identification, access, retention, deletion, incident-response, isolation, egress, kill-switch, and custody evidence;
+- exact manifest, dataset, model, policy, contract, adapter, source-mapping, adjudication-protocol, and pilot-protocol byte bindings;
+- a temporal holdout, frozen sampling method, complete-intake and sample counts, separated adjudication, indeterminate-outcome rule, and predeclared stop conditions;
+- confined nonsymlink restricted inputs under ignored `local/gate_b/`, owner-only output under ignored `outputs/replay/<run>/`, and restricted handling for source and raw-line hashes; and
+- complete negative-control evidence that any missing, stale, malformed, mismatched, unsafe, or unknown structural condition stops before payload access.
+
+After that structural preflight permits qualification, but before normalization or engine invocation, the runtime must require every accepted case to fall inside the approved half-open window and every observed overall/category quarantine rate to remain at or below its predeclared threshold. An unknown observed category fails closed. Complete-intake, quarantined, fatal, excluded, adjudicated, indeterminate, and missing-label counts remain visible alongside accepted-case measures.
 
 Gate B does not authorize a live feed, shadow-feed deployment, operational recommendation workflow, or operational action.
 
 ### Gate C: Live read-only shadow evaluation
 
-Phase 2.1 did not enter Gate C. Before a Phase 3 live shadow service, require:
+Phase 2.2 did not enter Gate C. Before a Phase 3 live shadow service, require:
 
 - a separately approved deployment architecture;
 - read-only service identities with no action permission;

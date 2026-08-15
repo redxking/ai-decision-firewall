@@ -1,0 +1,461 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/gate-b-authorization.schema.json",
+  "title": "AI Decision Firewall Gate B historical-replay authorization package",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "authorization_id",
+    "status",
+    "dataset_id",
+    "dataset_manifest_sha256",
+    "approved_purpose",
+    "population_scope",
+    "window_start",
+    "window_end",
+    "valid_from",
+    "expires_at",
+    "approvals",
+    "artifact_bindings",
+    "controls",
+    "custody",
+    "sampling",
+    "stop_conditions",
+    "adjudication",
+    "independent_review",
+    "claim_control"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.2.0"},
+    "authorization_id": {"$ref": "#/$defs/identifier"},
+    "status": {
+      "enum": ["DRAFT", "APPROVED", "REJECTED", "REVOKED", "EXPIRED"]
+    },
+    "dataset_id": {"$ref": "#/$defs/identifier"},
+    "dataset_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "approved_purpose": {"$ref": "#/$defs/nonemptyString"},
+    "population_scope": {"$ref": "#/$defs/nonemptyString"},
+    "window_start": {"type": "string", "format": "date-time"},
+    "window_end": {"type": "string", "format": "date-time"},
+    "valid_from": {"type": "string", "format": "date-time"},
+    "expires_at": {"type": "string", "format": "date-time"},
+    "approvals": {"$ref": "#/$defs/approvals"},
+    "artifact_bindings": {"$ref": "#/$defs/artifactBindings"},
+    "controls": {"$ref": "#/$defs/controls"},
+    "custody": {"$ref": "#/$defs/custody"},
+    "sampling": {"$ref": "#/$defs/sampling"},
+    "stop_conditions": {"$ref": "#/$defs/stopConditions"},
+    "adjudication": {"$ref": "#/$defs/adjudication"},
+    "independent_review": {"$ref": "#/$defs/independentReview"},
+    "claim_control": {"$ref": "#/$defs/claimControl"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"const": "DRAFT"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "approvals": {
+            "items": {
+              "properties": {
+                "status": {"const": "PENDING"},
+                "approved_at": {"type": "null"}
+              }
+            }
+          },
+          "independent_review": {
+            "properties": {
+              "status": {"const": "PENDING"},
+              "reviewed_at": {"type": "null"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "APPROVED"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "dataset_manifest_sha256": {"$ref": "#/$defs/nonPlaceholderSha256"},
+          "approvals": {
+            "items": {
+              "properties": {
+                "status": {"const": "APPROVED"},
+                "approved_at": {"type": "string", "format": "date-time"}
+              }
+            }
+          },
+          "artifact_bindings": {
+            "properties": {
+              "model_sha256": {"$ref": "#/$defs/nonPlaceholderSha256"},
+              "policy_sha256": {"$ref": "#/$defs/nonPlaceholderSha256"},
+              "artifacts": {
+                "items": {
+                  "properties": {
+                    "sha256": {"$ref": "#/$defs/nonPlaceholderSha256"}
+                  }
+                }
+              }
+            }
+          },
+          "controls": {
+            "properties": {
+              "direct_identifiers_removed": {"const": true},
+              "reidentification_risk_reviewed": {"const": true},
+              "offline_only": {"const": true},
+              "live_feed_connected": {"const": false},
+              "action_credentials_present": {"const": false},
+              "write_capable_connectors_present": {"const": false},
+              "network_egress_disabled": {"const": true},
+              "runtime_labels_separated": {"const": true},
+              "complete_intake_reporting": {"const": true},
+              "restricted_hash_handling": {"const": true}
+            }
+          },
+          "sampling": {
+            "properties": {
+              "full_intake_count": {"type": "integer", "minimum": 1},
+              "sample_count": {"type": "integer", "minimum": 1, "maximum": 100000},
+              "selection_frozen": {"const": true}
+            }
+          },
+          "stop_conditions": {
+            "properties": {
+              "stop_on_any_fatal": {"const": true},
+              "stop_on_unknown_failure": {"const": true},
+              "thresholds_frozen": {"const": true}
+            }
+          },
+          "adjudication": {
+            "properties": {
+              "runtime_separated": {"const": true},
+              "labels_hidden_until_decision": {"const": true},
+              "indeterminate_allowed": {"const": true}
+            }
+          },
+          "independent_review": {
+            "properties": {
+              "status": {"const": "APPROVED"},
+              "reviewed_at": {"type": "string", "format": "date-time"}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "nonemptyString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "pattern": "\\S"
+    },
+    "nonemptyUniqueStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/nonemptyString"}
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nonPlaceholderSha256": {
+      "type": "string",
+      "pattern": "^(?!0{64}$)[0-9a-f]{64}$"
+    },
+    "confinedRelativePath": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*\\\\)[A-Za-z0-9][A-Za-z0-9._-]*(?:/[A-Za-z0-9][A-Za-z0-9._-]*)*$"
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "status", "approver_id", "approval_reference", "approved_at"],
+      "properties": {
+        "role": {
+          "enum": [
+            "DATA_OWNER",
+            "MISSION_OWNER",
+            "SECURITY",
+            "PRIVACY_LEGAL",
+            "RECORDS_MANAGEMENT"
+          ]
+        },
+        "status": {"enum": ["PENDING", "APPROVED", "REJECTED", "REVOKED"]},
+        "approver_id": {"$ref": "#/$defs/nonemptyString"},
+        "approval_reference": {"$ref": "#/$defs/nonemptyString"},
+        "approved_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/approval"},
+      "allOf": [
+        {
+          "contains": {"properties": {"role": {"const": "DATA_OWNER"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {"properties": {"role": {"const": "MISSION_OWNER"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {"properties": {"role": {"const": "SECURITY"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {"properties": {"role": {"const": "PRIVACY_LEGAL"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {"properties": {"role": {"const": "RECORDS_MANAGEMENT"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "path", "sha256"],
+      "properties": {
+        "role": {
+          "enum": ["SOURCE_MAPPING", "ADJUDICATION_PROTOCOL", "PILOT_PROTOCOL"]
+        },
+        "path": {"$ref": "#/$defs/confinedRelativePath"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/artifact"},
+      "allOf": [
+        {
+          "contains": {"properties": {"role": {"const": "SOURCE_MAPPING"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {"properties": {"role": {"const": "ADJUDICATION_PROTOCOL"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {"properties": {"role": {"const": "PILOT_PROTOCOL"}}, "required": ["role"]},
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "artifactBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "contract_adapter",
+        "model_sha256",
+        "policy_sha256",
+        "artifacts"
+      ],
+      "properties": {
+        "contract_version": {"const": "0.2.0"},
+        "contract_adapter": {"$ref": "#/$defs/nonemptyString"},
+        "model_sha256": {"$ref": "#/$defs/sha256"},
+        "policy_sha256": {"$ref": "#/$defs/sha256"},
+        "artifacts": {"$ref": "#/$defs/artifacts"}
+      }
+    },
+    "controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deidentification_assessment_reference",
+        "direct_identifiers_removed",
+        "reidentification_risk_reviewed",
+        "offline_only",
+        "live_feed_connected",
+        "action_credentials_present",
+        "write_capable_connectors_present",
+        "network_egress_disabled",
+        "runtime_labels_separated",
+        "complete_intake_reporting",
+        "restricted_hash_handling",
+        "retention_deletion_reference",
+        "incident_response_reference",
+        "isolation_reference",
+        "kill_switch_reference"
+      ],
+      "properties": {
+        "deidentification_assessment_reference": {"$ref": "#/$defs/nonemptyString"},
+        "direct_identifiers_removed": {"type": "boolean"},
+        "reidentification_risk_reviewed": {"type": "boolean"},
+        "offline_only": {"type": "boolean"},
+        "live_feed_connected": {"type": "boolean"},
+        "action_credentials_present": {"type": "boolean"},
+        "write_capable_connectors_present": {"type": "boolean"},
+        "network_egress_disabled": {"type": "boolean"},
+        "runtime_labels_separated": {"type": "boolean"},
+        "complete_intake_reporting": {"type": "boolean"},
+        "restricted_hash_handling": {"type": "boolean"},
+        "retention_deletion_reference": {"$ref": "#/$defs/nonemptyString"},
+        "incident_response_reference": {"$ref": "#/$defs/nonemptyString"},
+        "isolation_reference": {"$ref": "#/$defs/nonemptyString"},
+        "kill_switch_reference": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_reference",
+        "custody_record_reference",
+        "external_manifest_digest_reference",
+        "frozen_at",
+        "custodian_id"
+      ],
+      "properties": {
+        "snapshot_reference": {"$ref": "#/$defs/nonemptyString"},
+        "custody_record_reference": {"$ref": "#/$defs/nonemptyString"},
+        "external_manifest_digest_reference": {"$ref": "#/$defs/nonemptyString"},
+        "frozen_at": {"type": "string", "format": "date-time"},
+        "custodian_id": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_reference",
+        "predeclared_at",
+        "temporal_holdout_start",
+        "temporal_holdout_end",
+        "full_intake_count",
+        "sample_count",
+        "selection_method",
+        "selection_frozen"
+      ],
+      "properties": {
+        "protocol_reference": {"$ref": "#/$defs/nonemptyString"},
+        "predeclared_at": {"type": "string", "format": "date-time"},
+        "temporal_holdout_start": {"type": "string", "format": "date-time"},
+        "temporal_holdout_end": {"type": "string", "format": "date-time"},
+        "full_intake_count": {"type": "integer", "minimum": 0},
+        "sample_count": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "selection_method": {"$ref": "#/$defs/nonemptyString"},
+        "selection_frozen": {"type": "boolean"}
+      }
+    },
+    "categoryRate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "max_rate"],
+      "properties": {
+        "category": {
+          "enum": [
+            "ENCODING",
+            "RESOURCE_LIMIT",
+            "SYNTAX",
+            "STRUCTURE",
+            "SEMANTICS",
+            "POLICY",
+            "DUPLICATE"
+          ]
+        },
+        "max_rate": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "stopConditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_overall_quarantine_rate",
+        "max_category_quarantine_rates",
+        "stop_on_any_fatal",
+        "stop_on_unknown_failure",
+        "thresholds_frozen",
+        "escalation_owner_id"
+      ],
+      "properties": {
+        "max_overall_quarantine_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "max_category_quarantine_rates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/categoryRate"}
+        },
+        "stop_on_any_fatal": {"type": "boolean"},
+        "stop_on_unknown_failure": {"type": "boolean"},
+        "thresholds_frozen": {"type": "boolean"},
+        "escalation_owner_id": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "adjudication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_reference",
+        "minimum_reviewers",
+        "runtime_separated",
+        "labels_hidden_until_decision",
+        "indeterminate_allowed",
+        "disagreement_resolution"
+      ],
+      "properties": {
+        "protocol_reference": {"$ref": "#/$defs/nonemptyString"},
+        "minimum_reviewers": {"type": "integer", "minimum": 2},
+        "runtime_separated": {"type": "boolean"},
+        "labels_hidden_until_decision": {"type": "boolean"},
+        "indeterminate_allowed": {"type": "boolean"},
+        "disagreement_resolution": {"$ref": "#/$defs/nonemptyString"}
+      }
+    },
+    "independentReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewer_id", "review_reference", "reviewed_at"],
+      "properties": {
+        "status": {"enum": ["PENDING", "APPROVED", "REJECTED"]},
+        "reviewer_id": {"$ref": "#/$defs/nonemptyString"},
+        "review_reference": {"$ref": "#/$defs/nonemptyString"},
+        "reviewed_at": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "claimControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim_owner_id",
+        "pause_authority_id",
+        "revocation_authority_id",
+        "expires_at",
+        "revalidation_triggers"
+      ],
+      "properties": {
+        "claim_owner_id": {"$ref": "#/$defs/nonemptyString"},
+        "pause_authority_id": {"$ref": "#/$defs/nonemptyString"},
+        "revocation_authority_id": {"$ref": "#/$defs/nonemptyString"},
+        "expires_at": {"type": "string", "format": "date-time"},
+        "revalidation_triggers": {"$ref": "#/$defs/nonemptyUniqueStrings"}
+      }
+    }
+  }
+}

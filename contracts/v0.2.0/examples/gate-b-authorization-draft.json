@@ -1,0 +1,147 @@
+{
+  "schema_version": "0.2.0",
+  "authorization_id": "DRAFT-NOT-AUTHORIZED",
+  "status": "DRAFT",
+  "dataset_id": "PLACEHOLDER-HISTORICAL-DATASET-NOT-PRESENT",
+  "dataset_manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "approved_purpose": "DRAFT PLACEHOLDER: proposed offline historical-replay purpose; no purpose is approved by this example.",
+  "population_scope": "DRAFT PLACEHOLDER: exact source, population, exclusions, jurisdiction, and maximum intake are not defined or approved.",
+  "window_start": "2000-01-01T00:00:00Z",
+  "window_end": "2000-01-01T00:00:00Z",
+  "valid_from": "2000-01-01T00:00:00Z",
+  "expires_at": "2000-01-02T00:00:00Z",
+  "approvals": [
+    {
+      "role": "DATA_OWNER",
+      "status": "PENDING",
+      "approver_id": "PLACEHOLDER-NOT-ASSIGNED",
+      "approval_reference": "UNSET-NOT-AN-APPROVAL",
+      "approved_at": null
+    },
+    {
+      "role": "MISSION_OWNER",
+      "status": "PENDING",
+      "approver_id": "PLACEHOLDER-NOT-ASSIGNED",
+      "approval_reference": "UNSET-NOT-AN-APPROVAL",
+      "approved_at": null
+    },
+    {
+      "role": "SECURITY",
+      "status": "PENDING",
+      "approver_id": "PLACEHOLDER-NOT-ASSIGNED",
+      "approval_reference": "UNSET-NOT-AN-APPROVAL",
+      "approved_at": null
+    },
+    {
+      "role": "PRIVACY_LEGAL",
+      "status": "PENDING",
+      "approver_id": "PLACEHOLDER-NOT-ASSIGNED",
+      "approval_reference": "UNSET-NOT-AN-APPROVAL",
+      "approved_at": null
+    },
+    {
+      "role": "RECORDS_MANAGEMENT",
+      "status": "PENDING",
+      "approver_id": "PLACEHOLDER-NOT-ASSIGNED",
+      "approval_reference": "UNSET-NOT-AN-APPROVAL",
+      "approved_at": null
+    }
+  ],
+  "artifact_bindings": {
+    "contract_version": "0.2.0",
+    "contract_adapter": "UNSET-NOT-IMPLEMENTED",
+    "model_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "policy_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "artifacts": [
+      {
+        "role": "SOURCE_MAPPING",
+        "path": "docs/phase2/templates/SOURCE_MAPPING_TEMPLATE.csv",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+        "role": "ADJUDICATION_PROTOCOL",
+        "path": "docs/phase2/templates/ADJUDICATION_PROTOCOL_TEMPLATE.md",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+        "role": "PILOT_PROTOCOL",
+        "path": "docs/phase2/templates/GATE_B_PILOT_PROTOCOL_TEMPLATE.md",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ]
+  },
+  "controls": {
+    "deidentification_assessment_reference": "UNSET-NOT-VERIFIED",
+    "direct_identifiers_removed": false,
+    "reidentification_risk_reviewed": false,
+    "offline_only": true,
+    "live_feed_connected": false,
+    "action_credentials_present": false,
+    "write_capable_connectors_present": false,
+    "network_egress_disabled": true,
+    "runtime_labels_separated": true,
+    "complete_intake_reporting": true,
+    "restricted_hash_handling": false,
+    "retention_deletion_reference": "UNSET-NOT-VERIFIED",
+    "incident_response_reference": "UNSET-NOT-VERIFIED",
+    "isolation_reference": "UNSET-NOT-VERIFIED",
+    "kill_switch_reference": "UNSET-NOT-VERIFIED"
+  },
+  "custody": {
+    "snapshot_reference": "UNSET-NO-HISTORICAL-SNAPSHOT",
+    "custody_record_reference": "UNSET-NO-CUSTODY-RECORD",
+    "external_manifest_digest_reference": "UNSET-NO-EXTERNAL-DIGEST",
+    "frozen_at": "2000-01-01T00:00:00Z",
+    "custodian_id": "PLACEHOLDER-NOT-ASSIGNED"
+  },
+  "sampling": {
+    "protocol_reference": "UNSET-NOT-APPROVED",
+    "predeclared_at": "2000-01-01T00:00:00Z",
+    "temporal_holdout_start": "2000-01-01T00:00:00Z",
+    "temporal_holdout_end": "2000-01-01T00:00:00Z",
+    "full_intake_count": 0,
+    "sample_count": 0,
+    "selection_method": "DRAFT PLACEHOLDER: not selected or frozen",
+    "selection_frozen": false
+  },
+  "stop_conditions": {
+    "max_overall_quarantine_rate": 0,
+    "max_category_quarantine_rates": [
+      {"category": "ENCODING", "max_rate": 0},
+      {"category": "RESOURCE_LIMIT", "max_rate": 0},
+      {"category": "SYNTAX", "max_rate": 0},
+      {"category": "STRUCTURE", "max_rate": 0},
+      {"category": "SEMANTICS", "max_rate": 0},
+      {"category": "POLICY", "max_rate": 0},
+      {"category": "DUPLICATE", "max_rate": 0}
+    ],
+    "stop_on_any_fatal": true,
+    "stop_on_unknown_failure": true,
+    "thresholds_frozen": false,
+    "escalation_owner_id": "PLACEHOLDER-NOT-ASSIGNED"
+  },
+  "adjudication": {
+    "protocol_reference": "UNSET-NOT-APPROVED",
+    "minimum_reviewers": 2,
+    "runtime_separated": true,
+    "labels_hidden_until_decision": true,
+    "indeterminate_allowed": true,
+    "disagreement_resolution": "DRAFT PLACEHOLDER: resolution method is not approved."
+  },
+  "independent_review": {
+    "status": "PENDING",
+    "reviewer_id": "PLACEHOLDER-NOT-ASSIGNED",
+    "review_reference": "UNSET-NOT-A-REVIEW",
+    "reviewed_at": null
+  },
+  "claim_control": {
+    "claim_owner_id": "PLACEHOLDER-NOT-ASSIGNED",
+    "pause_authority_id": "PLACEHOLDER-NOT-ASSIGNED",
+    "revocation_authority_id": "PLACEHOLDER-NOT-ASSIGNED",
+    "expires_at": "2000-01-02T00:00:00Z",
+    "revalidation_triggers": [
+      "Any source, mapping, contract, adapter, model, policy, control, custody, sampling, or adjudication change",
+      "Any incident, control failure, discovered classifier gap, or material claim change"
+    ]
+  }
+}

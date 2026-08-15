@@ -13,6 +13,7 @@ No rejected payload, parser message, contract error text, identifier, or
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 from dataclasses import dataclass
@@ -63,8 +64,7 @@ class QualificationFatalError(RuntimeError):
         location = (
             f" at physical line {physical_line_number}, nonblank record "
             f"{nonblank_record_number}"
-            if physical_line_number is not None
-            and nonblank_record_number is not None
+            if physical_line_number is not None and nonblank_record_number is not None
             else ""
         )
         super().__init__(
@@ -365,7 +365,9 @@ def _classify_contract_failure(
     return None
 
 
-def _identifier_definitions(value: dict[str, Any]) -> tuple[str | None, tuple[str, ...]]:
+def _identifier_definitions(
+    value: dict[str, Any],
+) -> tuple[str | None, tuple[str, ...]]:
     case_value = value.get("case_id")
     case_id = case_value if isinstance(case_value, str) and case_value else None
     event_ids: list[str] = []
@@ -380,14 +382,14 @@ def _identifier_definitions(value: dict[str, Any]) -> tuple[str | None, tuple[st
     return case_id, tuple(event_ids)
 
 
-def qualify_case_file(
-    path: str | Path,
+def _qualify_case_source(
+    source: str | Path | bytes,
     source_file_sha256: str,
     *,
     dataset_id: str,
     source_role: str = _SOURCE_ROLE,
 ) -> QualificationResult:
-    """Qualify a local canonical case JSONL file for replay.
+    """Qualify canonical case JSONL from a path or already-custodied bytes.
 
     The supplied source digest is verified against the exact file bytes.  Raw
     line digests cover all source bytes except a terminal LF or CRLF delimiter;
@@ -416,7 +418,9 @@ def qualify_case_file(
     source_hasher = hashlib.sha256()
 
     try:
-        handle = Path(path).open("rb")
+        handle = (
+            io.BytesIO(source) if isinstance(source, bytes) else Path(source).open("rb")
+        )
     except OSError:
         raise _fatal(
             error_category="INTERNAL",
@@ -583,7 +587,10 @@ def qualify_case_file(
                 accounting.append(row)
                 rejected.append(row)
                 continue
-            if "schema_version" in value and value["schema_version"] != CONTRACT_VERSION:
+            if (
+                "schema_version" in value
+                and value["schema_version"] != CONTRACT_VERSION
+            ):
                 raise _fatal(
                     error_category="STRUCTURE",
                     error_code="UNSUPPORTED_SCHEMA_VERSION",
@@ -682,10 +689,47 @@ def qualify_case_file(
     )
 
 
+def qualify_case_file(
+    path: str | Path,
+    source_file_sha256: str,
+    *,
+    dataset_id: str,
+    source_role: str = _SOURCE_ROLE,
+) -> QualificationResult:
+    """Qualify a local canonical case JSONL file for replay."""
+
+    return _qualify_case_source(
+        path,
+        source_file_sha256,
+        dataset_id=dataset_id,
+        source_role=source_role,
+    )
+
+
+def qualify_case_bytes(
+    content: bytes,
+    source_file_sha256: str,
+    *,
+    dataset_id: str,
+    source_role: str = _SOURCE_ROLE,
+) -> QualificationResult:
+    """Qualify already-custodied canonical case JSONL without opening a path."""
+
+    if not isinstance(content, bytes):
+        raise TypeError("content must be bytes.")
+    return _qualify_case_source(
+        content,
+        source_file_sha256,
+        dataset_id=dataset_id,
+        source_role=source_role,
+    )
+
+
 __all__ = [
     "MAX_JSON_NESTING_DEPTH",
     "QUALIFICATION_TAXONOMY_VERSION",
     "QualificationFatalError",
     "QualificationResult",
+    "qualify_case_bytes",
     "qualify_case_file",
 ]

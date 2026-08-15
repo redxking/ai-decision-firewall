@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0-alpha.3 — 2026-08-14
+
+- Added a closed Gate B authorization-package contract, non-authorizing DRAFT example, ADR, operator guide, and blank pilot, mapping, and adjudication templates.
+- Required historical, de-identified input to pass a current five-role approval, independent-review, custody, purpose/scope, time, contract, adapter, model, policy, and protocol-binding preflight before any case or adjudication payload access.
+- Added frozen sampling, complete-intake, accepted-case time-window, overall/category quarantine, fatal/unknown-failure, and claim-revalidation controls before engine invocation.
+- Confined restricted Gate B inputs to ignored `local/gate_b/` paths and historical outputs to new ignored owner-only `outputs/replay/<run>/` directories; retained directory descriptors for every snapshot and artifact operation so bound replay-ancestor relocation or run-directory substitution fails without redirecting writes.
+- Added a path-free historical runner interface using only in-memory accepted cases, model bytes, policy bytes, read-only decisions, and audit rows; no output, snapshot, source, or adjudication path crosses that boundary.
+- Deferred adjudication snapshot publication until decisions and boundary-audit checks close, while retaining the exact predecision bytes in a harness-owned frozen buffer so source mutation cannot alter evaluation inputs.
+- Rejected duplicate JSON object members in governed control and JSONL records, restricted replay audit rows to the exact code-owned record-type vocabulary, and rechecked authorization validity at payload, runner, post-run, and evidence-finalization boundaries.
+- Sanitized missing-path, schema, source-integrity, and post-decision adjudication failures so restricted paths, identifiers, digests, values, and operating-system text are not returned through historical validation or run surfaces.
+- Added schema/runtime differential, path/symlink/TOCTOU, parser-resource, binding, privacy/error-surface, pre-payload access, stop-condition, label-separation, snapshot, and zero-effect tests.
+- This increment establishes CE-1 implementation existence only. It does not approve a Gate B package, process organizational historical data, validate external authority or de-identification, or establish historical efficacy, operational readiness, live-shadow safety, or action safety.
+
 ## 0.2.0-alpha.2 — 2026-08-14
 
 Phase 2.1 bounded record qualification and quarantine increment.

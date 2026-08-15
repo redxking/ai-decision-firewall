@@ -6,7 +6,7 @@ Run from the repository root:
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The 67-test suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. It covers the original abstention, break-glass, human-authority, authorization, label-separation, and audit-tamper controls plus the Phase 2 read-only execution boundary, replay contracts, path confinement, canonical-context consistency, frozen input snapshots, temporal normalization, post-decision adjudication loading, deterministic artifacts, decision/audit binding, exact authorization-state rejection, zero token/broker/effect assertions, and the narrow starter claim-evidence record.
+The 93-test suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. It covers the original abstention, break-glass, human-authority, authorization, label-separation, and audit-tamper controls plus the Phase 2 read-only execution boundary, replay contracts, path confinement, canonical-context consistency, frozen input snapshots, descriptor-bound historical output, in-memory historical decision processing, temporal normalization, post-decision adjudication decoding, deterministic artifacts, decision/audit binding, exact authorization-state rejection, zero token/broker/effect assertions, and the narrow starter claim-evidence record.
 
 Phase 2.1 qualification coverage includes:
 
@@ -22,3 +22,18 @@ Phase 2.1 qualification coverage includes:
 - fail-closed protection against symlinked target directories, hard-linked target files, and source read/hash inconsistency.
 
 These are synthetic control tests with `historical_case_count=0`. They do not measure historical acceptance, historical efficacy, operational performance, agentic alignment, or live-shadow readiness.
+
+Phase 2.2 Gate B coverage includes:
+
+- closed-schema and runtime agreement for approval states, exact roles, controls, review, counts, bindings, path syntax, and resource ceilings;
+- rejection of missing, DRAFT, expired, malformed, mismatched, nonhistorical, or unsafe packages before any case or adjudication open, hash, count, decode, or parse;
+- confined nonsymlink Gate B inputs under ignored `local/gate_b/` and descriptor-bound, owner-only historical outputs under ignored `outputs/replay/<run>/`, including ancestor-relocation and run-directory-substitution negative controls;
+- frozen manifest, model, policy, mapping, and protocol bytes with mutation and symlink-swap detection;
+- sanitized failures that do not echo private paths, digests, operating-system errors, unexpected field names, or injected values;
+- missing private paths and qualification schemas fail through bounded validate-only and run errors, while duplicate JSON object members are rejected rather than accepted with last-member-wins behavior;
+- post-qualification window and exact-decimal quarantine thresholds that stop before normalization or engine invocation;
+- staged authorization expiry prevents completion, and unrecognized audit record types fail the replay evidence boundary;
+- a path-free historical runner interface containing only in-memory accepted cases, model bytes, policy bytes, and the read-only execution mode, with adjudication bytes withheld until decision and audit closure; and
+- zero authorization attempts, tokens, broker calls, action results, or operational effects for the fixed test-only package.
+
+These tests establish implementation and negative-control coverage in the current checkout. No committed Gate B approval or historical evidence bundle exists, so they do not establish organizational authority, privacy effectiveness, custody validity, historical performance, or CE-2 Gate B behavior for a published campaign.

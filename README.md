@@ -1,9 +1,9 @@
 # AI Decision Firewall
 
-- **Current code:** v0.2.0-alpha.2 Phase 2.1 record-qualification increment
+- **Current code:** v0.2.0-alpha.3 Phase 2.2 Gate B preflight increment
 - **Validated baseline:** v0.1.0 synthetic proof of concept
 - **Decision domain:** privileged-identity containment
-- **Operational status:** offline synthetic replay and record qualification; shadow-read-only remains an unconnected execution semantic, and no historical organizational data is included
+- **Operational status:** offline synthetic replay, record qualification, and historical-pilot preflight; no organizational historical data, approved Gate B package, live feed, or operational connector is included
 - **Safety boundary:** not approved for production integration, operational decision-making, or live containment
 
 AI systems can rank alerts and recommend actions, but consequential operations require a stronger control boundary: the system must determine whether the available evidence is trustworthy and sufficient, whether an action is within delegated authority, and whether the intended effect actually occurred.
@@ -44,7 +44,7 @@ Version 0.1 implements a complete synthetic decision transaction for privileged 
 
 There are no production credentials, production connectors, or external action interfaces in this repository.
 
-## Phase 2: replay boundary and record qualification
+## Phase 2: replay boundary, qualification, and Gate B preflight
 
 Phase 2 begins the transition from generator-consistent evidence to evidence-realism testing, without expanding action authority. The starter adds:
 
@@ -54,7 +54,7 @@ Phase 2 begins the transition from generator-consistent evidence to evidence-rea
 - versioned replay-envelope and manifest contracts, adapter and normalizer boundaries, deterministic replay metrics, and a command-line harness;
 - fail-closed validation for governance attestations, runtime-label separation, file digests and counts, path confinement, timestamps, identifiers, numeric ranges, and canonical-context consistency;
 - a per-run input snapshot that binds the exact configuration, manifest, model, policy, cases, and adjudications used, with integrity checks before and after engine execution;
-- separate post-decision adjudication loading so evaluator labels cannot enter runtime decisions;
+- pre-decision freezing of adjudication bytes inside the harness, with semantic decoding and loading deferred until the decision and audit close, so labels are neither placed beside nor passed to the decision runner;
 - one-to-one suppression, authorization, and decision-finalization audit checks, including recomputation of each decision-record hash;
 - a research-informed claim-evidence standard, machine-readable evidence schema, worked evidence record, and adversarial-evaluation backlog;
 - a small, explicitly synthetic starter fixture and automated regression tests.
@@ -66,6 +66,15 @@ Phase 2.1 adds an explicit, cases-only qualification policy for offline historic
 - code-owned fatal conditions abort the complete qualification call, while reviewed record-local defects produce sanitized `QUARANTINED` entries;
 - a closed metadata-only ledger binds every nonblank source occurrence by source digest, physical line, nonblank ordinal, and raw-line digest without copying rejected payloads or exception text;
 - the harness independently revalidates `input = accepted + quarantined`, requires the rejection artifact to equal the ordered quarantined projection, and requires one decision per accepted case before it finalizes evidence.
+
+Phase 2.2 adds the machine-enforced Gate B preflight needed before any future historical pilot:
+
+- a historical manifest cannot trigger an open, hash, count, decode, or parse of cases or adjudications until a separate Gate B package passes;
+- the package must be current and `APPROVED`, include exactly five accountable approval roles plus an approved independent review, and bind the manifest, model, policy, contract, adapter, source mapping, adjudication protocol, and pilot protocol;
+- the runtime requires offline `HISTORICAL_REPLAY`, `QUARANTINE_RECORD`, no live feed, no action credentials, no write-capable connector, disabled egress, label separation, complete-intake reporting, and frozen sampling and stop conditions;
+- control bytes are frozen before payload processing and revalidated from owner-only, descriptor-bound run snapshots before and after engine execution; authorization validity is rechecked before payload access, before and after the runner, and before final evidence completion;
+- governed JSON rejects duplicate object members, the audit boundary accepts only the exact code-owned record types, and the historical runner receives only in-memory accepted cases plus bound model and policy bytes, never output or evaluator-label paths; and
+- the public example is deliberately `DRAFT` and non-authorizing. Machine conformance cannot establish approver authority, signature authenticity, effective de-identification, custody truth, or historical efficacy.
 
 The included Phase 2 fixture contains **zero historical cases**. It exercises the framework; it does not establish historical replay performance, analyst agreement, operational calibration, or readiness for live shadow deployment. See [`docs/phase2/`](docs/phase2/) for the architecture, data contract, requirements, safety case, and validation plan.
 
@@ -83,7 +92,9 @@ The committed starter fixture provides a small deterministic integration check:
 | Broker invocations or operational effects | 0 |
 | Action or post-action audit records | 0 |
 | Presented audit chain | Valid, 24 records |
-| Full automated suite | 67 of 67 passed |
+| Full automated suite | 93 of 93 passed |
+
+The 93-test count is release-conformance evidence for this checkout and must be rebound to the published commit and GitHub CI result. It is not a CE-2 Gate B campaign or evidence that an organizational safeguard is effective.
 
 The fixture's three adjudications are test expectations, not historical ground truth. Agreement or classification measures calculated from these three synthetic records are wiring checks and must not be represented as efficacy evidence.
 
@@ -143,13 +154,16 @@ The model has no signing key, target credentials, action-broker reference, or di
 Phase 2 places a read-only ingestion boundary in front of the same decision path:
 
 ```text
-Approved replay manifest + canonical records
+Manifest control bytes + optional Gate B package
                     |
                     v
- digest/count/path/governance validation
+ historical origin? require current approvals and bindings
                     |
                     v
- frozen run-input snapshot and revalidation
+ only after Gate B: open and verify declared payloads
+                    |
+                    v
+ frozen inputs + descriptor-bound run snapshot
                     |
                     v
  fail-dataset validation OR cases-only qualification
@@ -158,7 +172,7 @@ Approved replay manifest + canonical records
           |                 + quarantined subset
           +------------+------------+
                        v
-             accepted cases only
+ accepted cases only, passed in memory
                     |
                     v
  deterministic normalization and temporal ordering
@@ -191,6 +205,9 @@ The executable safety invariants are:
 - tokens are signed, short-lived, case-bound, and action-scoped;
 - no action is declared successful solely because a command returned success;
 - material decision and execution events are recorded in a tamper-evident audit chain.
+- a historical payload cannot be touched until a current, exact Gate B package passes; manifest attestations alone are insufficient;
+- Gate B control bytes are frozen before payload processing, historical outputs use owner-only descriptor-bound writes, the runner receives no filesystem paths, and evaluator labels are withheld until decisions close; and
+- Gate B validates structure and byte bindings, not the external truth of authority, identity, signatures, privacy controls, or custody assertions.
 
 The three POC action types—revoke active sessions, require step-up authentication, and increase monitoring—operate only against the in-memory simulator. The `CONTAIN_REVERSIBLE` label means bounded and operationally recoverable in this POC; it does not imply exact transactional reversal. For example, a revoked session is recovered through reauthentication rather than restoration of the original session. Account disablement, endpoint isolation, network blocking, and persistent policy changes remain human-only in policy and are not implemented as live actions.
 
@@ -327,14 +344,14 @@ shasum -a 256 -c MANIFEST.sha256
 │   ├── policy.json                 # Decision, evidence, authority, and safety policy
 │   ├── phase2_replay.json          # Whole-dataset, read-only replay configuration
 │   └── phase2_qualification.json   # Cases-only synthetic qualification campaign
-├── contracts/v0.2.0/               # Replay and claim-evidence contracts plus examples
+├── contracts/v0.2.0/               # Replay, Gate B, and claim-evidence contracts
 ├── data/
 │   ├── phase2_starter/             # Three-case synthetic replay fixture; no historical data
 │   └── phase2_qualification/       # Seven-record mixed-quality synthetic fixture and expectations
 ├── docs/
 │   ├── adr/                        # Architecture decision records
 │   ├── architecture/               # Source and rendered diagrams
-│   ├── phase2/                     # Replay architecture, contracts, safety, V&V, traceability
+│   ├── phase2/                     # Replay architecture, Gate B templates, safety, V&V, traceability
 │   ├── CONCEPT_OF_OPERATIONS.md
 │   ├── REQUIREMENTS_TRACEABILITY_MATRIX.csv
 │   ├── SECURITY_AND_SAFETY_CASE.md
@@ -342,10 +359,11 @@ shasum -a 256 -c MANIFEST.sha256
 │   └── TEST_AND_EVALUATION_PLAN.md
 ├── evidence/phase2_starter/         # Sanitized evidence supporting the narrow CE-2 starter claim
 ├── evidence/phase2_qualification/   # Sanitized 7=3+4 qualification evidence and exact run artifacts
+├── local/gate_b/                    # Ignored restricted package location; never commit real controls
 ├── outputs/baseline/               # Reproducible decisions, metrics, audit, and report
 ├── scripts/                        # Confined fixture generation/checks and claim-evidence validation
 ├── src/adf_poc/
-│   └── replay/                     # Contracts, qualification, adapter, normalizer, harness, and metrics
+│   └── replay/                     # Contracts, Gate B, qualification, path-free harness, secure output, metrics
 ├── tests/                          # Safety and end-to-end tests
 ├── run_poc.py                      # End-to-end synthetic baseline entry point
 ├── run_phase2.py                   # Offline replay/shadow starter entry point
@@ -358,6 +376,8 @@ shasum -a 256 -c MANIFEST.sha256
 The current baseline has not established:
 
 - behavior on any historical organizational case (the Phase 2 starter reports `historical_case_count = 0`);
+- approval of a real Gate B package or authority to acquire, stage, or process organizational historical data;
+- authenticated approver identity or authority, signature validation, external custody truth, or effective de-identification from the Gate B structural preflight;
 - historical acceptance or quarantine rates, source completeness, or performance over records that did not survive qualification;
 - production vendor-adapter behavior or semantic equivalence between source telemetry and the canonical contract;
 - performance against historical or live identity, endpoint, network, or cloud telemetry;
@@ -370,16 +390,16 @@ The current baseline has not established:
 - an externally anchored or independently signed audit trail (a process able to rewrite the log can recompute the v0.1 hash chain);
 - independent target-state readback or executable rollback orchestration;
 - reconciliation of conflicting break-glass or asset-criticality values in the v0.1 direct-run interface (the Phase 2 canonical adapter instead rejects such disagreement before engine invocation);
-- suitability for safety-critical, operational-technology, or critical-infrastructure control environments.
+- suitability for safety-critical, operational-technology, or critical-infrastructure control environments;
 - agentic alignment, scheming, sabotage resistance, or monitor effectiveness; the evaluated path is deterministic and contains no autonomous generative agent.
 
 The policy engine and verifier also share configuration and may share design defects. The POC signing key has a documented non-production fallback. These limitations are deliberate release constraints, not deferred permission to connect the software to a live environment.
 
 ## Roadmap
 
-The **Phase 2 starter and Phase 2.1 qualification increment are now present**, with live actions remaining disabled. They establish the read-only mode boundary, canonical contracts, replay manifests, bounded cases-only quarantine policy, metadata-only accounting, counterfactual evaluation, validation controls, tests, and release-gate documentation.
+The **Phase 2 starter, Phase 2.1 qualification increment, and Phase 2.2 Gate B machine preflight are now present**, with live actions remaining disabled. The identified implementation provides the read-only mode boundary, canonical contracts, bounded quarantine and accounting, counterfactual evaluation, and a fail-closed control-package check before any future historical payload access. Under the project claim standard, Gate B remains CE-1 implementation evidence until the published commit is identified; no CE-2 Gate B campaign exists.
 
-The next Phase 2 increment is the Gate B authorization and custody package followed by a small, approved, de-identified historical pilot. That work must predeclare sampling and quarantine stop conditions, measure source availability, schema gaps, temporal fidelity, analyst disagreement, contextual assumptions, and calibration, and keep the complete intake denominator visible. No live or shadow-feed progression has occurred; `shadow_read_only` remains an unconnected code path until a separately approved Phase 3 architecture and safety case exist.
+The next step is external, not a code-only claim: accountable owners must assemble and authenticate a restricted Gate B approval, custody, privacy, mapping, adjudication, and pilot package for a small de-identified historical corpus. Only then may an isolated offline pilot measure source availability, schema gaps, temporal fidelity, analyst disagreement, contextual assumptions, and calibration while keeping the complete intake denominator visible. No Gate B approval, historical run, live feed, or shadow-feed progression has occurred; `shadow_read_only` remains unconnected until a separately approved Phase 3 architecture and safety case exist.
 
 Later phases, each requiring separate evidence and authorization, are:
 
@@ -403,7 +423,11 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`docs/phase2/CLAIM_EVIDENCE_STANDARD.md`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) — claim classes, proof requirements, statistical rules, and adversarial evaluations
 - [`docs/phase2/RESEARCH_COVERAGE_REGISTER.md`](docs/phase2/RESEARCH_COVERAGE_REGISTER.md) — dated Anthropic and OpenAI research screen, dispositions, gaps, and refresh triggers
 - [`docs/phase2/RECORD_QUALIFICATION.md`](docs/phase2/RECORD_QUALIFICATION.md) — fatal/quarantine taxonomy, metadata contract, accounting invariants, privacy rules, synthetic gate, and historical-pilot prerequisites
+- [`docs/phase2/GATE_B_HISTORICAL_PILOT.md`](docs/phase2/GATE_B_HISTORICAL_PILOT.md) — restricted-package contents, approval roles, pre-payload ordering, stop conditions, and nonclaims
+- [`docs/adr/006_gate_b_machine_readable_preflight.md`](docs/adr/006_gate_b_machine_readable_preflight.md) — decision to require Gate B before historical payload access
 - [`docs/phase2/REQUIREMENTS_TRACEABILITY.csv`](docs/phase2/REQUIREMENTS_TRACEABILITY.csv) — Phase 2 requirement status and verification evidence
+- [`contracts/v0.2.0/gate-b-authorization.schema.json`](contracts/v0.2.0/gate-b-authorization.schema.json) — closed Gate B authorization-package contract
+- [`contracts/v0.2.0/examples/gate-b-authorization-draft.json`](contracts/v0.2.0/examples/gate-b-authorization-draft.json) — schema-valid but explicitly non-authorizing public example
 - [`contracts/v0.2.0/replay-qualification.schema.json`](contracts/v0.2.0/replay-qualification.schema.json) — closed per-source-record qualification ledger contract
 - [`contracts/v0.2.0/qualification-expectations.schema.json`](contracts/v0.2.0/qualification-expectations.schema.json) — closed predeclared synthetic-campaign expectation contract
 - [`contracts/v0.2.0/evaluation-evidence.schema.json`](contracts/v0.2.0/evaluation-evidence.schema.json) — machine-readable claim-evidence contract

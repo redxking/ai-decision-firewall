@@ -24,4 +24,12 @@ data/historical/
 data/replay/
 data/shadow/
 data/local/
+data/pilots/
 data/**/*.local.*
+
+# Local Gate B configurations and approval packages can contain sensitive
+# organizational references. Commit only the public DRAFT templates under
+# contracts/ and docs/.
+config/local/
+config/*.local.json
+local/gate_b/

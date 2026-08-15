@@ -178,17 +178,19 @@ class TrackingAdapter(CanonicalJSONLAdapter):
 
     def assert_decisions_exist(self) -> None:
         if not self.decision_path.exists():
-            raise AssertionError("Adjudications were loaded before engine decisions existed.")
+            raise AssertionError(
+                "Adjudications were loaded before engine decisions existed."
+            )
 
 
 class ReplayHarnessTests(unittest.TestCase):
-    def test_synthetic_fixture_replay_has_zero_authorization_broker_or_effects(self) -> None:
+    def test_synthetic_fixture_replay_has_zero_authorization_broker_or_effects(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config_path = make_repository(root)
-            result = ReplayHarness.from_config(
-                config_path, repository_root=root
-            ).run()
+            result = ReplayHarness.from_config(config_path, repository_root=root).run()
             assurance = result.metrics["read_only_assurance"]
             self.assertEqual(assurance["authorization_tokens_issued"], 0)
             self.assertEqual(assurance["broker_invocations"], 0)
@@ -237,9 +239,7 @@ class ReplayHarnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config_path = make_repository(root, mode="SHADOW_READ_ONLY")
-            result = ReplayHarness.from_config(
-                config_path, repository_root=root
-            ).run()
+            result = ReplayHarness.from_config(config_path, repository_root=root).run()
             self.assertEqual(result.execution_mode, "shadow_read_only")
             self.assertEqual(
                 result.metrics["read_only_assurance"]["operational_effects"], 0
@@ -268,7 +268,9 @@ class ReplayHarnessTests(unittest.TestCase):
             with self.assertRaises(ReplaySafetyViolation):
                 harness.run()
 
-    def test_adjudications_are_loaded_only_after_decisions_and_never_passed_to_engine(self) -> None:
+    def test_adjudications_are_loaded_only_after_decisions_and_never_passed_to_engine(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config_path = make_repository(root)
@@ -309,15 +311,19 @@ class ReplayHarnessTests(unittest.TestCase):
             )
             self.assertEqual(result.metrics["scope"]["adjudicated_cases"], 3)
             self.assertTrue(
-                result.metrics["read_only_assurance"]
-                ["adjudications_loaded_after_decisions"]
+                result.metrics["read_only_assurance"][
+                    "adjudications_loaded_after_decisions"
+                ]
             )
             self.assertFalse(
-                result.metrics["read_only_assurance"]
-                ["runtime_label_file_passed_to_engine"]
+                result.metrics["read_only_assurance"][
+                    "runtime_label_file_passed_to_engine"
+                ]
             )
 
-    def test_adjudication_json_is_not_decoded_until_after_engine_decisions(self) -> None:
+    def test_adjudication_json_is_not_decoded_until_after_engine_decisions(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config_path = make_repository(root)
@@ -389,15 +395,16 @@ class ReplayHarnessTests(unittest.TestCase):
                 run_manifest["inputs"]["model"]["sha256"], original_model_digest
             )
             self.assertNotEqual(
-                run_manifest["inputs"]["declared_files"]["adjudications"][
-                    "sha256"
-                ],
+                run_manifest["inputs"]["declared_files"]["adjudications"]["sha256"],
                 sha256_file(adjudications_path),
             )
 
     def test_custom_runner_cannot_bypass_audit_boundary_validation(self) -> None:
         for audit_contents in ("", "{not-json}\n"):
-            with self.subTest(audit_contents=audit_contents), tempfile.TemporaryDirectory() as directory:
+            with (
+                self.subTest(audit_contents=audit_contents),
+                tempfile.TemporaryDirectory() as directory,
+            ):
                 root = Path(directory)
                 config_path = make_repository(root)
 
@@ -416,6 +423,26 @@ class ReplayHarnessTests(unittest.TestCase):
                 harness = ReplayHarness.from_config(config_path, repository_root=root)
                 with self.assertRaises(ReplaySafetyViolation):
                     run_with_runner(harness, runner_without_boundary_audit)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+
+            def runner_with_unknown_audit_type(**kwargs):
+                cases = read_jsonl(kwargs["cases_path"])
+                mode = kwargs["execution_mode"].value
+                decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                write_jsonl(kwargs["decisions_path"], decisions)
+                write_safe_read_only_audit(kwargs["audit_path"], decisions)
+                AuditLogger(kwargs["audit_path"]).append(
+                    "UNREVIEWED_AUDIT_TYPE",
+                    {"case_id": decisions[0]["case_id"]},
+                )
+                return decisions
+
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with self.assertRaises(ReplaySafetyViolation):
+                run_with_runner(harness, runner_with_unknown_audit_type)
 
     def test_audit_must_bind_every_finalized_decision(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -445,14 +472,19 @@ class ReplayHarnessTests(unittest.TestCase):
             "operational_effects",
         )
         for unsafe_field in unsafe_fields:
-            with self.subTest(unsafe_field=unsafe_field), tempfile.TemporaryDirectory() as directory:
+            with (
+                self.subTest(unsafe_field=unsafe_field),
+                tempfile.TemporaryDirectory() as directory,
+            ):
                 root = Path(directory)
                 config_path = make_repository(root)
 
                 def unsafe_runner(**kwargs):
                     cases = read_jsonl(kwargs["cases_path"])
                     mode = kwargs["execution_mode"].value
-                    decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                    decisions = [
+                        safe_fake_decision(row["case_id"], mode) for row in cases
+                    ]
                     if unsafe_field == "authorization":
                         decisions[0]["authorization"]["issued"] = True
                     elif unsafe_field in {"token_id", "decision_hash"}:

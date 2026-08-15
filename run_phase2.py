@@ -55,6 +55,11 @@ def main() -> None:
                     "record_failure_policy": harness.config.record_failure_policy,
                     "mapping_warnings": len(case_batch.mapping_warnings),
                     "live_actions_enabled": False,
+                    **(
+                        {"gate_b_preflight": harness.gate_b_preflight_summary}
+                        if harness.gate_b_preflight_summary is not None
+                        else {}
+                    ),
                 },
                 indent=2,
                 sort_keys=True,
@@ -82,6 +87,8 @@ def main() -> None:
         summary["accepted_records"] = qualification["accepted_records"]
         summary["quarantined_records"] = qualification["rejected_records"]
         summary["complete_accounting"] = qualification["complete_accounting"]
+    if result.gate_b_preflight is not None:
+        summary["gate_b_preflight"] = result.gate_b_preflight
     print(json.dumps(summary, indent=2, sort_keys=True))
 
 

@@ -12,10 +12,21 @@ from .contracts import (
     load_and_validate_manifest,
 )
 from .harness import ReplayHarness, ReplayRunResult, ReplaySafetyViolation
+from .gate_b import (
+    GateBAuthorization,
+    GateBStopConditionViolation,
+    GateBValidationError,
+    ManifestControl,
+    evaluate_qualification_stop_conditions,
+    load_gate_b_authorization,
+    load_manifest_control,
+    validate_gate_b_current,
+)
 from .qualification import (
     QUALIFICATION_TAXONOMY_VERSION,
     QualificationFatalError,
     QualificationResult,
+    qualify_case_bytes,
     qualify_case_file,
 )
 
@@ -32,8 +43,17 @@ __all__ = [
     "ReplayManifest",
     "ReplayRunResult",
     "ReplaySafetyViolation",
+    "GateBAuthorization",
+    "GateBStopConditionViolation",
+    "GateBValidationError",
+    "ManifestControl",
     "QualificationFatalError",
     "QualificationResult",
+    "qualify_case_bytes",
     "qualify_case_file",
+    "evaluate_qualification_stop_conditions",
+    "load_gate_b_authorization",
+    "load_manifest_control",
+    "validate_gate_b_current",
     "load_and_validate_manifest",
 ]
