@@ -1,5 +1,7 @@
 # Synthetic Data Card
 
+> **Version boundary.** The dataset below remains the v0.1.0 generated training/test baseline. `0.2.0-alpha.5` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline, with historical CI and Dependency Graph success bound to that commit. This package candidate's Phase 2.5 technical suite passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 evidence and does not validate the dataset. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and GitHub CI on the exact published package commit remain external gates. Tracked data and baseline outputs remain at their committed bytes. No tag, release, or evidence package exists. Phase 2 fixtures and campaign inputs are separate synthetic controls; they do not create a new historical dataset or an observed `P2-CE-005` result.
+
 ## Dataset identity
 
 **Name:** ADF Synthetic Privileged Identity Dataset  
@@ -36,6 +38,22 @@ Malicious scenarios include stolen privileged tokens, password spray followed by
 
 The generator encodes the engineering team's current assumptions. Feature relationships, base rates, event correlations, source reliability, attack timing, and contextual evidence are simplified. The model is trained and tested on partitions from the same generator family, so apparent discrimination is optimistic. Real data will exhibit unmodeled vendor differences, missing fields, semantic drift, adversarial adaptation, human process variation, and class imbalance.
 
-## Required evolution
+## Additional Phase 2 synthetic fixtures
 
-Version 0.2 should add de-identified historical replay cases, vendor-specific schema adapters, analyst disagreement labels, uncertain ground truth, delayed evidence arrival, duplicate and out-of-order events, multi-identity campaigns, and sector-specific mission criticality.
+These versioned controls are distinct from the v0.1 train/test partitions:
+
+| Fixture or campaign | Synthetic scope | Evidence status |
+|---|---|---|
+| Phase 2 starter | Three read-only cases | Published version-bound `P2-CE-001`; zero historical cases |
+| Phase 2.1 qualification | Seven nonblank records: three accepted and four deliberately quarantined | Published version-bound `P2-CE-002`; designed accounting result, not a data-quality estimate |
+| Phase 2.3 Gate B campaign | Ephemeral test-only authorization and fixed positive/negative scenarios | Published `P2-CE-003` SELF synthetic result; not an actual approval or historical pilot |
+| Phase 2.4 feature-assurance campaign | Fixed clean/mutant feature-contract and projection controls | Published `P2-CE-004` SELF synthetic result; not model or operational validation |
+| Phase 2.5 source-to-decision campaign | Ten planned clean/mutant pairs per run and two planned runs | CE-0 `NOT_EVALUATED`; expected outcomes are not observations |
+
+All committed observed results declare `historical_case_count: 0`. Synthetic campaign inputs are designed controls and are not representative samples of an operational identity environment.
+
+## Required dataset evolution
+
+A future dataset release—not merely a code version bump—would require approved de-identified historical replay under Gate B, vendor-specific schema mappings, analyst disagreement and indeterminate adjudications, uncertain outcome treatment, delayed and duplicate evidence, multi-identity campaigns, and sector-specific mission consequence. The current code already tests some delayed/out-of-order, duplicate-identifier, malformed-record, and source-conflict mechanics with synthetic controls; that does not satisfy the historical-data, vendor-semantic, representativeness, privacy, or adjudication obligations.
+
+Historical data must not be added to the public repository. Any future restricted dataset requires authenticated authority, tested de-identification, protected custody, complete-intake accounting, predeclared sampling and stop conditions, and evidence lifecycle controls described in [`phase2/GATE_B_HISTORICAL_PILOT.md`](phase2/GATE_B_HISTORICAL_PILOT.md).

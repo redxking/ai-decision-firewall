@@ -1,40 +1,92 @@
 digraph G {
-  graph [rankdir=LR, bgcolor="white", pad="0.3", nodesep="0.45", ranksep="0.7", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall POC — Trust Boundaries and Data Separation"];
-  node [shape=box, style="rounded,filled", fillcolor="#F7F9FC", color="#526C89", fontname="Arial", fontsize=11, margin="0.16,0.10"];
-  edge [color="#617286", fontname="Arial", fontsize=9, arrowsize=0.75];
+  graph [rankdir=TB, bgcolor="white", pad="0.28", nodesep="0.55", ranksep="0.60", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall - Phase 2 Trust Boundaries\nSame-process assurance is not independent custody; remote alpha.6 design freeze @ 08ce203c; P2-CE-005 evidence absent", splines=polyline];
+  node [shape=plain, fontname="Arial", fontsize=9.5];
+  edge [color="#617286", fontname="Arial", fontsize=8, arrowsize=0.68, penwidth=1.0];
 
-  subgraph cluster_untrusted {
-    label="Untrusted / Partially Trusted Evidence Zone"; color="#C77C7C"; style="rounded,dashed";
-    logs [label="Raw telemetry"];
-    tickets [label="Free-text tickets / analyst notes", fillcolor="#FDEBEC"];
-    intel [label="External threat intelligence"];
+  authority [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#C79A45">
+      <TR><TD COLSPAN="3" BGCOLOR="#FFF4DD"><B>A. External authority and owner custody</B></TD></TR>
+      <TR>
+        <TD BGCOLOR="#FFF4DD"><B>Approval roles</B><BR/>Data owner • legal/privacy • security<BR/>Model risk • independent review</TD>
+        <TD PORT="gate" BGCOLOR="#FFF4DD"><B>Gate B control package</B><BR/>Exact scope, bytes, roles, and controls</TD>
+        <TD PORT="historical" BGCOLOR="#F5F5F5"><B>Historical payload</B><BR/>Owner-controlled future input<BR/><FONT COLOR="#666666">Not present in this repository</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  untrusted [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#C77C7C">
+      <TR><TD COLSPAN="2" BGCOLOR="#FDEBEC"><B>B. Untrusted replay input</B></TD></TR>
+      <TR>
+        <TD PORT="cases" BGCOLOR="#FDEBEC"><B>Cases</B><BR/>Synthetic or approved historical JSONL<BR/>Strict parsing and resource ceilings</TD>
+        <TD PORT="adjudication" BGCOLOR="#FDEBEC"><B>Adjudications</B><BR/>Separate bytes withheld until<BR/>decision and audit closure</TD>
+      </TR>
+    </TABLE>
+  >];
+
+  application [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#6E94C5">
+      <TR><TD COLSPAN="4" BGCOLOR="#DCEBFA"><B>C. Phase 2 application control zone</B></TD></TR>
+      <TR>
+        <TD PORT="preflight" BGCOLOR="#DCEBFA"><B>Preflight</B><BR/>Gate B / manifest / path<BR/>Digest and count binding</TD>
+        <TD BGCOLOR="#DCEBFA"><B>Qualification and normalization</B><BR/>Typed/source-authorized contract</TD>
+        <TD BGCOLOR="#E8F1FF"><B>Read-only decision</B><BR/>EVIDENCE → MODEL → POLICY → VERIFIER</TD>
+        <TD PORT="surface" BGCOLOR="#E7F5ED"><B>Final surface</B><BR/>SUPPRESSED_READ_ONLY<BR/>Counterfactual action only</TD>
+      </TR>
+      <TR>
+        <TD PORT="audit" BGCOLOR="#F0EAF7"><B>Eight-stage audit</B><BR/>Descriptor-bound owner-only output</TD>
+        <TD BGCOLOR="#F0EAF7"><B>Reference feature projector</B><BR/>Same process and project</TD>
+        <TD PORT="source" COLSPAN="2" BGCOLOR="#F7F2FA"><B>Source-to-decision reference path</B><BR/>Same process/project; design freeze @ 08ce203c<BR/>CI succeeded • CE-1 calculation consistency only<BR/><FONT COLOR="#6B4A8C">P2-CE-005 remains CE-0 NOT_EVALUATED</FONT><BR/>Not independent custody or an external oracle</TD>
+      </TR>
+    </TABLE>
+  >];
+
+  subgraph cluster_evaluation {
+    label="D. Project-controlled deferred evaluation and evidence zone\nNo independent custody asserted";
+    color="#73A47F";
+    fontcolor="#355D40";
+    fontname="Arial";
+    fontsize=10;
+    style="rounded";
+    margin=14;
+
+    receipts [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#73A47F">
+        <TR><TD BGCOLOR="#E7F5ED"><B>Closed digest-only receipts</B><BR/>Written only after both checks<BR/>Replay receipts; not campaign evidence</TD></TR>
+      </TABLE>
+    >];
+
+    evaluator [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#73A47F">
+        <TR><TD BGCOLOR="#E7F5ED"><B>Post-run evaluator</B><BR/>Consumes closed replay + assurance receipts<BR/>Adjudication • comparison • metrics<BR/>Manifest finalization</TD></TR>
+      </TABLE>
+    >];
+
+    existing_evidence [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#73A47F">
+        <TR><TD BGCOLOR="#E7F5ED"><B>Published evidence status</B><BR/>P2-CE-001..004: version-bound<BR/>P2-CE-004 = CE-2 SELF</TD></TR>
+      </TABLE>
+    >];
+
+    p2ce005_future [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" COLOR="#C79A45">
+        <TR><TD BGCOLOR="#FFF4DD"><B>Future P2-CE-005 evidence package</B><BR/><FONT COLOR="#8B3A3A">CE-0 NOT_EVALUATED • no record exists</FONT><BR/>Requires exact Commit-A campaign<BR/>and evidence-only Commit B</TD></TR>
+      </TABLE>
+    >];
+
+    {rank=same; receipts; evaluator; existing_evidence;}
+    receipts -> evaluator [label="after closure"];
+    evaluator -> existing_evidence [label="P2-CE-001..004 only"];
+    evaluator -> p2ce005_future [style=dashed, label="exact-commit campaign + evidence-only publication"];
   }
 
-  subgraph cluster_control {
-    label="Decision Firewall Control Zone"; color="#6E94C5"; style="rounded";
-    parser [label="Strict parsers + allowlist"];
-    structured [label="Structured evidence store"];
-    risk [label="Risk model"];
-    policy [label="Policy + verifier"];
-    token [label="Authorization token service"];
-  }
+  excluded [shape=box, style="rounded,dashed,filled", label="E. Operational target zone - excluded\nNo connector • credential • authorization token\naction broker • target • external effect", fillcolor="#F4F4F4", color="#8A8A8A", fontcolor="#555555", margin="0.18,0.11"];
 
-  subgraph cluster_target {
-    label="Action Target Zone (POC Simulator Only)"; color="#73A47F"; style="rounded";
-    broker [label="Action broker\n(no model access to credentials)"];
-    target [label="Identity state simulator"];
-  }
-
-  labels [label="Ground-truth labels\nEvaluator only", fillcolor="#EEE6FA", color="#8A70AE"];
-  audit [label="Append-only audit chain", fillcolor="#EEE6FA", color="#8A70AE"];
-
-  logs -> parser;
-  intel -> parser;
-  tickets -> parser [label="text isolated; instructions never authoritative"];
-  parser -> structured -> risk -> policy -> token -> broker -> target;
-  policy -> audit;
-  token -> audit;
-  broker -> audit;
-  labels -> risk [style=dashed, label="training only"];
-  labels -> policy [style=dashed, label="never at runtime", dir=none];
+  authority:s -> untrusted:n [style=invis, weight=100];
+  authority:gate:s -> application:preflight:n [label="control bytes only"];
+  authority:historical:s -> application:preflight:n [style=dashed, label="payload only after pass"];
+  untrusted:cases:s -> application:preflight:n [label="untrusted bytes"];
+  application:source:s -> receipts:n [label="runtime exact agreement"];
+  untrusted:adjudication:s -> evaluator:n [style=dashed, label="decoded only after closure"];
+  application:surface:s -> excluded:n [style=dashed, color="#B85450", fontcolor="#8B3A3A", arrowhead=tee, label="structurally no route"];
 }

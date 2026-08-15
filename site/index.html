@@ -31,8 +31,8 @@
     <meta name="twitter:image" content="https://redxking.github.io/ai-decision-firewall/assets/og.png" />
     <title>AI Decision Firewall — Decision assurance, made visible</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%2306111c'/%3E%3Cpath d='M16 16h32v7H16zm0 13h24v7H16zm0 13h15v7H16z' fill='%2352c8ff'/%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="./styles.css?v=1.0.3" />
-    <script src="./app.js?v=1.0.3" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=1.0.4" />
+    <script src="./app.js?v=1.0.4" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#decision-demo">Skip to the decision demonstration</a>
@@ -62,11 +62,11 @@
           <p class="eyebrow">A model recommendation is not authority.</p>
           <h1 id="hero-title">The model proposes.<br /><em>The firewall decides.</em></h1>
           <p class="hero-lede">
-            Watch evidence, policy, and independent verification turn an AI recommendation into a
+            Watch evidence, policy, and separately implemented deterministic verification turn an AI recommendation into a
             defensible decision—without giving the model direct control.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#decision-demo" data-run-decision>Run a decision <span aria-hidden="true">→</span></a>
+            <a class="button button-primary" href="#decision-demo" data-run-decision>Play decision trace <span aria-hidden="true">→</span></a>
             <a class="button button-secondary" href="#evidence">Inspect the evidence</a>
           </div>
           <ul class="boundary-list" aria-label="Current system boundary">
@@ -121,7 +121,7 @@
                 <span class="gate-title">Decision firewall</span>
                 <div data-gate="evidence"><i aria-hidden="true">1</i><span>Evidence</span><b>Waiting</b></div>
                 <div data-gate="policy"><i aria-hidden="true">2</i><span>Policy &amp; authority</span><b>Waiting</b></div>
-                <div data-gate="verify"><i aria-hidden="true">3</i><span>Independent verify</span><b>Waiting</b></div>
+                <div data-gate="verify"><i aria-hidden="true">3</i><span>Deterministic verify</span><b>Waiting</b></div>
               </div>
 
               <div class="flow-line outcome-line" aria-hidden="true"><span></span></div>
@@ -271,7 +271,7 @@
         <ol class="release-flow">
           <li><span>01</span><strong>Freeze version</strong><p>Bind code, model, policy, tests, and evidence inputs.</p></li>
           <li><span>02</span><strong>Validate claims</strong><p>Reconcile schemas, hashes, counts, outcomes, and limitations.</p></li>
-          <li><span>03</span><strong>Build public data</strong><p>Export only closed, sanitized, metadata-only fields.</p></li>
+          <li><span>03</span><strong>Build public data</strong><p>Export only closed, sanitized public-projection fields; no raw records or identifiers.</p></li>
           <li><span>04</span><strong>Publish atomically</strong><p>Deploy the complete release or retain the last known-good site.</p></li>
         </ol>
       </section>
@@ -303,7 +303,7 @@
         <p class="eyebrow">Defensible action over unchecked autonomy</p>
         <h2 id="closing-title">The goal is not to make AI act more often.<br />It is to make every consequential decision defensible.</h2>
         <div>
-          <a class="button button-primary" href="#decision-demo" data-run-decision>Run another scenario <span aria-hidden="true">↑</span></a>
+        <a class="button button-primary" href="#decision-demo" data-run-decision>Replay another scenario <span aria-hidden="true">↑</span></a>
           <a class="button button-secondary" href="https://github.com/redxking/ai-decision-firewall">Inspect the repository <span aria-hidden="true">↗</span></a>
         </div>
       </section>

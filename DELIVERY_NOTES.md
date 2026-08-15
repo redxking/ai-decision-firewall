@@ -1,21 +1,23 @@
 # AI Decision Firewall POC v0.1 — Delivery Notes
 
+> **Historical delivery record.** This document preserves the 14 August 2026 v0.1 handoff and its exact results. `0.2.0-alpha.5` remains the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` design-freeze baseline; its historical CI and Dependency Graph results remain bound to that commit. This package candidate's Phase 2.5 technical suite passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and exact-package GitHub CI remain external release gates; tracked data, model, and baseline-output bytes remain at their committed baselines. No tag, release/evidence package, historical-data approval, Gate B package, live feed, operational connector, or action authority exists. `P2-CE-005` is CE-0 `NOT_EVALUATED`.
+
 **Delivery date:** 2026-08-14  
 **Author:** Angelis Pseftis  
-**Status:** Working engineering baseline  
+**Status:** Historical working engineering baseline
 **Restriction:** Synthetic data and simulated reversible actions only. Not approved for production integration, operational decision-making, or live containment.
 
 ## Objective
 
-Demonstrate that an AI-assisted cybersecurity decision can be placed inside an enforceable decision-control architecture that separates evidence, model advice, deterministic policy, independent verification, authorization, action execution, post-action verification, and audit.
+Demonstrate that an AI-assisted cybersecurity decision can be placed inside an enforceable decision-control architecture that separates evidence, model advice, deterministic policy, functionally separate deterministic non-model verification, authorization, action execution, post-action verification, and audit. The verifier is not organizationally independent.
 
 The bounded POC decision is whether suspicious privileged-identity activity should result in no action, additional investigation, reversible containment, or human escalation.
 
 ## Delivered capability
 
-The package contains a deterministic synthetic-data generator, an advisory interpretable risk model, evidence-quality assessment, four-way disposition logic, an independent verifier, signed and scoped authorization tokens, an in-memory identity-system simulator, post-action verification, a tamper-evident audit chain, automated tests, architecture diagrams, requirements traceability, and a 32-page engineering baseline.
+The package contains a deterministic synthetic-data generator, an advisory interpretable risk model, evidence-quality assessment, four-way disposition logic, a functionally separate deterministic non-model verifier, signed and scoped authorization tokens, an in-memory identity-system simulator, post-action verification, a SHA-256 hash-chained audit log, automated tests, architecture diagrams, requirements traceability, and a 32-page engineering baseline. The verifier is not organizationally independent. The self-custodied chain supports internal consistency checks; it is not resistant to wholesale replacement by a writer that can recompute the chain.
 
-## Reproduce the baseline
+## Run the POC locally
 
 ```bash
 python -m venv .venv
@@ -26,7 +28,7 @@ python run_poc.py
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The default run uses seed `20260814`, generates 800 training cases and 400 test cases, and writes results to `outputs/baseline/`.
+At the v0.1 delivery, the default run used seed `20260814`, generated 800 training cases and 400 test cases, and wrote results to `outputs/baseline/`. The current command writes ignored local data and output artifacts under `data/local/synthetic-baseline/` and `outputs/local/synthetic-baseline/` so an ordinary run cannot replace the governed baseline. It does not promise byte-identical model reconstruction across permitted numeric runtimes.
 
 ## Included baseline result
 
@@ -34,9 +36,11 @@ The supplied 400-case synthetic evaluation produced 112 reversible-containment d
 
 These results validate software behavior against the included synthetic generator. They do not establish real-world detection accuracy or production safety because training and test cases share the same synthetic scenario family.
 
-## Recommended next phase
+## Recommendation at the v0.1 delivery
 
 Proceed to de-identified historical replay and data-contract discovery under a strict no-live-action constraint. The next phase should measure telemetry availability, source trust, schema gaps, analyst agreement, calibration, counterfactual decision quality, and failure behavior before any consideration of production connectivity.
+
+That recommendation was a proposed direction, not an approval to acquire or process historical data. Subsequent work implemented a synthetic-only read-only replay boundary, record qualification, Gate B machine preflight, exact audit checks, Phase 2.4 feature assurance, and a Phase 2.5 source-to-decision design freeze. The current internal gate is to finish the post-freeze path-confinement change, freeze and verify the combined package, and complete the separate `P2-CE-005` evidence protocol before preparing any externally authenticated Gate B package. No historical pilot has begun.
 
 ## Primary review artifacts
 
@@ -47,3 +51,5 @@ Proceed to de-identified historical replay and data-contract discovery under a s
 - `docs/SECURITY_AND_SAFETY_CASE.md`
 - `docs/TEST_AND_EVALUATION_PLAN.md`
 - `outputs/baseline/unit_test_results.txt`
+
+The DOCX/PDF and the seven-test result remain v0.1 artifacts. Current Phase 2 status, requirements, and claim limits are maintained in `README.md` and `docs/phase2/`; the v0.1 engineering baseline must not be overwritten to imply later-phase validation.

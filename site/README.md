@@ -35,11 +35,16 @@ python -m unittest tests.test_public_site -v
 
 The GitHub Pages workflow validates a published GitHub release or an explicit
 manual run. It deploys only for a published release; a manual run is validation
-only. The workflow checks the complete project tests, claim evidence,
-public-data contract, release manifest, and website structure before uploading
-the static directory. A failed workflow does not deploy a partial candidate and
-leaves the last successful Pages deployment unchanged.
+only. The workflow checks the complete project tests, starter and qualification
+read-only replays, frozen campaign plans, claim evidence, public-data contract,
+release manifest, and website structure before uploading the static directory.
+A failed workflow does not deploy a partial candidate and leaves the last
+successful Pages deployment unchanged.
 
 The current public boundary is synthetic, offline, read-only, SELF-reviewed,
 and without operational authority. The site must preserve those labels until a
-new evidence record supports different wording.
+new evidence record supports different wording. The static bundle does not yet
+apply claim-expiration logic in the browser; before any evidence record reaches
+its declared expiration, regenerate and review the bundle or withdraw the
+affected observed-result presentation. Automated expiry handling remains
+publication-lifecycle technical debt.

@@ -15,14 +15,14 @@
       "evaluated_at": "2026-08-15T03:12:44Z",
       "evidence_level": "CE-2",
       "highlights": [
-        "28 attempts blocked before governed payload access",
+        "28 structural blocks; 0 governed payload-role opens or reads observed through declared hooks",
         "2 attempts blocked after qualification and before the engine",
         "2 test-only validation passes",
         "0 operational effects"
       ],
       "historical_case_count": 0,
       "implementation_commit": "e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b",
-      "limitation": "No internal-independent or external-independent replication has occurred.",
+      "limitation": "No internal-independent or external-independent replication has occurred. The fixed mutation set is not exhaustive or representative. No real approval authority, signature, custody statement, privacy assessment, historical data, or operational target was evaluated.",
       "publication_commit": "c9e7e63d9cd1d6abe80cd813a061e3bad64c1e43",
       "results": {
         "denominator": 32,
@@ -50,7 +50,7 @@
       ],
       "historical_case_count": 0,
       "implementation_commit": "53e409d6ffa4af98ea892bc1a81302bf30870693",
-      "limitation": "No internal-independent or external-independent replication occurred.",
+      "limitation": "No internal-independent or external-independent replication occurred. The fixed scenarios are neither exhaustive nor representative. No historical data, live feed, organizational approval, privacy review, or operational target was evaluated. No OS-level isolation, filesystem nonaccess, or network nonuse was independently attested.",
       "publication_commit": "f7f6b5c4933de72d730411ba34fe08d01a559657",
       "results": {
         "denominator": 32,
@@ -180,12 +180,12 @@
           "stance": "SUPPORTING"
         },
         {
-          "label": "Independent sources conflict",
+          "label": "Separate source types conflict",
           "stance": "CONFLICTING"
         }
       ],
       "source_url": "https://github.com/redxking/ai-decision-firewall/blob/b3a4c89450cc76576d463ae4006228a98603e260/evidence/phase2_starter/replay_decisions.jsonl",
-      "summary": "A suspicious sign appears, but independent telemetry disagrees with it.",
+      "summary": "A suspicious sign appears, but separate network telemetry disagrees with it.",
       "title": "Conflicting telemetry"
     },
     {

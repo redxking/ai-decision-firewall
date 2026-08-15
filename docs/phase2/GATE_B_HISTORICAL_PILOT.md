@@ -1,10 +1,14 @@
 # Gate B historical-pilot preflight
 
+> **Repository status.** `0.2.0-alpha.5` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline, with historical CI and Dependency Graph success bound to that commit. This package candidate adds bounded path controls, selected Gate B causal-test scaffolding, documentation, and packaging; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 and Gate B evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and GitHub CI on the exact published package commit remain external gates. Neither state is an approved execution baseline, tag, release, or evidence package. No Gate B package is approved or stored here. `P2-CE-005` is CE-0 `NOT_EVALUATED`; its plan, design freeze, generator, or tests do not authorize historical access or establish an eligible campaign result.
+
 Gate B is the authorization and evidence boundary for the first small, de-identified historical replay. It remains offline and read-only. It does not authorize a live feed, shadow-feed deployment, operational recommendation workflow, action credential, write-capable connector, or operational action.
 
 The public repository contains the contract and blank templates needed to design the package. It must not contain actual historical data, adjudications, approval records, source-specific mappings, custody records, identities, signatures, endpoints, or linkable historical digests.
 
 The separate [`P2-CE-003` synthetic campaign](../../contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json) exercises fixed preflight and stop-condition cases under ephemeral test-only authorization content. Its 32/32 project-controlled expected-outcome matches are CE-2 controlled-behavior evidence for that bound campaign only. They are not a Gate B approval, a historical pilot, independent assurance, or evidence that any external authority, privacy, custody, de-identification, or operational claim is true.
+
+This package candidate separately adds CE-1 test scaffolding for 25 selected causal identities: 24 selected pre-payload mutations and one post-qualification threshold identity. Classified errors must match exact closed tuples; unclassified Gate B errors remain unscorable. A bounded observer recorded zero `cases` or `adjudications` roles for the 24 selected pre-payload mutations under its enumerated Python file APIs. Six oracle and four observer tests passed within the 222/222 Phase 2.5 technical suite; the separate 9/9 public-site module is outside this Gate B claim. This does not retroactively change `P2-CE-003`, define a complete failure taxonomy, prove OS-level nonaccess/non-egress, or establish a new campaign result.
 
 ## Gate outcome
 
@@ -23,8 +27,9 @@ The restricted Gate B package consists of:
 2. an externally held manifest and frozen source snapshot whose identity and manifest digest match the authorization record;
 3. a frozen source mapping, adjudication protocol, and pilot protocol, each bound by confined relative path and SHA-256;
 4. a frozen contract version, contract adapter, model, and policy;
-5. external approval, review, custody, de-identification, retention/deletion, incident-response, isolation, and kill-switch evidence; and
-6. a predeclared sampling, holdout, stop-condition, adjudication, and claim-control plan.
+5. the exact clean, released repository commit and its release-required assurance profile, recorded in the bound pilot protocol;
+6. external approval, review, custody, de-identification, retention/deletion, incident-response, isolation, and kill-switch evidence; and
+7. a predeclared sampling, holdout, stop-condition, adjudication, and claim-control plan.
 
 Use the public templates only as starting points:
 
@@ -34,6 +39,8 @@ Use the public templates only as starting points:
 - [`gate-b-authorization-draft.json`](../../contracts/v0.2.0/examples/gate-b-authorization-draft.json)
 
 Every committed template is `NOT APPROVED` and contains no historical data. Complete operational packages belong in an approved restricted system, not this repository.
+
+A design-freeze commit, package candidate, unit-test or CI run, schema-valid draft, or synthetic campaign plan is not an approved pilot implementation. The restricted package must identify one exact released commit and the completion artifacts required by that release. The prior alpha.5 baseline requires its Phase 2.4 reference-feature receipt for a newly generated replay. Any future final alpha.6 package would require both the feature and source-to-decision receipts plus successful final harness return; predecessor Commit `08ce203c` and this package candidate do not establish that release or approval state.
 
 Within a restricted working copy, authorization and bound control artifacts must be placed under ignored `local/gate_b/`; historical output must use a new ignored run-specific `outputs/replay/<run>/` directory with owner-only access. The runtime retains directory descriptors for snapshots and artifacts, rejects changed path bindings, and never gives the historical decision runner a filesystem path. This blocks path-redirection failures inside the application boundary; it is not an operating-system isolation control against another process running as the same user. The runtime does not implement a one-time authorization-consumption ledger. If single-use approval is required, that control must be externally anchored and checked before each run; otherwise an unchanged package may be reused only within its recorded scope and validity interval.
 
@@ -86,6 +93,9 @@ For `HISTORICAL_DEIDENTIFIED` origin, the runtime sequence is mandatory:
 9. Only after every structural, authority, binding, time, resource, path, and declared-count check passes may the runtime open, hash, count, decode, parse, or qualify case/adjudication payloads.
 10. After case qualification, but before normalization or engine invocation, verify every accepted `opened_at` value against the approved half-open window and every observed overall/category quarantine rate against its frozen threshold. Any unknown observed category or threshold breach stops the run.
 11. Recheck the current half-open authorization interval immediately before the runner, after the runner returns, and before final evidence completion. Expiry or revocation requires a stopped run; it cannot be converted into a completed manifest by finishing work that began while authorization was current.
+12. Validate the read-only decisions and exact eight-stage audit, then run every reference-assurance check required by the frozen release. A reference mismatch, malformed receipt, unequal case set, source binding mismatch, or incomplete receipt set stops before evaluator decoding and completed-run finalization.
+13. Write release-required assurance artifacts only after their in-memory checks succeed. For an alpha.6-derived future release, neither the feature nor source-to-decision receipt may be published if the source-to-decision check fails.
+14. Revalidate every frozen input and replay artifact through the final return boundary. A file's presence—including metrics or a run manifest written before a late failure—does not establish completion. Only a successful harness return after all final checks may be treated as a completed run.
 
 Before step 9, the runtime may read only configuration, manifest control bytes, the Gate B package, model and policy, and the bound pilot-protocol, source-mapping, and adjudication-protocol controls. Pre-reading a case or label file to discover its size, count, digest, encoding, or validity violates Gate B even if the run later aborts.
 
@@ -117,7 +127,7 @@ The pilot evidence must report intake, accepted, quarantined, fatal, excluded, a
 
 ### 5. Predeclare stop conditions
 
-Set a maximum overall quarantine rate and a unique ceiling for every category in scope. Stop on any fatal validator condition and on any unknown failure. Also stop on authority expiry/revocation, manifest or artifact mismatch, custody loss, isolation or egress failure, label exposure, source drift, count inconsistency, incident, or evidence-accounting failure.
+Set a maximum overall quarantine rate and a unique ceiling for every category in scope. Stop on any fatal validator condition and on any unknown failure. Also stop on authority expiry/revocation, manifest or artifact mismatch, custody loss, isolation or egress failure, label exposure, source drift, count inconsistency, incident, evidence-accounting failure, required reference-assurance mismatch or incompleteness, late artifact mutation, or unsuccessful harness return.
 
 A threshold breach, an observed quarantine category without a predeclared threshold, or an accepted case outside the approved half-open source window pauses the pilot and escalates to the named owner. It does not justify deleting rejected records, relaxing thresholds, changing the sample, or continuing only with accepted cases.
 
@@ -131,7 +141,7 @@ Each required role approves the same immutable package. The independent review c
 
 ### 8. Execute, review, and dispose
 
-Run only inside the approved isolated environment and validity interval. The implementation rechecks the recorded interval at major processing boundaries, but an external authority remains responsible for communicating revocation and enforcing any stronger real-time or single-use control. Monitor stop conditions throughout the run. Preserve restricted evidence under the custody and retention plan, investigate deviations, validate deletion when due, and generate sanitized public summaries only after independent claim review.
+Run only the exact approved released commit inside the approved isolated environment and validity interval. The implementation rechecks the recorded interval at major processing boundaries, but an external authority remains responsible for communicating revocation and enforcing any stronger real-time or single-use control. Monitor stop conditions throughout the run. A failed return leaves only incomplete diagnostic material, regardless of which files exist. Preserve restricted evidence under the custody and retention plan, investigate deviations, validate deletion when due, and generate sanitized public summaries only after independent claim review.
 
 ## Claim and publication boundary
 
@@ -143,13 +153,15 @@ Machine validation proves internal structure and binding only. It does not prove
 
 `P2-CE-003` does not change that boundary. Its two complete executions repeat the same 16 fixed synthetic scenarios; they are not independent/statistical trials, and the Commit A project freeze is not external preregistration. Declared open/read instrumentation is not OS-level nonaccess/non-egress proof, zero target-effect boundary reaches are not target-side proof, and the selected mutations do not establish exhaustive coverage, an operational failure rate, efficacy, live safety, or alignment/misalignment behavior.
 
+Neither Phase 2.4 feature assurance nor the Phase 2.5 design-freeze implementation changes the authority boundary. Same-process reference agreement is calculation consistency, not source truth, outcome correctness, policy fitness, privacy authority, external custody, or independent assurance. `P2-CE-005` has no observed campaign result and cannot be cited as support for a Gate B approval, historical-processing decision, or pilot claim.
+
 ## Revalidation and revocation
 
 Pause before further payload access when any of the following occurs:
 
 - authorization or claim expiry, revocation, rejected review, or changed personnel authority;
-- any source, manifest, mapping, contract, adapter, model, policy, artifact, control, sampling, holdout, adjudication, or claim change;
-- an incident, custody break, control failure, source drift, newly discovered privacy risk, classifier gap, label leak, or unknown failure; or
+- any source, manifest, mapping, contract, adapter, model, policy, reference implementation, required assurance profile, artifact, control, sampling, holdout, adjudication, or claim change;
+- an incident, custody break, control failure, source drift, newly discovered privacy risk, classifier gap, label leak, reference mismatch, late mutation, failed finalization, or unknown failure; or
 - a proposed expansion in source, population, time window, environment, personnel, purpose, publication, or claim.
 
 Resume only with a newly frozen and independently reviewed package whose approvals and bindings cover the change. Gate B never rolls forward automatically.

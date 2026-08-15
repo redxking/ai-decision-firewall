@@ -2,7 +2,7 @@
   "use strict";
 
   const PLAYER_INTERVAL_MS = 1850;
-  const PUBLIC_DATA_URL = "./data/public-results.json?v=1.0.3";
+  const PUBLIC_DATA_URL = "./data/public-results.json?v=1.0.4";
   const PUBLIC_DATA_ATTEMPTS = 3;
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const state = {
@@ -137,7 +137,7 @@
         {
           label: "Verify",
           visual: "verify",
-          title: "Independent checks approve the proposed action set.",
+          title: "Project-controlled deterministic checks approve the proposed action set.",
           body: "Authorization is scoped to the case and the three allow-listed reversible simulator actions.",
         },
         {
@@ -176,7 +176,7 @@
         visual: "evidence",
         title: isInvestigation ? "Evidence conflict is detected." : "Evidence quality is assessed.",
         body: isInvestigation
-          ? `Evidence quality is ${evidence}, but independent telemetry conflicts. The evidence gate holds automation.`
+          ? `Evidence quality is ${evidence}, but separate network telemetry conflicts. The evidence gate holds automation.`
           : `Evidence quality is ${evidence}. Provenance, integrity, freshness, and corroboration are evaluated before the score can matter.`,
       },
       {
@@ -194,7 +194,7 @@
       {
         label: "Verify",
         visual: "verify",
-        title: "An independent, non-model control checks the proposal.",
+        title: "A separately implemented, non-model control checks the proposal.",
         body: "The verifier checks cited evidence, action allowlists, thresholds, conflicts, criticality, and rollback requirements.",
       },
       {

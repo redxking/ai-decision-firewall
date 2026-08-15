@@ -34,7 +34,7 @@ CLAIM_PRESENTATION = {
         "evidence_level": "CE-2",
         "summary": Path("evidence/phase2_gate_b_ce2/campaign_summary.json"),
         "highlights": [
-            "28 attempts blocked before governed payload access",
+            "28 structural blocks; 0 governed payload-role opens or reads observed through declared hooks",
             "2 attempts blocked after qualification and before the engine",
             "2 test-only validation passes",
             "0 operational effects",
@@ -70,11 +70,11 @@ SCENARIO_PRESENTATION = {
     "phase2-synthetic-conflict-001": {
         "id": "conflicting-telemetry",
         "title": "Conflicting telemetry",
-        "summary": "A suspicious sign appears, but independent telemetry disagrees with it.",
+        "summary": "A suspicious sign appears, but separate network telemetry disagrees with it.",
         "signals": [
             {"label": "Impossible-travel indicator", "stance": "SUPPORTING"},
             {"label": "New device observed", "stance": "SUPPORTING"},
-            {"label": "Independent sources conflict", "stance": "CONFLICTING"},
+            {"label": "Separate source types conflict", "stance": "CONFLICTING"},
         ],
         "decision_label": "Investigate",
         "explanation": "Conflicting evidence prevents automation, so the firewall abstains and requests more evidence.",
@@ -370,7 +370,7 @@ def build_claims(records: list[tuple[Path, dict[str, Any]]]) -> list[dict[str, A
                     "excluded": record["results"]["excluded"],
                 },
                 "highlights": presentation["highlights"],
-                "limitation": record["review"]["unresolved_objections"][0],
+                "limitation": " ".join(record["review"]["unresolved_objections"]),
                 "source_url": source_url(publication_commit, path),
             }
         )

@@ -1,8 +1,10 @@
 # Phase 2 Data Contracts
 
+> **Release boundary.** `0.2.0-alpha.5` / Phase 2.4 is the prior published evidence baseline. The Phase 2.5 receipt and campaign-plan contracts were present at predecessor untagged `0.2.0-alpha.6` design-freeze Commit `08ce203c`, with historical commit-bound CI and Dependency Graph success. This package candidate adds bounded controls and packaging outside that predecessor commit; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site module is outside these contract and Phase 2.5 evidence claims. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and GitHub CI on the exact published package commit remain external gates; no tag or release/evidence package exists. Contract presence, a design freeze, or green implementation tests do not establish a completed replay or an observed `P2-CE-005` result.
+
 ## Contract objective and status
 
-Phase 2 defines a narrow, versioned boundary between an untrusted local evidence snapshot and the v0.1 decision engine. It accepts canonical JSONL, validates integrity and record counts, and decodes separately stored adjudications only after decision processing and read-only safety checks finish. Phase 2.1 qualifies bounded case records into accepted and quarantined sets with exact metadata-only accounting. Phase 2.2 adds a separate Gate B authority, custody, and binding contract before historical payload access. Phase 2.4 adds exact type/source authorization for modeled attributes, exact four-field inventory binding, and a closed reference-feature-assurance record.
+Phase 2 defines a narrow, versioned boundary between an untrusted local evidence snapshot and the v0.1 decision engine. It accepts canonical JSONL, validates integrity and record counts, and decodes separately stored adjudications only after decision processing and read-only safety checks finish. Phase 2.1 qualifies bounded case records into accepted and quarantined sets with exact metadata-only accounting. Phase 2.2 adds a separate Gate B authority, custody, and binding contract before historical payload access. Phase 2.4 adds exact type/source authorization for modeled attributes, exact four-field inventory binding, and a closed reference-feature-assurance record. Phase 2.5 adds a closed source-to-decision semantic receipt across the evidence, model, policy, verifier, and read-only final surfaces.
 
 The implemented contract version is `0.2.0`. The executable Python validation in `src/adf_poc/replay/contracts.py` is the runtime authority; the schemas under `contracts/v0.2.0/` document and independently constrain the same public shape. Unknown fields are rejected rather than silently ignored. These starter contracts do not certify source semantics, legal authority, de-identification effectiveness, or production fitness.
 
@@ -226,6 +228,32 @@ The artifact contains no raw case, attribute, feature value, feature trace, sour
 If a projection, trace, normalized-case binding, or case-set check fails, the projector raises a stable code-owned exception and emits no assurance artifact. The harness then emits no qualification/rejection artifacts, adjudication comparison, metrics, or completed run manifest. Raw, normalized, and deterministic decisions plus audit output may already exist from earlier stages and are incomplete evidence, not a completed replay result.
 
 The reference implementation is separate from the production feature calculation but runs in the same Python process and project against the same normalized case bytes. Its agreement supports only a bounded implementation-conformance claim; it does not recompute `source_conflict`, evidence quality, model probability, policy/disposition correctness, or verifier behavior and is not proof of source truth, external custody, or independent replication.
+
+## Source-to-decision assurance record
+
+After the feature projector succeeds in memory, the Phase 2.5 reference path parses the exact frozen normalized-case and raw-decision JSONL plus the exact model and policy JSON. It rejects invalid encoding, duplicate object members, non-finite values, malformed or nonclosed structures, invalid model/policy ranges, invalid timestamps or identifiers, duplicate cases or decisions, and unequal case sets.
+
+The reference parser applies code-owned ceilings: 64 MiB per model or policy document; 512 MiB per JSONL input; one MiB per physical JSONL line; 100,000 nonblank records; nesting depth 128; 10,000 events per case; 16,384 untrusted-text characters per event; 256 KiB per event `attributes` object or model `training_metadata`; and at most 256 `limitations` entries with 64 KiB total canonical size. A bound failure stops the reference path. These ceilings limit parser exposure and do not establish production capacity or availability.
+
+The implementation separately reconstructs and compares these semantic stages in exact order:
+
+1. `EVIDENCE`;
+2. `MODEL`;
+3. `POLICY`;
+4. `VERIFIER`; and
+5. `FINAL_SURFACE`.
+
+Evidence provenance, integrity, freshness, and source-trust aggregates use ordered `math.fsum(values) / event_count` in both implementations. The model calculation iterates the frozen 20-feature order, accumulates contributions with `math.fsum`, adds the intercept, clamps the sigmoid input to `[-30, 30]`, and preserves the defined rounding and factor ordering. These are explicit algorithmic consistency rules, not blanket cross-platform reproducibility claims.
+
+For a successful match, `source_to_decision_assurance.jsonl` contains exactly one closed row per case. It binds the case, execution mode, normalized-case/model/policy sources, expected and observed digests for each stage, and the ordered complete path; `read_only` and `matched` can only be `true`. Raw evidence, model values, policy content, verifier details, source paths, and free-form errors are prohibited.
+
+The receipt binds the deterministic semantic surface rather than volatile `decision_id`, `created_at`, `latency_ms`, or `decision_record_hash` instance fields. The completed run manifest separately co-binds the exact raw decision and eight-stage audit bytes and their counts. A receipt can therefore be identical across semantically equivalent runs and is neither a complete run record nor independent custody evidence.
+
+On a stage or binding mismatch, the harness writes neither reference receipt and stops before qualification/rejection publication, adjudication decoding, comparison, metrics, or completed-run finalization. Earlier normalized cases, diagnostics, raw/deterministic decisions, and audit may remain and are incomplete. Later failures can leave more artifacts or a manifest written before final revalidation; only successful harness return establishes completion. The nonempty output directory is not reusable.
+
+For both ordinary and descriptor-bound historical output, every deterministic artifact is strict-parsed, structurally compared, and exact-digest frozen immediately after write: normalized cases, normalization diagnostics, deterministic decisions, both reference receipts, qualification accounting and rejections when enabled, adjudication comparison, and replay metrics. Volatile raw engine decisions and replay audit are exact-frozen separately. The complete set is rechecked before manifest construction, after construction, and after manifest write and is included in the manifest digest map. The manifest itself is not self-hashed.
+
+The reference implementation is same-process, same-project, and project-controlled. Agreement does not establish source truth, outcome correctness, policy fitness, efficacy, historical/live performance, external custody, or organizational independence. `P2-CE-005` remains CE-0 `NOT_EVALUATED`; its plan and schema are not campaign evidence.
 
 ## Governance and de-identification gates
 

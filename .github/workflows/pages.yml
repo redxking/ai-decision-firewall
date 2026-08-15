@@ -36,6 +36,30 @@ jobs:
       - name: Run the complete project test suite
         run: PYTHONPATH=src python -m unittest discover -s tests -v
 
+      - name: Validate Phase 2 starter inputs
+        run: python run_phase2.py --validate-only
+
+      - name: Run Phase 2 starter read-only replay
+        run: python run_phase2.py
+
+      - name: Verify Phase 2.1 qualification fixture generation
+        run: python scripts/generate_phase2_qualification_fixture.py --check
+
+      - name: Validate Phase 2.1 qualification inputs
+        run: python run_phase2.py --config config/phase2_qualification.json --validate-only
+
+      - name: Run Phase 2.1 qualification replay
+        run: python run_phase2.py --config config/phase2_qualification.json
+
+      - name: Validate commit-frozen Gate B campaign plan
+        run: python scripts/generate_gate_b_ce2_campaign.py --validate-plan
+
+      - name: Validate commit-frozen feature-assurance campaign plan
+        run: python scripts/generate_feature_assurance_ce2_campaign.py --validate-plan
+
+      - name: Validate planned source-to-decision campaign
+        run: python scripts/generate_source_to_decision_ce2_campaign.py --validate-plan
+
       - name: Validate committed claim evidence
         run: |
           python -m scripts.validate_claim_evidence
