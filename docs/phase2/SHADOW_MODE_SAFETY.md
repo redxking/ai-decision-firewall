@@ -6,7 +6,7 @@ Under the built-in runner, canonical adapter, and tested repository configuratio
 
 This CE-2 controlled-behavior claim applies only to the repository-controlled path and exact configuration identified by the run evidence. The starter is a same-process Python program, not an OS-enforced sandbox against arbitrary imported code. The claim does not authorize a live data connection. The included fixture is synthetic, `historical_case_count=0`, and no live-feed connector or action capability exists.
 
-Phase 2.4 adds a separate CE-1 implementation-conformance boundary: modeled attributes require exact types and authorized sources, canonical inventory context is bound exactly, and a separately implemented in-process projector must reproduce the serialized 20-feature values and traces before evaluation metrics or a completed run manifest. This does not expand the CE-2 no-effect claim, and the planned `P2-CE-004` campaign has not been executed.
+Phase 2.4 adds a separate CE-1 implementation-conformance boundary: modeled attributes require exact types and authorized sources, canonical inventory context is bound exactly, and a separately implemented in-process projector must reproduce the serialized 20-feature values and traces before evaluation metrics or a completed run manifest. This does not expand the CE-2 no-effect claim, and the corrected `P2-CE-004` freeze has no valid published campaign evidence.
 
 ## Safety invariants
 

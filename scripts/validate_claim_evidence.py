@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -17,6 +18,8 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
@@ -266,6 +269,10 @@ class _DuplicateJSONMember(ValueError):
     """Internal marker for ambiguous evidence JSON."""
 
 
+class _InvalidJSONNumber(ValueError):
+    """Internal marker for nonstandard or non-finite evidence JSON numbers."""
+
+
 def _reject_duplicate_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     value: dict[str, Any] = {}
     for key, child in pairs:
@@ -273,6 +280,31 @@ def _reject_duplicate_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]
             raise _DuplicateJSONMember
         value[key] = child
     return value
+
+
+def _reject_nonstandard_json_number(_value: str) -> None:
+    raise _InvalidJSONNumber("Nonstandard JSON number is prohibited.")
+
+
+def _parse_finite_json_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise _InvalidJSONNumber("Non-finite JSON number is prohibited.")
+    return parsed
+
+
+def _assert_finite_json_numbers(value: Any) -> None:
+    """Reject non-finite values anywhere in a decoded JSON tree."""
+
+    pending = [value]
+    while pending:
+        current = pending.pop()
+        if isinstance(current, float) and not math.isfinite(current):
+            raise _InvalidJSONNumber("Decoded JSON contains a non-finite number.")
+        if isinstance(current, dict):
+            pending.extend(current.values())
+        elif isinstance(current, list):
+            pending.extend(current)
 
 
 def _select_profile(
@@ -298,8 +330,17 @@ def _load_json(path: Path) -> dict[str, Any]:
         value = json.loads(
             path.read_text(encoding="utf-8"),
             object_pairs_hook=_reject_duplicate_json_pairs,
+            parse_constant=_reject_nonstandard_json_number,
+            parse_float=_parse_finite_json_float,
         )
-    except (OSError, UnicodeError, json.JSONDecodeError, _DuplicateJSONMember) as exc:
+        _assert_finite_json_numbers(value)
+    except (
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        _DuplicateJSONMember,
+        _InvalidJSONNumber,
+    ) as exc:
         raise EvidenceValidationError(f"Unable to decode JSON {path}: {exc}") from exc
     if not isinstance(value, dict):
         raise EvidenceValidationError(f"JSON document {path} is not an object.")
@@ -327,7 +368,10 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
                 value = json.loads(
                     line,
                     object_pairs_hook=_reject_duplicate_json_pairs,
+                    parse_constant=_reject_nonstandard_json_number,
+                    parse_float=_parse_finite_json_float,
                 )
+                _assert_finite_json_numbers(value)
                 if not isinstance(value, dict):
                     raise EvidenceValidationError(
                         f"{path}:{line_number} is not a JSON object."
@@ -340,6 +384,7 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
         UnicodeError,
         json.JSONDecodeError,
         _DuplicateJSONMember,
+        _InvalidJSONNumber,
     ) as exc:
         raise EvidenceValidationError(f"Unable to decode JSONL {path}: {exc}") from exc
     return rows
@@ -1521,7 +1566,11 @@ def _validate_gate_b_campaign_evidence(
         raise EvidenceValidationError(
             "Gate B public campaign artifacts contain prohibited ephemeral content."
         )
-    serialized_record = json.dumps(record, sort_keys=True).encode("utf-8")
+    serialized_record = json.dumps(
+        record,
+        sort_keys=True,
+        allow_nan=False,
+    ).encode("utf-8")
     if any(token in serialized_record for token in prohibited_public_tokens):
         raise EvidenceValidationError(
             "Gate B evidence record contains prohibited ephemeral content."
@@ -2202,7 +2251,7 @@ def main() -> None:
         )
     except EvidenceValidationError as exc:
         raise SystemExit(f"INVALID: {exc}") from exc
-    print(json.dumps(result, indent=2, sort_keys=True))
+    print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
 
 
 if __name__ == "__main__":

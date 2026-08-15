@@ -93,7 +93,7 @@ Phase 2.4 adds a bounded feature-assurance layer without changing the action bou
 - a successful check emits one closed, metadata-only `reference_feature_assurance.jsonl` row per case and binds its digest/count into metrics and the run manifest; and
 - a mismatch stops the run before qualification/rejection publication, adjudication loading, comparisons, metrics, or completed run-manifest finalization. Raw/normalized/deterministic decisions and the audit may already exist and must be treated as incomplete evidence.
 
-The fixed `P2-CE-004` campaign is currently a **Commit-A plan and scaffold only**. Its frozen design calls for two deterministic same-process repetitions of 16 synthetic attempts each: eight clean projection matches, four qualification quarantines (`INVALID_BOOLEAN`, `INVALID_TYPE`, and two `UNAUTHORIZED_MODELED_SIGNAL` cases), and four `REFERENCE_FEATURE_PROJECTION_MISMATCH` blocks per repetition, with zero retries or exclusions. The repetitions are not independent or fresh statistical trials; any final mismatch aborts without a result/evidence package. It has not been executed, no result ledger or claim-evidence record exists, and it remains CE-0 / `NOT_EVALUATED`. The 143-test implementation result is CE-1 conformance evidence for this checkout, not the planned CE-2 campaign result.
+The fixed `P2-CE-004` campaign is currently a **corrected implementation freeze and plan only**. Its design calls for two deterministic same-process repetitions of 16 synthetic attempts each: eight clean projection matches, four qualification quarantines (`INVALID_BOOLEAN`, `INVALID_TYPE`, and two `UNAUTHORIZED_MODELED_SIGNAL` cases), and four `REFERENCE_FEATURE_PROJECTION_MISMATCH` blocks per repetition, with zero retries or exclusions. The repetitions are not independent or fresh statistical trials; any final mismatch aborts without a result/evidence package. An earlier unpublished package against Commit `1945ff283794c42f8eb649e320ba6adf91a6b982` was rejected after review identified a non-finite-JSON validation gap. It is excluded and is not CE-2 evidence. No valid result ledger or claim-evidence record exists yet, so `P2-CE-004` remains CE-0 / `NOT_EVALUATED`. The 147-test implementation result is CE-1 conformance evidence for this checkout, not the planned CE-2 campaign result.
 
 The included Phase 2 fixture contains **zero historical cases**. It exercises the framework; it does not establish historical replay performance, analyst agreement, operational calibration, or readiness for live shadow deployment. See [`docs/phase2/`](docs/phase2/) for the architecture, data contract, requirements, safety case, and validation plan.
 
@@ -111,9 +111,9 @@ The committed starter fixture provides a small deterministic integration check:
 | Broker invocations or operational effects | 0 |
 | Action or post-action audit records | 0 |
 | Presented audit chain | Valid, 24 records; eight exact ordered stages per case |
-| Full automated suite | 143 of 143 passed locally in this checkout |
+| Full automated suite | 147 of 147 passed locally in this checkout |
 
-The 143-test count is local implementation-conformance evidence for this checkout. It is not a `P2-CE-004` campaign result, GitHub CI evidence, or evidence that an organizational safeguard is effective.
+The 147-test count is local implementation-conformance evidence for this checkout. It is not a `P2-CE-004` campaign result, GitHub CI evidence, or evidence that an organizational safeguard is effective.
 
 The fixture's three adjudications are test expectations, not historical ground truth. Agreement or classification measures calculated from these three synthetic records are wiring checks and must not be represented as efficacy evidence.
 
@@ -472,7 +472,7 @@ The current baseline has not established:
 - suitability for safety-critical, operational-technology, or critical-infrastructure control environments;
 - agentic alignment, scheming, sabotage resistance, or monitor effectiveness; the evaluated path is deterministic and contains no autonomous generative agent.
 
-The typed contract does not prove that an authorized source assertion is truthful, authentic, complete, or semantically equivalent to a vendor record. The reference projector is separately implemented but not externally or organizationally independent, and its metadata hashes do not create independent custody. `P2-CE-004` is a frozen plan, not evidence: no campaign run, repeatability result, CE-2 record, historical/live evaluation, or feature-assurance failure-rate estimate exists.
+The typed contract does not prove that an authorized source assertion is truthful, authentic, complete, or semantically equivalent to a vendor record. The reference projector is separately implemented but not externally or organizationally independent, and its metadata hashes do not create independent custody. `P2-CE-004` is a corrected freeze and plan, not evidence: no valid published campaign package, repeatability result, CE-2 record, historical/live evaluation, or feature-assurance failure-rate estimate exists.
 
 `P2-CE-003` adds no exception to these limitations. Its 32/32 observations are two repetitions of the same 16 project-selected synthetic scenarios under SELF automated project-controlled review. They do not establish a complete mutation space, a bounded failure rate, independent replication, real Gate B authority, effective de-identification, historical efficacy, live-shadow readiness, target-side effect absence, or zero risk.
 

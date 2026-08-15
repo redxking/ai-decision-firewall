@@ -34,7 +34,7 @@ For a new alpha.5 replay, the harness invokes the separately implemented in-proc
 
 The committed `P2-CE-001` and `P2-CE-002` bundles predate alpha.5 and therefore do not contain the new reference-assurance artifact. Their recorded narrow claims remain validated under their original version-bound artifacts; they were not retroactively upgraded. New alpha.5 replay evidence requires the new artifact.
 
-The frozen `P2-CE-004` plan specifies two intended 16-attempt synthetic repetitions, each with eight clean matches, four qualification quarantines, and four reference-projector blocks, with zero retries or exclusions. It is CE-0 / `NOT_EVALUATED`: no execution, result ledger, summary, evidence record, repeatability result, or observed denominator exists.
+The frozen `P2-CE-004` plan specifies two intended 16-attempt synthetic repetitions, each with eight clean matches, four qualification quarantines, and four reference-projector blocks, with zero retries or exclusions. It is CE-0 / `NOT_EVALUATED`: no valid published result ledger, summary, evidence record, repeatability result, or observed denominator exists. A prior unpublished package was invalidated after its frozen validator failed a non-finite-JSON negative control and is excluded from all claim evidence.
 
 ## Phase 2.3 synthetic Gate B campaign
 

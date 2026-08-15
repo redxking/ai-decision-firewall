@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import importlib.metadata
 import json
+import math
 import platform
 import re
 import subprocess
@@ -101,8 +102,29 @@ def _reject_duplicate_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]
     return value
 
 
-def _reject_nonstandard_number(value: str) -> None:
-    raise ValueError(f"Nonstandard JSON number is prohibited: {value}")
+def _reject_nonstandard_number(_value: str) -> None:
+    raise ValueError("Nonstandard JSON number is prohibited.")
+
+
+def _parse_finite_json_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("Non-finite JSON number is prohibited.")
+    return parsed
+
+
+def _assert_finite_json_numbers(value: Any) -> None:
+    """Reject non-finite values anywhere in a decoded JSON tree."""
+
+    pending = [value]
+    while pending:
+        current = pending.pop()
+        if isinstance(current, float) and not math.isfinite(current):
+            raise ValueError("Decoded JSON contains a non-finite number.")
+        if isinstance(current, dict):
+            pending.extend(current.values())
+        elif isinstance(current, list):
+            pending.extend(current)
 
 
 def _package_source_paths() -> dict[str, str]:
@@ -317,12 +339,22 @@ EXPECTED_ATTEMPTS: tuple[dict[str, Any], ...] = (
 
 
 def _json_bytes(value: Any) -> bytes:
-    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    return (json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n").encode(
+        "utf-8"
+    )
 
 
 def _jsonl_bytes(rows: list[dict[str, Any]]) -> bytes:
     return b"".join(
-        (json.dumps(row, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
+        (
+            json.dumps(
+                row,
+                separators=(",", ":"),
+                sort_keys=True,
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
         for row in rows
     )
 
@@ -365,7 +397,9 @@ def _load_json(path: Path) -> dict[str, Any]:
             path.read_text(encoding="utf-8"),
             object_pairs_hook=_reject_duplicate_json_pairs,
             parse_constant=_reject_nonstandard_number,
+            parse_float=_parse_finite_json_float,
         )
+        _assert_finite_json_numbers(value)
     except (
         OSError,
         UnicodeError,
@@ -818,7 +852,25 @@ def build_summary(
     *,
     evaluated_at: str,
 ) -> dict[str, Any]:
-    profile = json.loads(profile_bytes)
+    try:
+        profile = json.loads(
+            profile_bytes,
+            object_pairs_hook=_reject_duplicate_json_pairs,
+            parse_constant=_reject_nonstandard_number,
+            parse_float=_parse_finite_json_float,
+        )
+        _assert_finite_json_numbers(profile)
+    except (
+        UnicodeError,
+        json.JSONDecodeError,
+        _DuplicateJSONMember,
+        ValueError,
+    ) as exc:
+        raise CampaignGenerationError(
+            "Unable to decode generated campaign profile JSON."
+        ) from exc
+    if not isinstance(profile, dict):
+        raise CampaignGenerationError("Generated campaign profile is not an object.")
     rows = results_run1 + results_run2
     zero_fields = (
         "model_calls",
@@ -1621,7 +1673,9 @@ def main() -> None:
         load_and_validate_plan()
         print(
             json.dumps(
-                {"campaign_id": CAMPAIGN_ID, "status": "PLAN_VALID"}, sort_keys=True
+                {"campaign_id": CAMPAIGN_ID, "status": "PLAN_VALID"},
+                sort_keys=True,
+                allow_nan=False,
             )
         )
         return
@@ -1646,6 +1700,7 @@ def main() -> None:
                     "generated": [str(path) for path in generated],
                 },
                 sort_keys=True,
+                allow_nan=False,
             )
         )
         return
@@ -1655,7 +1710,13 @@ def main() -> None:
         evaluated_at=args.evaluated_at,
         record_path=args.record,
     )
-    print(json.dumps({"campaign_id": CAMPAIGN_ID, "status": "VALID"}, sort_keys=True))
+    print(
+        json.dumps(
+            {"campaign_id": CAMPAIGN_ID, "status": "VALID"},
+            sort_keys=True,
+            allow_nan=False,
+        )
+    )
 
 
 if __name__ == "__main__":

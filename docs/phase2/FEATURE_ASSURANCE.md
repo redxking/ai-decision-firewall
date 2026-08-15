@@ -12,9 +12,9 @@ This increment remains synthetic, offline, and read-only. It does not introduce 
 
 ## Current status
 
-The typed/source-authorized production contract, exact four-field inventory binding, separately implemented in-process reference projector, closed metadata-only assurance schema, harness integration, metrics/manifest bindings, and negative tests are implemented in the current Phase 2.4 checkout. The full local suite passes 143 tests. This is CE-1 implementation-conformance evidence only.
+The typed/source-authorized production contract, exact four-field inventory binding, separately implemented in-process reference projector, closed metadata-only assurance schema, harness integration, metrics/manifest bindings, and negative tests are implemented in the current Phase 2.4 checkout. The full local suite passes 147 tests. This is CE-1 implementation-conformance evidence only.
 
-`P2-CE-004` is a frozen Commit-A plan and scaffold, including a generator/checker and claim-validator profile, not a result. No campaign execution, result ledger, summary, repeatability evidence, claim-evidence record, Commit B, or GitHub CI conclusion exists. Until those artifacts are produced and validated, the campaign remains CE-0 / `NOT_EVALUATED`.
+`P2-CE-004` is a corrected implementation freeze and plan, including a generator/checker and claim-validator profile, not a result. No valid published result ledger, summary, repeatability evidence, claim-evidence record, Commit B, or GitHub CI conclusion exists. A prior unpublished package was invalidated after its frozen validator accepted non-finite JSON and is excluded from claim evidence. Until a new bound execution produces artifacts that pass the corrected validator, the campaign remains CE-0 / `NOT_EVALUATED`.
 
 ## Threat and failure model
 

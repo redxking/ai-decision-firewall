@@ -3,8 +3,11 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import re
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -36,8 +39,11 @@ from scripts.generate_feature_assurance_ce2_campaign import (
     PROHIBITED_PUBLIC_FIELDS as FEATURE_PROHIBITED_PUBLIC_FIELDS,
     CampaignGenerationError as FeatureCampaignGenerationError,
     _base_case as build_seeded_feature_case,
+    _json_bytes as serialize_feature_json,
+    _jsonl_bytes as serialize_feature_jsonl,
     _require_clean_generation_commit as require_clean_feature_commit,
     build_campaign_artifacts as build_feature_campaign_artifacts,
+    build_summary as build_feature_campaign_summary,
     check_artifacts as check_feature_campaign_artifacts,
     generate_artifacts as generate_feature_campaign_artifacts,
     load_and_validate_plan as load_and_validate_feature_plan,
@@ -430,6 +436,63 @@ def _refresh_feature_campaign_record(
 
 
 class ClaimEvidenceContractTests(unittest.TestCase):
+    def test_validator_cli_supports_direct_and_module_invocation(self) -> None:
+        environment = dict(os.environ)
+        environment["PYTHONPATH"] = str(ROOT / "src")
+        commands = (
+            (
+                "direct",
+                [sys.executable, str(ROOT / "scripts/validate_claim_evidence.py")],
+            ),
+            (
+                "module",
+                [sys.executable, "-m", "scripts.validate_claim_evidence"],
+            ),
+        )
+        for invocation, command in commands:
+            with self.subTest(invocation=invocation):
+                completed = subprocess.run(
+                    command,
+                    cwd=ROOT,
+                    env=environment,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                result = json.loads(completed.stdout)
+                self.assertEqual(result["status"], "VALID")
+                self.assertEqual(result["profile_id"], "P2-CE-001")
+
+        import_probe = """
+import runpy
+import sys
+from pathlib import Path
+
+root = Path.cwd().resolve()
+sys.path = [
+    entry
+    for entry in sys.path
+    if Path(entry or ".").resolve() != root
+]
+runpy.run_path(
+    str(root / "scripts/validate_claim_evidence.py"),
+    run_name="claim_validator_import_probe",
+)
+import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
+"""
+        completed = subprocess.run(
+            [sys.executable, "-c", import_probe],
+            cwd=ROOT,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_starter_record_preserves_narrow_synthetic_claim_boundary(self) -> None:
         schema = json.loads(
             (ROOT / "contracts/v0.2.0/evaluation-evidence.schema.json").read_text(
@@ -1224,6 +1287,14 @@ class ClaimEvidenceContractTests(unittest.TestCase):
                 1,
             ),
             original.replace('"campaign_seed": 20260815', '"campaign_seed": NaN', 1),
+            original.replace(
+                '"campaign_seed": 20260815', '"campaign_seed": Infinity', 1
+            ),
+            original.replace(
+                '"campaign_seed": 20260815', '"campaign_seed": -Infinity', 1
+            ),
+            original.replace('"campaign_seed": 20260815', '"campaign_seed": 1e400', 1),
+            original.replace('"campaign_seed": 20260815', '"campaign_seed": -1e400', 1),
         )
         for index, payload in enumerate(mutations):
             with (
@@ -1240,6 +1311,46 @@ class ClaimEvidenceContractTests(unittest.TestCase):
                     self.assertRaises(FeatureCampaignGenerationError),
                 ):
                     load_and_validate_feature_plan()
+
+    def test_feature_campaign_serializers_reject_nested_nonfinite_values(self) -> None:
+        for spelling, value in (
+            ("nan", float("nan")),
+            ("positive-infinity", float("inf")),
+            ("negative-infinity", float("-inf")),
+        ):
+            nested = {"outer": [{"value": value}]}
+            with self.subTest(serializer="json", spelling=spelling):
+                with self.assertRaisesRegex(ValueError, "Out of range float values"):
+                    serialize_feature_json(nested)
+            with self.subTest(serializer="jsonl", spelling=spelling):
+                with self.assertRaisesRegex(ValueError, "Out of range float values"):
+                    serialize_feature_jsonl([nested])
+
+    def test_feature_campaign_summary_rejects_nonfinite_profile_bytes(self) -> None:
+        profile_bytes, run1_bytes, run2_bytes, _ = build_feature_campaign_artifacts(
+            "1" * 40,
+            "2026-08-15T00:00:00Z",
+        )
+        rows_run1 = [json.loads(line) for line in run1_bytes.splitlines()]
+        rows_run2 = [json.loads(line) for line in run2_bytes.splitlines()]
+        mutated_profile = profile_bytes.replace(
+            b'"campaign_seed": 20260815',
+            b'"campaign_seed": 1e400',
+            1,
+        )
+        self.assertNotEqual(mutated_profile, profile_bytes)
+        with self.assertRaisesRegex(
+            FeatureCampaignGenerationError,
+            "Unable to decode generated campaign profile JSON",
+        ):
+            build_feature_campaign_summary(
+                mutated_profile,
+                run1_bytes,
+                run2_bytes,
+                rows_run1,
+                rows_run2,
+                evaluated_at="2026-08-15T00:00:00Z",
+            )
 
     def test_feature_campaign_final_generation_requires_exact_clean_freeze(
         self,
@@ -1320,6 +1431,91 @@ class ClaimEvidenceContractTests(unittest.TestCase):
                 "byte_identical_result_ledgers": True,
             },
         )
+
+    def test_feature_campaign_readers_reject_nonfinite_json_numbers(self) -> None:
+        mutations = (
+            {
+                "target": "record",
+                "role": None,
+                "filename": None,
+                "before": '"wall_time_seconds": null',
+                "after": '"wall_time_seconds": NaN',
+                "token": "NaN",
+                "error": "Unable to decode JSON ",
+            },
+            {
+                "target": "profile",
+                "role": "campaign_profile",
+                "filename": "campaign_profile.json",
+                "before": '"campaign_seed": 20260815',
+                "after": '"campaign_seed": Infinity',
+                "token": "Infinity",
+                "error": "Unable to decode JSON ",
+            },
+            {
+                "target": "summary",
+                "role": "campaign_summary",
+                "filename": "campaign_summary.json",
+                "before": '"campaign_seed": 20260815',
+                "after": '"campaign_seed": -Infinity',
+                "token": "-Infinity",
+                "error": "Unable to decode JSON ",
+            },
+            {
+                "target": "run1",
+                "role": "campaign_results_run1",
+                "filename": "campaign_results_run1.jsonl",
+                "before": '"sequence":1',
+                "after": '"sequence":1e400',
+                "token": "1e400",
+                "error": "Unable to decode JSONL ",
+            },
+            {
+                "target": "run2",
+                "role": "campaign_results_run2",
+                "filename": "campaign_results_run2.jsonl",
+                "before": '"sequence":1',
+                "after": '"sequence":-1e400',
+                "token": "-1e400",
+                "error": "Unable to decode JSONL ",
+            },
+        )
+        for mutation in mutations:
+            with (
+                self.subTest(target=mutation["target"]),
+                tempfile.TemporaryDirectory(
+                    prefix=".feature-ce2-nonfinite-",
+                    dir=ROOT,
+                ) as directory,
+            ):
+                record_path, output_dir = _build_feature_campaign_evidence(
+                    Path(directory)
+                )
+                if mutation["target"] == "record":
+                    target_path = record_path
+                else:
+                    target_path = output_dir / str(mutation["filename"])
+                original = target_path.read_text(encoding="utf-8")
+                mutated = original.replace(
+                    str(mutation["before"]),
+                    str(mutation["after"]),
+                    1,
+                )
+                self.assertNotEqual(mutated, original)
+                target_path.write_text(mutated, encoding="utf-8")
+
+                if mutation["role"] is not None:
+                    record = json.loads(record_path.read_text(encoding="utf-8"))
+                    artifact = _artifact_by_role(record, str(mutation["role"]))
+                    artifact["sha256"] = _sha256(target_path)
+                    _write_json(record_path, record)
+
+                with self.assertRaisesRegex(
+                    EvidenceValidationError,
+                    str(mutation["error"]),
+                ) as raised:
+                    _validate_feature_campaign_test_record(record_path)
+                self.assertNotIn(str(mutation["token"]), str(raised.exception))
 
     def test_feature_campaign_check_preserves_recorded_runtime(self) -> None:
         with tempfile.TemporaryDirectory(
