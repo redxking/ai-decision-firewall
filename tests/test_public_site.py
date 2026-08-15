@@ -119,8 +119,8 @@ class PublicSiteStructureTests(unittest.TestCase):
         self.assertTrue(parser.has_main)
         self.assertTrue(parser.has_h1)
         self.assertTrue({"decision-demo", "how-it-works", "evidence", "boundaries"}.issubset(parser.ids))
-        self.assertEqual(parser.scripts, ["./app.js"])
-        self.assertEqual(parser.stylesheets, ["./styles.css"])
+        self.assertEqual(parser.scripts, ["./app.js?v=1.0.2"])
+        self.assertEqual(parser.stylesheets, ["./styles.css?v=1.0.2"])
         self.assertEqual(parser.run_decision_links, ["#decision-demo", "#decision-demo"])
 
     def test_social_preview_asset_is_present(self) -> None:
