@@ -4,7 +4,7 @@
 
 Validation must establish whether the built-in Phase 2 path can reject untrusted or ungoverned replay inputs, produce traceable counterfactual decisions from accepted records, account for every input, and maintain zero authorization-token issuance, zero broker invocation, and zero operational effects under the exact tested configuration.
 
-The current evidence base contains only synthetic fixtures with `historical_case_count=0`: the three-case starter and the seven-record Phase 2.1 qualification campaign. Historical efficacy, historical calibration, historical acceptance rates, and analyst-agreement claims are therefore unavailable.
+The current evidence base contains only synthetic fixtures with `historical_case_count=0`: the three-case starter, the seven-record Phase 2.1 qualification campaign, and the ephemeral test-only inputs used by the fixed Phase 2.3 Gate B campaign. Historical efficacy, historical calibration, historical acceptance rates, and analyst-agreement claims are therefore unavailable.
 
 ## Evidence hierarchy
 
@@ -88,7 +88,20 @@ The contract-validation plan covers the following cases. Implemented versus rema
 - duplicate JSON object members are rejected in governed control and JSONL inputs, and authorization expiry at a staged runner boundary prevents a completed run manifest;
 - the historical runner receives only in-memory accepted cases, model bytes, policy bytes, and the read-only execution mode; label bytes and all filesystem/output paths are excluded until decision/audit closure, while the completed test path retains zero authorization attempts/tokens, broker invocations, action results, and operational effects.
 
-These tests support the CE-1 statement that the preflight controls exist in the identified commit. They are not a committed CE-2 Gate B campaign and do not establish real approver authority, signature validity, de-identification effectiveness, custody truth, organizational authorization, or historical performance.
+These tests support the CE-1 statement that the preflight controls exist in the identified commit. They do not establish real approver authority, signature validity, de-identification effectiveness, custody truth, organizational authorization, or historical performance. The separate fixed campaign below supports a narrower CE-2 controlled-behavior statement; it does not elevate these external or operational nonclaims.
+
+### Phase 2.3 Gate B controlled-behavior campaign
+
+[`P2-CE-003`](../../contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json) binds the exact generator, plan, schema, validator, Gate B implementation, contracts, harness, fixtures, model, policy, runtime fingerprint, seed, budget, scenario order, expected outcomes, and implementation Commit [`e8aa8b0`](https://github.com/redxking/ai-decision-firewall/commit/e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b). The fixed design executes two complete repetitions of the same 16 project-selected synthetic scenarios:
+
+- one test-only validate-only positive control per repetition;
+- 14 single-mutation structural negative controls per repetition that are expected to block before governed payload access;
+- one quarantine-threshold control per repetition that is expected to open both governed payload roles, qualify the cases, and stop before normalization or engine invocation; and
+- zero permitted decision-engine, authorization, broker, or target-effect boundary calls.
+
+The published campaign observed 32/32 matches with no exclusions: two validate-only passes, 28 structural pre-payload blocks with no governed payload-role open/read attempt observed by the declared `Path.open`, `Path.read_text`, `Path.read_bytes`, and `os.open` hooks during the harness invocation, and two post-qualification/pre-engine threshold blocks. The two sanitized 16-row result ledgers were byte-identical. No engine, authorization, broker, or target-effect boundary was reached, and no completed run manifest, decision artifact, or audit artifact was observed. The exact artifacts and their custody limits are listed in the [`campaign bundle`](../../evidence/phase2_gate_b_ce2/README.md).
+
+This is a CE-2 `CONTROLLED_BEHAVIOR` result under `SELF` automated project-controlled review. It uses no real approval or actual historical data and authorizes no live feed or action. The two executions are repetitions, not independent or statistically representative trials; Commit A is a public project-controlled freeze, not external preregistration; the mutation set is not exhaustive; the open/read hooks do not establish OS-level nonaccess or non-egress; boundary counters do not provide target-side proof; and 32/32 does not estimate an operational failure probability, demonstrate efficacy, or establish alignment/misalignment behavior.
 
 ### Replay-harness tests
 
@@ -101,7 +114,7 @@ These tests support the CE-1 statement that the preflight controls exist in the 
 - historical adjudication bytes may be integrity-frozen inside the harness, but their path and contents are withheld from the runner and they are decoded and semantically loaded only after decisions and boundary-audit checks close;
 - every accepted case retains evidence-ID traceability;
 - semantically equivalent runs produce equivalent decisions after excluding time, latency, UUID, and run-ID fields;
-- the output audit chain verifies, every final decision hash is recomputed and bound to exactly one finalization record, unknown audit record types fail closed, and ordinary record tampering is detected;
+- the output audit chain verifies and every accepted case has exactly one canonical eight-stage trace in the required order; exact row/payload shapes, global sequence and aware/nondecreasing timestamps, code-owned suppression content, frozen-policy action bindings, decision identifiers, and decision hashes are cross-checked; missing, duplicate, reordered, forged, malformed, and duplicate-member records fail closed; and
 - token/decision-hash residue and any non-applicable post-action success claim are rejected;
 - authorization, broker, and operational-effect counters remain zero.
 
@@ -133,7 +146,8 @@ The Phase 2 starter is acceptable for public release only when the implemented g
 | Historical preflight | Historical origin requires a current, exact Gate B package and owner-only ignored paths before payload access; observed window/rate gates pass after qualification but before the engine | Required for Phase 2.2 implementation; no real package or pilot is approved |
 | Historical label boundary | Adjudication bytes may be frozen within the harness, but are neither passed nor made path-discoverable to the built-in runner and are decoded only after decisions close | Required for Phase 2.2; same-process isolation limitation retained |
 | Traceability | Every accepted decision's cited and feature-linked event IDs resolve to accepted input events | Required |
-| Audit | One suppression, no-authorization, and hash-bound finalization record exists per case and the presented hash chain verifies | Required, with custody limitation |
+| Audit | Exactly one canonical, ordered eight-stage trace exists per accepted case; decision/policy bindings and the presented hash chain verify | Required CE-1 implementation conformance, with independent-recomputation, time, and custody limitations |
+| Gate B controlled behavior | Fixed, commit-bound synthetic positive/negative campaign reports raw denominators, boundary observations, repeatability, and nonclaims | `P2-CE-003`: 32/32 project-controlled expected-outcome matches across two repetitions; CE-2 only |
 | Compatibility | All Phase 1 tests continue to pass | Required |
 | Claim discipline | A schema-valid evidence record states the exact supported wording, data origin, validity status, limitations, and prohibited inferences | Required |
 | Nonclaims | Synthetic evaluation is not described as historical or operational performance | Required |
@@ -175,7 +189,7 @@ Future results must be stratified by synthetic versus historical origin and must
 
 ## Claim and adversarial-evaluation rules
 
-Passing tests support only the claim those tests were designed to evaluate. Every release result must use the claim class, evidence-record fields, statistical rules, and prohibited wording in [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md). The machine-readable contract is `contracts/v0.2.0/evaluation-evidence.schema.json`. `P2-CE-001` covers the three-case synthetic starter, and `P2-CE-002` covers only the fixed seven-record qualification campaign and its accepted subset's read-only invariants. Both are CE-2 controlled-behavior records; neither is historical, operational, alignment, or production evidence.
+Passing tests support only the claim those tests were designed to evaluate. Every release result must use the claim class, evidence-record fields, statistical rules, and prohibited wording in [`CLAIM_EVIDENCE_STANDARD.md`](CLAIM_EVIDENCE_STANDARD.md). The machine-readable contract is `contracts/v0.2.0/evaluation-evidence.schema.json`. `P2-CE-001` covers the three-case synthetic starter, `P2-CE-002` covers only the fixed seven-record qualification campaign and its accepted subset's read-only invariants, and `P2-CE-003` covers only the fixed two-repetition synthetic Gate B registry and declared instrumentation. All three are CE-2 controlled-behavior records; none is historical, operational, alignment, or production evidence. The separate eight-stage audit hardening remains a CE-1 implementation-conformance claim because it cross-checks presented decisions and policy actions but does not independently recompute the full decision path or provide external time/custody evidence.
 
 The adversarial matrix in that standard derives future test families from Anthropic and OpenAI research: goal conflict, evaluation awareness, instruction/evidence poisoning, reward and test hacking, code sabotage, oversight undermining, sandbagging, hidden-objective audit, long-horizon state manipulation, human-decision sabotage, monitor effectiveness, and independent operational-effect proof. The current deterministic POC implements only a subset. It contains no autonomous generative-language-model agent, so it makes no claim about alignment, scheming, sabotage resistance, or monitor recall.
 
@@ -187,7 +201,7 @@ For any later repeated behavioral evaluation, report raw numerators and denomina
 
 Required evidence:
 
-- all Phase 1, Phase 2 starter, Phase 2.1 qualification, and Phase 2.2 Gate B tests pass;
+- all Phase 1, Phase 2 starter, Phase 2.1 qualification, Phase 2.2 Gate B, and Phase 2.3 audit/campaign tests pass;
 - no credential or production endpoint is present;
 - fixture provenance and synthetic status are documented;
 - public files contain no historical or direct-identifier data;
@@ -214,7 +228,7 @@ Gate B does not authorize a live feed, shadow-feed deployment, operational recom
 
 ### Gate C: Live read-only shadow evaluation
 
-Phase 2.2 did not enter Gate C. Before a Phase 3 live shadow service, require:
+Phase 2.3 did not enter Gate C. Before a Phase 3 live shadow service, require:
 
 - a separately approved deployment architecture;
 - read-only service identities with no action permission;
@@ -232,4 +246,4 @@ Phase 2 may recommend whether the privileged-identity use case warrants further 
 
 ## Exit conditions and nonclaims
 
-The current increment exits validation when all implemented requirements have passing evidence, planned requirements are not mislabeled as complete, every unavailable metric is explicit, and each public claim is no broader than its evidence record. Success establishes a controlled synthetic result for the built-in test-harness path, not historical efficacy, historical data quality, safe future autonomy, privacy compliance, production readiness, live-shadow readiness, agentic alignment, monitor effectiveness, or independent audit custody.
+The current increment exits validation when all implemented requirements have passing evidence, planned requirements are not mislabeled as complete, every unavailable metric is explicit, and each public claim is no broader than its evidence record. Success establishes narrow controlled synthetic results for the built-in test-harness path, not historical efficacy, historical data quality, safe future autonomy, privacy compliance, production readiness, live-shadow readiness, agentic alignment/misalignment behavior, monitor effectiveness, OS-level nonaccess/non-egress, target-side proof, exhaustive coverage, an operational failure rate, or independent audit custody.

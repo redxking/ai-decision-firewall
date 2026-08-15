@@ -4,6 +4,8 @@ Gate B is the authorization and evidence boundary for the first small, de-identi
 
 The public repository contains the contract and blank templates needed to design the package. It must not contain actual historical data, adjudications, approval records, source-specific mappings, custody records, identities, signatures, endpoints, or linkable historical digests.
 
+The separate [`P2-CE-003` synthetic campaign](../../contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json) exercises fixed preflight and stop-condition cases under ephemeral test-only authorization content. Its 32/32 project-controlled expected-outcome matches are CE-2 controlled-behavior evidence for that bound campaign only. They are not a Gate B approval, a historical pilot, independent assurance, or evidence that any external authority, privacy, custody, de-identification, or operational claim is true.
+
 ## Gate outcome
 
 Gate B has only two executable outcomes:
@@ -138,6 +140,8 @@ Gate B approval authorizes data processing within a bounded pilot; it does not p
 The authorization snapshot and its approval, review, custody, source, incident, and hash references may be sensitive and are excluded from public evidence summaries. A bounded opaque `authorization_id` may appear in the runtime's aggregate preflight summary for trace correlation only; it must not encode a person, system, incident, source, or other sensitive identifier. Do not publish record-level source metadata, linkable line or source digests, rare-event combinations, personnel identifiers, source-system identifiers, or representative failures that could enable re-identification.
 
 Machine validation proves internal structure and binding only. It does not prove legal authority, identity, signature authenticity, effective de-identification, custody truth, or historical efficacy.
+
+`P2-CE-003` does not change that boundary. Its two complete executions repeat the same 16 fixed synthetic scenarios; they are not independent/statistical trials, and the Commit A project freeze is not external preregistration. Declared open/read instrumentation is not OS-level nonaccess/non-egress proof, zero target-effect boundary reaches are not target-side proof, and the selected mutations do not establish exhaustive coverage, an operational failure rate, efficacy, live safety, or alignment/misalignment behavior.
 
 ## Revalidation and revocation
 

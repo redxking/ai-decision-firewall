@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0-alpha.4 — 2026-08-14
+
+- Strengthened the read-only audit boundary to require exactly one canonical, correctly ordered eight-stage trace per accepted case: `CASE_RECEIVED`, `EVIDENCE_ASSESSED`, `MODEL_ASSESSED`, `POLICY_PROPOSED`, `INDEPENDENTLY_VERIFIED`, `EXECUTION_SUPPRESSED`, `AUTHORIZATION_EVALUATED`, and `DECISION_FINALIZED`.
+- Added rejection tests for missing, duplicated, reordered, malformed, extra-field, time/sequence-invalid, suppression-forged, policy-action-forged, decision/hash-mismatched, and duplicate-member audit records.
+- Added a fixed, closed-schema `P2-CE-003` Gate B controlled-behavior campaign frozen in implementation Commit `e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b`.
+- Executed two complete repetitions of 16 fixed synthetic scenarios. All 32 observations matched the project-controlled expectations with no exclusions: two validate-only passes, 28 structural pre-payload blocks, and two post-qualification/pre-engine threshold blocks. The two sanitized result ledgers were byte-identical.
+- During the 28 structural-block harness invocations, no governed payload-role open/read attempt was observed by the declared `Path`/`os.open` hooks. Across all 32 attempts, no engine, authorization, broker, or target-effect boundary was reached, and no completed run manifest, decision artifact, or audit artifact was observed.
+- Added a commit-bound campaign profile, two result ledgers, summary, evidence record, campaign contract, generator/checker, claim-evidence validation profile, negative tests, and documentation. The full local suite now contains 101 passing tests.
+- The audit result is CE-1 implementation-conformance evidence; `P2-CE-003` is CE-2 controlled-behavior evidence under SELF automated project-controlled review. Neither establishes a real approval, actual historical-data handling, a live feed or action, OS-level nonaccess/non-egress, target-side proof, exhaustive coverage, an operational failure rate, efficacy, independent assurance, or alignment/misalignment behavior. The two repetitions are not independent statistical trials, and the Commit A freeze is not external preregistration.
+
 ## 0.2.0-alpha.3 — 2026-08-14
 
 - Added a closed Gate B authorization-package contract, non-authorizing DRAFT example, ADR, operator guide, and blank pilot, mapping, and adjudication templates.

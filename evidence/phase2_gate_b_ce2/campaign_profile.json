@@ -1,0 +1,304 @@
+{
+  "artifact_kind": "CAMPAIGN_PROFILE",
+  "budget": {
+    "attempts_per_run": 16,
+    "engine_call_budget": 0,
+    "evaluation_runs": 2,
+    "retries": 0,
+    "tokens": null,
+    "total_attempt_executions": 32
+  },
+  "campaign_id": "P2-CE-003-GATE-B-SYNTHETIC",
+  "campaign_plan_sha256": "cd94608ade5dcb6a6ff09d289b1eb8fa124805bff98dd703283d1c2e672cee12",
+  "campaign_seed": 20260814,
+  "claim_id": "P2-CE-003",
+  "configuration_binding": {
+    "canonical_sha256": "35d2dc104c04939734658363f105781ffa1d4977a52de88bef9aea04b9617668",
+    "configuration": {
+      "contract_adapter": "canonical_jsonl_v0.2",
+      "dataset_manifest": "data/campaign/manifest.json",
+      "deterministic_outputs": true,
+      "execution_mode": "HISTORICAL_REPLAY",
+      "gate_b_authorization": "local/gate_b/gate_b_authorization.json",
+      "live_actions_enabled": false,
+      "model_path": "outputs/baseline/model.json",
+      "output_dir": "outputs/replay/gate_b_ce2_campaign",
+      "policy_path": "config/policy.json",
+      "record_failure_policy": "QUARANTINE_RECORD",
+      "schema_version": "0.2.0",
+      "zero_effects_required": true
+    }
+  },
+  "design": {
+    "actual_historical_records": 0,
+    "attempt_order_frozen": true,
+    "data_origin": "SYNTHETIC_FIXTURE",
+    "execution_authority": "NONE",
+    "result_capture": "SANITIZED_ENUMERATED_FIELDS_ONLY",
+    "simulated_runtime_origin": "HISTORICAL_DEIDENTIFIED",
+    "stored_approval_package": false,
+    "stored_historical_data": false
+  },
+  "evaluated_at": "2026-08-15T03:12:44Z",
+  "expected_attempts": [
+    {
+      "attempt_id": "GB-POS-001",
+      "expected_accessed_payload_roles": [
+        "adjudications",
+        "cases"
+      ],
+      "expected_error_class": "NONE",
+      "expected_outcome": "PASS_TEST_ONLY",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "NONE",
+      "operation": "VALIDATE_ONLY",
+      "sequence": 1
+    },
+    {
+      "attempt_id": "GB-NEG-001",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "STATUS_DRAFT",
+      "operation": "RUN",
+      "sequence": 2
+    },
+    {
+      "attempt_id": "GB-NEG-002",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "MISSING_APPROVAL_ROLE",
+      "operation": "RUN",
+      "sequence": 3
+    },
+    {
+      "attempt_id": "GB-NEG-003",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "DUPLICATE_APPROVAL_ROLE",
+      "operation": "RUN",
+      "sequence": 4
+    },
+    {
+      "attempt_id": "GB-NEG-004",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "MANIFEST_DIGEST_MISMATCH",
+      "operation": "RUN",
+      "sequence": 5
+    },
+    {
+      "attempt_id": "GB-NEG-005",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "MODEL_DIGEST_MISMATCH",
+      "operation": "RUN",
+      "sequence": 6
+    },
+    {
+      "attempt_id": "GB-NEG-006",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "POLICY_DIGEST_MISMATCH",
+      "operation": "RUN",
+      "sequence": 7
+    },
+    {
+      "attempt_id": "GB-NEG-007",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "CONTROL_ARTIFACT_DIGEST_MISMATCH",
+      "operation": "RUN",
+      "sequence": 8
+    },
+    {
+      "attempt_id": "GB-NEG-008",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "ACTION_CREDENTIALS_PRESENT",
+      "operation": "RUN",
+      "sequence": 9
+    },
+    {
+      "attempt_id": "GB-NEG-009",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "LIVE_FEED_CONNECTED",
+      "operation": "RUN",
+      "sequence": 10
+    },
+    {
+      "attempt_id": "GB-NEG-010",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "WRITE_CONNECTOR_PRESENT",
+      "operation": "RUN",
+      "sequence": 11
+    },
+    {
+      "attempt_id": "GB-NEG-011",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "NETWORK_EGRESS_ENABLED",
+      "operation": "RUN",
+      "sequence": 12
+    },
+    {
+      "attempt_id": "GB-NEG-012",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "AUTHORIZATION_EXPIRED",
+      "operation": "RUN",
+      "sequence": 13
+    },
+    {
+      "attempt_id": "GB-NEG-013",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "REVIEWER_NOT_INDEPENDENT",
+      "operation": "RUN",
+      "sequence": 14
+    },
+    {
+      "attempt_id": "GB-NEG-014",
+      "expected_accessed_payload_roles": [],
+      "expected_error_class": "GateBValidationError",
+      "expected_outcome": "BLOCKED_PREPAYLOAD",
+      "fixture": "STARTER_VALID",
+      "mutation_id": "CUSTODY_FREEZE_PREDATES_WINDOW",
+      "operation": "RUN",
+      "sequence": 15
+    },
+    {
+      "attempt_id": "GB-NEG-015",
+      "expected_accessed_payload_roles": [
+        "adjudications",
+        "cases"
+      ],
+      "expected_error_class": "GateBStopConditionViolation",
+      "expected_outcome": "BLOCKED_POSTQUALIFICATION_PREENGINE",
+      "fixture": "QUALIFICATION_THRESHOLD",
+      "mutation_id": "QUARANTINE_THRESHOLD_EXCEEDED",
+      "operation": "RUN",
+      "sequence": 16
+    }
+  ],
+  "implementation_commit": "e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b",
+  "runtime_fingerprint": {
+    "jsonschema_version": "4.26.0",
+    "numpy_version": "2.5.2",
+    "platform_machine": "arm64",
+    "platform_release": "25.6.0",
+    "platform_system": "Darwin",
+    "python_implementation": "CPython",
+    "python_version": "3.14.7"
+  },
+  "schema_version": "1.0.0",
+  "source_bindings": [
+    {
+      "path": "scripts/generate_gate_b_ce2_campaign.py",
+      "role": "CAMPAIGN_GENERATOR",
+      "sha256": "8d10cbacc480df866a48c00067a0a40f11097132f2a462d550dca6c86a8b4a21"
+    },
+    {
+      "path": "config/gate_b_ce2_campaign_plan.json",
+      "role": "CAMPAIGN_PLAN",
+      "sha256": "cd94608ade5dcb6a6ff09d289b1eb8fa124805bff98dd703283d1c2e672cee12"
+    },
+    {
+      "path": "contracts/v0.2.0/gate-b-ce2-campaign.schema.json",
+      "role": "CAMPAIGN_SCHEMA",
+      "sha256": "c4cb4672a3d780975561146348a66cb55f472f62d69503f6f28d1f4325964bdb"
+    },
+    {
+      "path": "scripts/validate_claim_evidence.py",
+      "role": "CLAIM_VALIDATOR",
+      "sha256": "aeb71021a46efe0a0449d561c54573660595f82169a4d8ff41d3871d5196a5a6"
+    },
+    {
+      "path": "src/adf_poc/replay/gate_b.py",
+      "role": "GATE_B_IMPLEMENTATION",
+      "sha256": "1b368bca62ca6f4de47354240eb7be6f067d1e50f02a172853b76b347d70cde4"
+    },
+    {
+      "path": "src/adf_poc/replay/contracts.py",
+      "role": "REPLAY_CONTRACTS_IMPLEMENTATION",
+      "sha256": "33d50122aa3ef6f614968c4a61ae295739e7932f39c9f2b3a32659de05c851e1"
+    },
+    {
+      "path": "src/adf_poc/replay/harness.py",
+      "role": "REPLAY_HARNESS_IMPLEMENTATION",
+      "sha256": "751ac063318a2e3393b9426e716d7ba5a396d9b78ac2a6f4d10c4881333d13d7"
+    },
+    {
+      "path": "contracts/v0.2.0/gate-b-authorization.schema.json",
+      "role": "GATE_B_AUTHORIZATION_SCHEMA",
+      "sha256": "c463e0f66cee2ad98f6f2d651b41841d661a30a68cb4659e98f8ddf363679160"
+    },
+    {
+      "path": "data/phase2_starter/manifest.json",
+      "role": "STARTER_MANIFEST",
+      "sha256": "3507bef3207e474d069518cc8af0dd17fa2a121bc7dbd9f97dd97819272da7c7"
+    },
+    {
+      "path": "data/phase2_starter/cases.jsonl",
+      "role": "STARTER_CASES",
+      "sha256": "2224e8fdebeec512880f89b43889195bdefa66389eee7ca70ac4370f1000d3d5"
+    },
+    {
+      "path": "data/phase2_starter/adjudications.jsonl",
+      "role": "STARTER_ADJUDICATIONS",
+      "sha256": "9fbfba2f1e7f39aa26817f5956cc065434114d4cfe478e16dd478e5ae774a079"
+    },
+    {
+      "path": "data/phase2_qualification/manifest.json",
+      "role": "QUALIFICATION_MANIFEST",
+      "sha256": "24beef99cc03c18f9dbaa2dacfdaa0bd9aea96f874e13df4eb0e4bef1cbc1096"
+    },
+    {
+      "path": "data/phase2_qualification/cases.jsonl",
+      "role": "QUALIFICATION_CASES",
+      "sha256": "1a2085a8c9c709766d8395e2ec5390c9c9ec3d15329bf87ac7cc6569d6fe4e44"
+    },
+    {
+      "path": "data/phase2_qualification/adjudications.jsonl",
+      "role": "QUALIFICATION_ADJUDICATIONS",
+      "sha256": "9fbfba2f1e7f39aa26817f5956cc065434114d4cfe478e16dd478e5ae774a079"
+    },
+    {
+      "path": "outputs/baseline/model.json",
+      "role": "MODEL",
+      "sha256": "ab3ea55a2d7fcb88a0dda1b2756418f24432b4089ace92d3e8e6a34a3986b2cd"
+    },
+    {
+      "path": "config/policy.json",
+      "role": "POLICY",
+      "sha256": "3f40d35784942bd72730e592d7a875ca15ff8c723481b2096359cf4a2576e561"
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 
 The Phase 2 architecture adds a governed replay path around the v0.1 evidence, model, policy, and verifier pipeline. It does not extend the action surface. In the built-in runner and canonical adapter, historical replay and shadow mode terminate at a recorded counterfactual decision; the tested read-only path does not construct an authorization gate, broker, or target.
 
-The current repository uses local synthetic fixtures only. `historical_case_count` is `0`, there is no approved Gate B package or live-feed adapter, and there are no production credentials or connectors. Phase 2.2 adds the machine preflight needed before a future historical pilot; it does not authorize that pilot or advance the architecture to live or shadow-feed deployment.
+The current repository uses local synthetic fixtures only. `historical_case_count` is `0`, there is no approved Gate B package or live-feed adapter, and there are no production credentials or connectors. Phase 2.3 adds exact eight-stage audit conformance checks and a fixed synthetic Gate B campaign around the Phase 2.2 preflight; it does not authorize a historical pilot or advance the architecture to live or shadow-feed deployment.
 
 ## Logical flow
 
@@ -51,6 +51,8 @@ flowchart TD
 | Local snapshot adapter | `src/adf_poc/replay/adapters.py` | Read manifest-referenced local JSONL only; no network or vendor client |
 | Normalizer | `src/adf_poc/replay/normalizer.py` | Produce canonical cases, retain mapping warnings, and sort valid events deterministically |
 | Replay harness | `src/adf_poc/replay/harness.py` | Freeze and reverify Gate B and replay inputs; independently validate qualification accounting; withhold adjudication files from the runner; enforce decision/audit binding, decision-only execution, safety checks, and artifact generation |
+| Audit validator | `src/adf_poc/audit.py` and `src/adf_poc/replay/harness.py` | Reject ambiguous JSON and require the exact canonical eight-stage per-case trace, sequence/time rules, decision bindings, suppression content, and policy action list |
+| Gate B campaign | `config/gate_b_ce2_campaign_plan.json`, `scripts/generate_gate_b_ce2_campaign.py`, and `evidence/phase2_gate_b_ce2/` | Bind fixed synthetic scenarios and expected outcomes to an implementation commit; capture only sanitized enumerated outcomes and declared boundary instrumentation |
 | Replay metrics | `src/adf_poc/replay/metrics.py` | Report scope, disposition, qualification, rejection-reason, adjudication-comparison, and read-only assurance measures |
 | Phase 1 engine | `src/adf_poc/engine.py` | Supply evidence, model, policy, and verifier behavior under an explicit execution boundary |
 | Command entry point | `run_phase2.py` | Expose only read-only Phase 2 modes and local paths |
@@ -135,7 +137,9 @@ The built-in replay and shadow outputs contain recommendations and evidence trac
 
 ### 7. Audit boundary
 
-The current audit design is a SHA-256-linked consistency chain. The harness permits only the exact code-owned record types for the read-only engine path and also requires exactly one suppression, no-authorization, and decision-finalization record per case; it recomputes each decision hash and cross-checks the finalization payload. These checks detect ordinary modification and incomplete local evidence when verified against an unchanged chain, but the chain is not externally signed, WORM-protected, or resistant to wholesale recomputation by a writer. Phase 2 must preserve this limitation in reports and cannot use `audit_chain_valid=true` as proof of independent custody.
+The current audit design is a SHA-256-linked consistency chain. For every accepted case, the harness requires exactly one row in this order: `CASE_RECEIVED`, `EVIDENCE_ASSESSED`, `MODEL_ASSESSED`, `POLICY_PROPOSED`, `INDEPENDENTLY_VERIFIED`, `EXECUTION_SUPPRESSED`, `AUTHORIZATION_EVALUATED`, and `DECISION_FINALIZED`. It rejects additional row or payload fields, missing or duplicate stages, cross-case reordering, invalid sequence or timestamp state, non-code-owned suppression content, action lists inconsistent with the exact frozen policy, and finalization identifiers or hashes inconsistent with the serialized decision.
+
+This is CE-1 implementation-conformance evidence for the named code and tested mutation set. It confirms internal agreement among the presented audit rows, decisions, and bound policy-action list; it does not independently recompute evidence-quality, model, complete policy, verifier, or source-to-decision correctness. The timestamps are not externally trusted, and the chain is not independently signed, WORM-protected, OS-anchored, or resistant to wholesale replacement and recomputation by a writer. Phase 2 must preserve these limitations beside any `audit_chain_valid=true` result.
 
 ## Validation and failure behavior
 
@@ -163,13 +167,13 @@ The current audit design is a SHA-256-linked consistency chain. The harness perm
 | Unknown execution mode or action-enabling configuration | Fail closed before engine construction |
 | Policy proposes containment in a read-only mode | Record counterfactual actions and suppress authorization and execution |
 | Audit row contains an unknown record type | Reject the decision/audit evidence boundary |
-| Missing, duplicate, or mismatched decision-finalization audit record | Abort before completed run evidence is emitted |
+| Missing, duplicate, reordered, malformed, or extra-field eight-stage audit record; invalid sequence/time; forged suppression/policy action; or mismatched final decision/hash | Abort before completed run evidence is emitted |
 | Malformed or inconsistent adjudication | Abort post-run evaluation before comparisons, metrics, or completed run manifest; retain decision and audit evidence |
 
 ## Deployment view
 
-The current code is an offline, single-host development harness. `shadow_read_only` is a semantic execution mode, not a deployed service and not a connection to live telemetry. `QUARANTINE_RECORD` is intentionally unavailable in that mode. Any Phase 3 live shadow deployment requires a separately approved architecture with a read-only service identity, network and tenant controls, data-retention rules, ingestion stop conditions, monitoring, and incident response. Phase 2.2 provides no evidence that those gates are met, and none of those future controls grants action authority.
+The current code is an offline, single-host development harness. `shadow_read_only` is a semantic execution mode, not a deployed service and not a connection to live telemetry. `QUARANTINE_RECORD` is intentionally unavailable in that mode. Any Phase 3 live shadow deployment requires a separately approved architecture with a read-only service identity, network and tenant controls, data-retention rules, ingestion stop conditions, monitoring, and incident response. Phase 2.3 provides no evidence that those gates are met, and none of those future controls grants action authority.
 
 ## Architectural nonclaims
 
-The starter does not demonstrate process isolation between policy and verification, sandboxing against arbitrary same-process code, cryptographic evidence provenance, externally anchored audit custody, privacy effectiveness, vendor semantics, production-scale availability, agentic alignment, monitor effectiveness, or safe operational action. Those are future validation obligations, not implicit capabilities.
+The starter does not demonstrate process isolation between policy and verification, sandboxing against arbitrary same-process code, cryptographic evidence provenance, externally anchored audit custody, privacy effectiveness, vendor semantics, production-scale availability, agentic alignment or misalignment behavior, monitor effectiveness, or safe operational action. `P2-CE-003` additionally does not establish a real approval, actual historical-data handling, OS-level nonaccess/non-egress, target-side effect proof, exhaustive defect coverage, an operational failure rate, independent replication, or efficacy. Those are future validation obligations, not implicit capabilities.

@@ -59,7 +59,7 @@ The read-only decision shape preserves the counterfactual result while making no
 }
 ```
 
-The engine audit includes execution-suppression, no-authorization, and decision-finalization events for every read-only case. The harness recomputes the decision-record hash and cross-checks the finalization payload. Exact field and status values are governed by `src/adf_poc/execution.py`, `src/adf_poc/engine.py`, and their tests.
+The engine audit includes exactly one canonical ordered trace for every read-only case: `CASE_RECEIVED`, `EVIDENCE_ASSESSED`, `MODEL_ASSESSED`, `POLICY_PROPOSED`, `INDEPENDENTLY_VERIFIED`, `EXECUTION_SUPPRESSED`, `AUTHORIZATION_EVALUATED`, and `DECISION_FINALIZED`. The harness enforces closed row and payload shapes, global sequence and timestamp rules, code-owned suppression content, exact frozen-policy action binding, and decision identifier/hash cross-binding. Exact field and status values are governed by `src/adf_poc/execution.py`, `src/adf_poc/engine.py`, `src/adf_poc/replay/harness.py`, and their tests.
 
 ## Threats and controls
 
@@ -99,7 +99,7 @@ Those controls still would not authorize operational action.
 
 ## Audit interpretation
 
-A successful `AuditLogger.verify()` result means that records are internally consistent with the chain presented for verification. It does not prove independent custody or prevent a process with write access from replacing and recomputing the complete chain. Phase 2 reports must retain this limitation beside any audit-validity result.
+A successful `AuditLogger.verify()` and eight-stage harness result means that the presented rows are internally consistent with the presented chain, decisions, and bound policy actions under the tested mutation set. This is CE-1 implementation conformance. It does not independently recompute evidence, model, complete policy, verifier, or source-to-decision correctness; establish externally trusted timestamps or custody; or prevent a process with write access from replacing and recomputing the complete chain. Phase 2 reports must retain these limitations beside any audit-validity result.
 
 ## Prohibited Phase 2 changes
 

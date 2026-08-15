@@ -1,0 +1,63 @@
+{
+  "artifact_bindings": {
+    "campaign_profile_sha256": "de88e2c700e828f5afdf9b6f454014e98e3b58da60a1923aaa9182ff6d5dc4ec",
+    "campaign_results_run1_sha256": "95520da714a0ac7aa69f82bb529838006cf50e9481b27424bb77149d8bbffd6f",
+    "campaign_results_run2_sha256": "95520da714a0ac7aa69f82bb529838006cf50e9481b27424bb77149d8bbffd6f"
+  },
+  "artifact_kind": "CAMPAIGN_SUMMARY",
+  "assurance": {
+    "action_results": 0,
+    "audit_artifacts": 0,
+    "authorization_attempts": 0,
+    "authorization_tokens_issued": 0,
+    "broker_invocations": 0,
+    "completed_run_manifests": 0,
+    "decision_artifacts": 0,
+    "engine_calls": 0,
+    "operational_effects": 0,
+    "prepayload_attempts": 28,
+    "prepayload_attempts_with_payload_access": 0,
+    "target_effect_calls": 0
+  },
+  "campaign_id": "P2-CE-003-GATE-B-SYNTHETIC",
+  "campaign_plan_sha256": "cd94608ade5dcb6a6ff09d289b1eb8fa124805bff98dd703283d1c2e672cee12",
+  "campaign_seed": 20260814,
+  "claim_id": "P2-CE-003",
+  "evaluated_at": "2026-08-15T03:12:44Z",
+  "evidence_boundary": {
+    "review_type": "SELF",
+    "stored_approval_package": false,
+    "stored_historical_data": false,
+    "supported_claim_class": "CONTROLLED_BEHAVIOR"
+  },
+  "implementation_commit": "e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b",
+  "raw_outcomes": {
+    "denominator": 32,
+    "excluded": 0,
+    "matched": 32,
+    "mismatched": 0,
+    "observed_blocked": 30,
+    "observed_pass_test_only": 2
+  },
+  "repeatability": {
+    "attempts_per_run": 16,
+    "byte_identical_result_ledgers": true,
+    "evaluation_runs": 2,
+    "total_attempt_executions": 32
+  },
+  "runtime_fingerprint": {
+    "jsonschema_version": "4.26.0",
+    "numpy_version": "2.5.2",
+    "platform_machine": "arm64",
+    "platform_release": "25.6.0",
+    "platform_system": "Darwin",
+    "python_implementation": "CPython",
+    "python_version": "3.14.7"
+  },
+  "schema_version": "1.0.0",
+  "stage_outcomes": {
+    "blocked_postqualification_preengine": 2,
+    "blocked_prepayload": 28,
+    "pass_test_only": 2
+  }
+}

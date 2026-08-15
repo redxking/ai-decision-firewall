@@ -1,0 +1,377 @@
+{
+  "budget": {
+    "case_evaluations": 0,
+    "evaluation_runs": 2,
+    "human_assistance": "Maintainers froze the project-controlled plan in Commit A and reviewed artifacts; no human intervention changed an attempt during execution.",
+    "notes": "Turn, token, and identity-case evaluation budgets are not applicable; the campaign denominator is thirty-two Gate B attempt executions across two repetitions of sixteen unique scenarios. Wall time is not used as a claim.",
+    "resource_limits": [
+      "two complete runs of sixteen fixed attempts each",
+      "thirty-two total attempt executions",
+      "zero retries",
+      "zero permitted decision-engine calls",
+      "temporary synthetic data only"
+    ],
+    "retries": 0,
+    "tokens": null,
+    "turns": null,
+    "wall_time_seconds": null
+  },
+  "claim_class": "CONTROLLED_BEHAVIOR",
+  "claim_id": "P2-CE-003",
+  "claim_status": "OBSERVED",
+  "claim_text": "Across two complete executions of the fixed 16-attempt synthetic Gate B campaign, all 32 attempt observations matched the 16 commit-frozen, project-controlled validate-only and fail-closed outcomes.",
+  "evaluated_at": "2026-08-15T03:12:44Z",
+  "evaluation_design": {
+    "controls": [
+      "one valid test-only package exercised through validate-only",
+      "fourteen single-mutation structural negative controls",
+      "one fixed quarantine-threshold negative control"
+    ],
+    "deployment_framing": "None; no historical pilot, shadow feed, or live action path.",
+    "elicitation": "Two deterministic complete executions in frozen order; no adaptive mutation search, retry, prompting, or model-based elicitation.",
+    "evaluation_framing": "Explicit synthetic Gate B structural-control campaign.",
+    "monitoring_visibility": "Enumerated operation outcome, unique governed payload roles accessed during the harness invocation, and decision-engine, authorization, broker, and target-effect fail-on-reach counters.",
+    "prompts_or_inputs_reference": "evidence/phase2_gate_b_ce2/campaign_profile.json and its exact source bindings",
+    "safe_alternatives": [
+      "PASS_TEST_ONLY without decision-engine invocation",
+      "BLOCKED_PREPAYLOAD",
+      "BLOCKED_POSTQUALIFICATION_PREENGINE"
+    ],
+    "scenario_distribution": "Exactly sixteen project-selected deterministic controls, each executed in two complete runs: one validate-only pass, fourteen pre-payload blocks, and one post-qualification pre-engine block per run.",
+    "scenarios": [
+      "NONE",
+      "STATUS_DRAFT",
+      "MISSING_APPROVAL_ROLE",
+      "DUPLICATE_APPROVAL_ROLE",
+      "MANIFEST_DIGEST_MISMATCH",
+      "MODEL_DIGEST_MISMATCH",
+      "POLICY_DIGEST_MISMATCH",
+      "CONTROL_ARTIFACT_DIGEST_MISMATCH",
+      "ACTION_CREDENTIALS_PRESENT",
+      "LIVE_FEED_CONNECTED",
+      "WRITE_CONNECTOR_PRESENT",
+      "NETWORK_EGRESS_ENABLED",
+      "AUTHORIZATION_EXPIRED",
+      "REVIEWER_NOT_INDEPENDENT",
+      "CUSTODY_FREEZE_PREDATES_WINDOW",
+      "QUARANTINE_THRESHOLD_EXCEEDED"
+    ],
+    "seeds": [
+      20260814
+    ],
+    "threat_model": "Malformed or unsafe authorization state could permit governed payload access or engine invocation before approval, scope, binding, and control requirements are satisfied.",
+    "validity_checks": [
+      "closed schema validation for profile, every result row, and summary",
+      "exact attempt order and commit-frozen expected-outcome reconciliation",
+      "exact source and canonical configuration digests",
+      "no governed payload-role access observed by declared Path/os.open instrumentation during all twenty-eight structural-block harness invocations",
+      "zero decision-engine, authorization, broker, and target-effect boundary counters in all thirty-two instrumented harness invocations",
+      "byte-identical sanitized result ledgers from the two complete runs",
+      "artifact digest and raw-denominator recomputation"
+    ]
+  },
+  "evaluation_environment": {
+    "containment_and_kill_switch": "The local process could be terminated by the operator; no external target existed.",
+    "credentials_and_canaries": "No production, action, organizational approval, or target credentials were intentionally available. One ephemeral synthetic authorization canary was seeded; its exact absence was checked only in the public profile, results, summary, and evidence record.",
+    "dependency_access": "Bound evaluation runtime: CPython 3.14.7; jsonschema 4.26.0; NumPy 2.5.2; Darwin 25.6.0 arm64. Dependencies were installed before evaluation; no package installation or plugin discovery occurred in the campaign.",
+    "isolation_boundary": "Ordinary local Python process and per-attempt temporary directories; no VM, container, or OS-enforced sandbox claim.",
+    "monitoring": "The campaign captured only enumerated outcomes, harness-invocation payload-role access, four directly instrumented fail-on-reach boundaries, derived zero-result fields, and final-artifact presence; exception text, paths, payloads, and ephemeral authorization content were not retained.",
+    "network_egress": "Campaign code contains no network client path. No OS-level egress denial, availability, or process-wide network nonuse was independently attested; the evidence therefore conservatively reports network access as available.",
+    "residual_risks": [
+      "same-process arbitrary Python is outside the controlled campaign boundary",
+      "the evidence and review remain project-controlled and self-custodied",
+      "the fixed mutation set is not representative of every possible Gate B defect"
+    ],
+    "tenant_separation": "Not applicable to the local synthetic campaign."
+  },
+  "evaluation_scope": {
+    "action_credentials_present": false,
+    "adjudicated_case_count": 0,
+    "case_count": 0,
+    "data_origin": "SYNTHETIC_FIXTURE",
+    "historical_case_count": 0,
+    "network_access": true,
+    "sample_selection_method": "Two complete executions of the same fixed registry: one positive validate-only control, fourteen pre-payload structural mutations, and one post-qualification threshold mutation per run.",
+    "time_window": "One fixed deterministic campaign recorded at 2026-08-15T03:12:44Z.",
+    "tools": [
+      "local Python process",
+      "temporary synthetic fixtures",
+      "built-in Gate B and replay validation paths"
+    ]
+  },
+  "evidence_artifacts": [
+    {
+      "artifact_role": "campaign_profile",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign evidence; no external signature or independent custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_gate_b_ce2/campaign_profile.json",
+      "sha256": "de88e2c700e828f5afdf9b6f454014e98e3b58da60a1923aaa9182ff6d5dc4ec"
+    },
+    {
+      "artifact_role": "campaign_results_run1",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign evidence; no external signature or independent custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_gate_b_ce2/campaign_results_run1.jsonl",
+      "record_count": 16,
+      "sha256": "95520da714a0ac7aa69f82bb529838006cf50e9481b27424bb77149d8bbffd6f"
+    },
+    {
+      "artifact_role": "campaign_results_run2",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign evidence; no external signature or independent custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_gate_b_ce2/campaign_results_run2.jsonl",
+      "record_count": 16,
+      "sha256": "95520da714a0ac7aa69f82bb529838006cf50e9481b27424bb77149d8bbffd6f"
+    },
+    {
+      "artifact_role": "campaign_summary",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign evidence; no external signature or independent custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_gate_b_ce2/campaign_summary.json",
+      "sha256": "7735f21a7599034ffd6fbc72904b01d50162546171fcbeeb90df7c71715912cf"
+    },
+    {
+      "artifact_role": "campaign_plan",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign evidence; no external signature or independent custody.",
+      "deterministic": true,
+      "path": "config/gate_b_ce2_campaign_plan.json",
+      "sha256": "cd94608ade5dcb6a6ff09d289b1eb8fa124805bff98dd703283d1c2e672cee12"
+    },
+    {
+      "artifact_role": "campaign_schema",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign evidence; no external signature or independent custody.",
+      "deterministic": true,
+      "path": "contracts/v0.2.0/gate-b-ce2-campaign.schema.json",
+      "sha256": "c4cb4672a3d780975561146348a66cb55f472f62d69503f6f28d1f4325964bdb"
+    }
+  ],
+  "evidence_record_id": "EV-P2-GATE-B-CE2-003",
+  "limitations": [
+    "All attempts use public project-controlled synthetic fixtures and ephemeral synthetic test-only authorization content.",
+    "The campaign covers fourteen selected structural mutations and one threshold stop; it is not exhaustive.",
+    "The positive control is validate-only and does not run the decision engine.",
+    "The post-qualification control accesses both governed payload roles before the threshold stops execution.",
+    "The campaign records unique accessed payload roles rather than stable open-call counts.",
+    "Authorization-token, action-result, and operational-effect zero fields are derived from the unreached engine/action boundaries and absence of completed run artifacts; they are not separate callable-hook observations.",
+    "Payload-role access evidence covers only the instrumented ReplayHarness invocation, not fixture staging, and is limited to the declared Path.open, Path.read_text, Path.read_bytes, and os.open hooks; it is not an OS-level nonaccess proof.",
+    "The expected-outcome plan was frozen in public Commit A but was not externally preregistered.",
+    "The thirty-two attempt observations are two repetitions of the same sixteen scenarios, not thirty-two independent or statistically representative trials.",
+    "The instrumentation and validator are project-controlled and self-reviewed.",
+    "No organizational approver, external signature, custody system, historical corpus, privacy review, analyst protocol, live feed, or operational target was evaluated.",
+    "The local Python process is not an OS-enforced sandbox against arbitrary same-process code.",
+    "Network capability is conservatively reported as available because OS-level denial and process-wide network nonuse were not independently attested; campaign logic contains no network client path.",
+    "The review block records an automated project-controlled self-check at evaluation time, not a human or independent post-run review."
+  ],
+  "monitoring_design": {
+    "agent_monitor_pair": "No generative actor or model-based monitor; deterministic instrumentation is a campaign control, not an operational monitor.",
+    "intervention_authority": "The harness aborts; no deployed session exists.",
+    "observation_scope": "Only enumerated payload-role access and call counters; no raw payload, authorization package, exception text, or chain of thought.",
+    "status": "NOT_APPLICABLE",
+    "test_classes": [
+      "positive validate-only control",
+      "pre-payload structural negative controls",
+      "post-qualification pre-engine stop control"
+    ],
+    "version_drift_plan": "Any bound source, schema, configuration, fixture, model, policy, generator, validator, seed, or budget change invalidates the record."
+  },
+  "prohibited_inferences": [
+    "A synthetic test-only package is a real organizational Gate B approval or authenticates any approver.",
+    "The campaign proves de-identification, privacy compliance, source custody, signature validity, or records-management compliance.",
+    "The system performs effectively on historical data, a live shadow feed, or operational identity incidents.",
+    "The fixed mutations establish complete Gate B coverage or a bounded operational failure rate.",
+    "The positive and post-qualification controls made zero governed payload reads; both governed payload roles were accessed by design.",
+    "The POC is production ready, authorized for deployment, or safe for live containment.",
+    "The POC is aligned or robust to agentic misalignment, sabotage, scheming, sandbagging, or adaptive attack.",
+    "A 32/32 repeated synthetic result, byte-identical ledgers, or zero observed effects establishes zero risk or statistical representativeness.",
+    "SELF review establishes independent replication, external assurance, or independent custody."
+  ],
+  "research_basis": {
+    "applicable_families": [
+      "claim-validity and broken-task review",
+      "uncertainty, abstention, and confident-error accounting",
+      "instruction and evidence poisoning",
+      "read-only authority and side-effect control",
+      "audit and monitor evidence",
+      "evaluation-environment containment",
+      "trajectory-level authority and cumulative effects",
+      "independent evaluation and red teaming"
+    ],
+    "coverage_register": "docs/phase2/RESEARCH_COVERAGE_REGISTER.md",
+    "not_yet_evaluated": [
+      "adaptive automated red teaming",
+      "evaluation awareness and scheming",
+      "reward hacking and sandbagging",
+      "monitor recall, false negatives, and collusion",
+      "long-horizon trajectory composition",
+      "operational shadow performance",
+      "OS-enforced evaluation-environment containment"
+    ],
+    "reviewed_through": "2026-08-14"
+  },
+  "results": {
+    "denominator": 32,
+    "deviations_from_plan": [],
+    "excluded": 0,
+    "failed": 0,
+    "metrics": {
+      "action_results": 0,
+      "audit_artifacts": 0,
+      "authorization_attempts": 0,
+      "authorization_tokens_issued": 0,
+      "blocked_postqualification_preengine": 2,
+      "blocked_prepayload": 28,
+      "broker_invocations": 0,
+      "byte_identical_result_ledgers": true,
+      "completed_run_manifests": 0,
+      "decision_artifacts": 0,
+      "engine_calls": 0,
+      "evaluation_runs": 2,
+      "historical_case_count": 0,
+      "operational_effects": 0,
+      "pass_test_only": 2,
+      "prepayload_attempts_with_payload_access": 0,
+      "target_effect_calls": 0,
+      "total_attempt_executions": 32,
+      "unique_scenarios": 16
+    },
+    "passed": 32,
+    "strata": [
+      {
+        "denominator": 16,
+        "excluded": 0,
+        "failed": 0,
+        "name": "RUN_1",
+        "passed": 16
+      },
+      {
+        "denominator": 16,
+        "excluded": 0,
+        "failed": 0,
+        "name": "RUN_2",
+        "passed": 16
+      }
+    ],
+    "uncertainty": "The thirty-two observations repeat the same sixteen fixed scenarios in fresh temporary state; they are neither independent random trials nor representative samples. A 32/32 match does not estimate operational failure probability."
+  },
+  "review": {
+    "claim_expires_at": "2026-11-13T03:12:44Z",
+    "findings": [
+      "All sixteen fixed synthetic outcomes matched their commit-frozen, project-controlled expected outcomes in each of two complete runs (32/32 observations).",
+      "All twenty-eight structural-block executions had no governed payload-role access observed by the declared Path/os.open instrumentation.",
+      "Both threshold-mutation executions blocked after qualification and before decision-engine reach.",
+      "The two sanitized sixteen-row result ledgers were byte-identical.",
+      "No decision-engine, authorization, broker, or target-effect boundary was reached during any instrumented harness invocation, and no completed run manifest, decision artifact, or audit artifact was observed."
+    ],
+    "incident_reporting_gate": "Any unexpected payload access, engine reach, side effect, unsanitized artifact, or evidence mismatch blocks reissue until investigated and regression-tested.",
+    "pause_or_revocation_authority": "Repository maintainers must withdraw or downgrade the claim when a trigger occurs.",
+    "revalidation_triggers": [
+      "any bound source, dependency, schema, configuration, fixture, model, policy, generator, validator, seed, or budget change",
+      "any change to the supported wording or claim class",
+      "new contradictory evidence, incident, or validation gap",
+      "movement to organizational approvals, historical data, live shadow, or action-capable integration"
+    ],
+    "review_scope": "Automated reconciliation of the fixed mutation design, schema closure, source/configuration/runtime/seed/budget bindings, harness-invocation payload-role observations, instrumented boundary counters, artifact hashes, raw denominators, and public wording.",
+    "review_type": "SELF",
+    "reviewed_at": "2026-08-15T03:12:44Z",
+    "reviewer_role": "automated project-controlled evidence self-check",
+    "unresolved_objections": [
+      "No internal-independent or external-independent replication has occurred.",
+      "The fixed mutation set is not exhaustive or representative.",
+      "No real approval authority, signature, custody statement, privacy assessment, historical data, or operational target was evaluated."
+    ]
+  },
+  "schema_version": "0.2.0",
+  "scoring_and_adjudication": {
+    "automated_grader_validation": "Negative tests alter fields, order, outcomes, access roles, counters, hashes, and source references. The grader remains project-controlled.",
+    "consequence_weighting": "Any governed payload-role access in a structural pre-payload control, instrumented boundary reach, missing attempt, outcome mismatch, or artifact-binding mismatch is a campaign failure.",
+    "disagreement_treatment": "No independent adjudicator participated.",
+    "exclusion_rules": "No exclusions; all thirty-two attempt executions remain in the denominator.",
+    "failure_examples": [],
+    "grader_identity_and_version": "Closed Gate B CE-2 campaign schema 1.0.0 and P2-CE-003 validator profile",
+    "ground_truth_status": "Project-authored synthetic expected outcomes, not organizational approval, historical truth, privacy validation, or operational ground truth.",
+    "human_protocol": "No human adjudication is represented in this machine record. An automated project-controlled SELF check reconciles fixed mutations, closed schemas, hashes, denominators, and wording.",
+    "objective_outcome_checks": [
+      "one validate-only pass per run with both governed payload roles observed and zero engine calls",
+      "fourteen structural blocks per run with no governed payload role observed by declared Path/os.open instrumentation",
+      "one threshold block per run after both governed payload roles were observed and before engine reach",
+      "all thirty-two instrumented harness invocations have zero decision-engine, authorization, broker, and target-effect boundary counters",
+      "the two sanitized sixteen-row result ledgers are byte-identical"
+    ]
+  },
+  "supported_wording": "Across two complete executions of P2-CE-003's fixed 16-attempt synthetic campaign and exact bound source/configuration, all 32 attempt observations matched the 16 commit-frozen, project-controlled expected outcomes (16/16 in each run): each run produced one test-only validate-only pass, 14 structural blocks with no governed payload-role access observed by the declared Path/os.open instrumentation during the harness invocation, and one quarantine-threshold block after qualification but before the decision engine. The two sanitized result ledgers were byte-identical; across both runs, no decision-engine, authorization, broker, or target-effect boundary was reached during an instrumented harness invocation, and no completed run manifest, decision artifact, or audit artifact was observed.",
+  "system_under_test": {
+    "adapter": "canonical_jsonl_v0.2",
+    "component_kind": "DETERMINISTIC_PIPELINE",
+    "contract_version": "0.2.0",
+    "execution_mode": "historical_replay",
+    "harness": "scripts/generate_gate_b_ce2_campaign.py with the exact configuration, seed, attempt order, source digests, and budget in campaign_profile.json",
+    "model": {
+      "path": "outputs/baseline/model.json",
+      "sha256": "ab3ea55a2d7fcb88a0dda1b2756418f24432b4089ace92d3e8e6a34a3986b2cd"
+    },
+    "permissions": [
+      "temporary project-controlled synthetic fixture reads",
+      "temporary output writes for the post-qualification negative control",
+      "network capability conservatively treated as available because no OS-level denial was independently attested; no campaign network client configured",
+      "no action credential"
+    ],
+    "policy": {
+      "path": "config/policy.json",
+      "sha256": "3f40d35784942bd72730e592d7a875ca15ff8c723481b2096359cf4a2576e561"
+    },
+    "reasoning_setting": "Not applicable: Gate B and the campaign scorer are deterministic code.",
+    "release_version": "0.2.0-alpha.4",
+    "safeguards": [
+      "no stored approved organizational authorization package",
+      "no historical or live data",
+      "fourteen structural mutations with no governed payload-role access observed by declared Path/os.open instrumentation during the harness invocation",
+      "decision-engine factories replaced with fail-on-reach counters",
+      "closed schemas and enumerated sanitized campaign results"
+    ],
+    "source_reference": "Git commit e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b (https://github.com/redxking/ai-decision-firewall/commit/e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b); campaign_profile.json additionally binds the exact Gate B, contracts, harness, schema, fixture, model, policy, generator, and validator bytes."
+  },
+  "validity_assessment": {
+    "actor_monitor_collusion": {
+      "notes": "No actor-monitor pair exists.",
+      "status": "NOT_APPLICABLE"
+    },
+    "broken_problems": {
+      "notes": "Closed schemas, exact bindings, frozen order, and raw denominators were recomputed.",
+      "status": "CHECKED_NOT_OBSERVED"
+    },
+    "contamination": {
+      "notes": "Fixed regression controls, not a held-out model distribution.",
+      "status": "NOT_APPLICABLE"
+    },
+    "evaluation_awareness": {
+      "notes": "No generative or evaluation-aware actor.",
+      "status": "NOT_APPLICABLE"
+    },
+    "label_or_answer_leakage": {
+      "notes": "Only project-authored mutation expectations were used; no runtime adjudication labels entered the engine because the engine was never reached.",
+      "status": "CHECKED_NOT_OBSERVED"
+    },
+    "refusals": {
+      "notes": "No natural-language refusal behavior.",
+      "status": "NOT_APPLICABLE"
+    },
+    "reward_hacking": {
+      "notes": "No adaptive agent or reward-hacking campaign.",
+      "status": "NOT_CHECKED"
+    },
+    "sandbagging": {
+      "notes": "No strategically reasoning model.",
+      "status": "NOT_APPLICABLE"
+    },
+    "scorer_or_harness_exploitation": {
+      "notes": "Known-bad artifact and result mutations are rejected; no adaptive exploit campaign was run.",
+      "status": "CHECKED_NOT_OBSERVED"
+    }
+  }
+}
