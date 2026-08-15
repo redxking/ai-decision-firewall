@@ -25,6 +25,7 @@ class _SiteHTMLParser(HTMLParser):
         self.stylesheets: list[str | None] = []
         self.has_main = False
         self.has_h1 = False
+        self.run_decision_links: list[str | None] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
@@ -38,6 +39,8 @@ class _SiteHTMLParser(HTMLParser):
             self.has_main = True
         if tag == "h1":
             self.has_h1 = True
+        if tag == "a" and "data-run-decision" in values:
+            self.run_decision_links.append(values.get("href"))
 
 
 def _walk(value):
@@ -118,6 +121,7 @@ class PublicSiteStructureTests(unittest.TestCase):
         self.assertTrue({"decision-demo", "how-it-works", "evidence", "boundaries"}.issubset(parser.ids))
         self.assertEqual(parser.scripts, ["./app.js"])
         self.assertEqual(parser.stylesheets, ["./styles.css"])
+        self.assertEqual(parser.run_decision_links, ["#decision-demo", "#decision-demo"])
 
     def test_social_preview_asset_is_present(self) -> None:
         image = ROOT / "site/assets/og.png"

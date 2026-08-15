@@ -8,6 +8,7 @@
     scenarioIndex: 2,
     stepIndex: 0,
     timer: null,
+    pendingRun: false,
   };
 
   const player = document.querySelector(".player-shell");
@@ -247,6 +248,18 @@
       state.stepIndex += 1;
       renderStage();
     }, interval);
+  }
+
+  function runDecision() {
+    if (!state.data) {
+      state.pendingRun = true;
+      return;
+    }
+    state.pendingRun = false;
+    stopPlayback();
+    state.stepIndex = 0;
+    renderStage();
+    startPlayback();
   }
 
   function setGate(gateName, status, text) {
@@ -524,10 +537,7 @@
     if (control.dataset.action === "play") {
       startPlayback();
     } else if (control.dataset.action === "replay") {
-      stopPlayback();
-      state.stepIndex = 0;
-      renderStage();
-      startPlayback();
+      runDecision();
     } else {
       stopPlayback();
       state.stepIndex = control.dataset.action === "next"
@@ -535,6 +545,12 @@
         : Math.max(0, state.stepIndex - 1);
       renderStage();
     }
+  });
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest?.("[data-run-decision]");
+    if (!trigger) return;
+    runDecision();
   });
 
   ui.selector.addEventListener("keydown", (event) => {
@@ -559,6 +575,7 @@
       loading.hidden = true;
       content.hidden = false;
       renderAll();
+      if (state.pendingRun) runDecision();
     })
     .catch(() => {
       loading.classList.add("is-error");
