@@ -19,6 +19,22 @@ from adf_poc.utils import read_jsonl, sha256_json, write_jsonl
 
 
 ROOT = Path(__file__).resolve().parents[1]
+BOUND_AUTONOMOUS_ACTIONS = [
+    "revoke_active_sessions",
+    "force_step_up_auth",
+    "increase_monitoring",
+]
+CONTAINMENT_ROLLBACK_PLAN = {
+    "revoke_active_sessions": (
+        "restore only through normal reauthentication; no session token is reinstated"
+    ),
+    "force_step_up_auth": ("remove temporary step-up requirement after analyst review"),
+    "increase_monitoring": "return telemetry policy to baseline after closure",
+}
+VERIFIER_DOWNGRADE_REASON = (
+    "Independent verification failed; the action proposal was downgraded to "
+    "investigation."
+)
 
 
 def write_json(path: Path, value) -> None:
@@ -61,15 +77,51 @@ def safe_fake_decision(case_id: str, execution_mode: str) -> dict:
     decision = {
         "decision_id": f"test-decision-{case_id}",
         "case_id": case_id,
+        "subject_id": f"test-subject-{case_id}",
         "execution_mode": execution_mode,
+        "original_disposition": "NO_ACTION",
         "final_disposition": "NO_ACTION",
         "compromise_probability": 0.1,
         "counterfactual_actions": [],
-        "evidence_assessment": {"evidence_quality": 0.9},
+        "evidence_assessment": {
+            "evidence_quality": 0.9,
+            "provenance_valid_ratio": 1.0,
+            "integrity_verified_ratio": 1.0,
+            "freshness_score": 1.0,
+            "source_diversity_score": 1.0,
+            "mean_source_trust": 0.9,
+            "independent_supporting_sources": 0,
+            "positive_event_ids": [],
+            "benign_event_ids": [],
+            "missing_expected_sources": [],
+            "conflict_count": 0,
+            "poisoned_evidence": False,
+            "poisoned_event_ids": [],
+            "reasons": ["Test runner evidence assessment."],
+        },
+        "model_assessment": {
+            "model_version": "test-model-v1",
+            "compromise_probability": 0.1,
+            "feature_values": {},
+            "feature_trace": {},
+            "top_positive_factors": [],
+            "top_negative_factors": [],
+        },
         "proposal": {
+            "disposition": "NO_ACTION",
             "executable_actions": [],
+            "recommended_human_actions": [],
+            "investigation_actions": [],
+            "rationale": ["Test runner read-only proposal."],
             "policy_rules_applied": ["TEST-READ-ONLY"],
             "evidence_event_ids": [],
+            "required_authority": "read_only_observation",
+            "rollback_plan": {},
+        },
+        "independent_verification": {
+            "passed": True,
+            "checks": [],
+            "blocking_reasons": [],
         },
         "authorization": {
             "issued": False,
@@ -93,6 +145,11 @@ def safe_fake_decision(case_id: str, execution_mode: str) -> dict:
             "broker_invocations": 0,
             "operational_effects": 0,
         },
+        "traceability": {
+            "input_event_ids": [],
+            "cited_evidence_event_ids": [],
+            "feature_trace": {},
+        },
     }
     decision["decision_record_hash"] = sha256_json(decision)
     return decision
@@ -103,20 +160,131 @@ def rehash_decision(decision: dict) -> None:
     decision["decision_record_hash"] = sha256_json(decision)
 
 
+def make_containment_decision(
+    case_id: str,
+    execution_mode: str,
+    *,
+    verifier_downgrade: bool,
+) -> dict:
+    decision = safe_fake_decision(case_id, execution_mode)
+    decision["original_disposition"] = "CONTAIN_REVERSIBLE"
+    decision["proposal"].update(
+        {
+            "policy_rules_applied": [
+                "RISK-AUTO-CONTAIN-THRESHOLD",
+                "AUTH-REVERSIBLE-ACTIONS-ONLY",
+            ],
+            "rationale": ["Test runner reversible containment proposal."],
+        }
+    )
+    if verifier_downgrade:
+        decision["final_disposition"] = "INVESTIGATE"
+        decision["counterfactual_actions"] = []
+        decision["proposal"].update(
+            {
+                "disposition": "INVESTIGATE",
+                "investigation_actions": [
+                    "resolve_independent_verifier_failure",
+                    "collect_additional_evidence",
+                ],
+                "rationale": decision["proposal"]["rationale"]
+                + [VERIFIER_DOWNGRADE_REASON],
+                "policy_rules_applied": decision["proposal"]["policy_rules_applied"]
+                + ["FAIL-SAFE-VERIFIER-DOWNGRADE"],
+            }
+        )
+        decision["independent_verification"] = {
+            "passed": False,
+            "checks": [
+                {
+                    "check": "TEST-FORCED-FAILURE",
+                    "passed": False,
+                    "detail": "Exercise the deterministic downgrade contract.",
+                }
+            ],
+            "blocking_reasons": ["TEST-FORCED-FAILURE"],
+        }
+    else:
+        decision["final_disposition"] = "CONTAIN_REVERSIBLE"
+        decision["counterfactual_actions"] = list(BOUND_AUTONOMOUS_ACTIONS)
+        decision["proposal"]["disposition"] = "CONTAIN_REVERSIBLE"
+    rehash_decision(decision)
+    return decision
+
+
 def write_safe_read_only_audit(
     path: str | Path,
     decisions: list[dict],
-    *,
-    include_finalization: bool = True,
 ) -> None:
     audit = AuditLogger(path)
     for decision in decisions:
+        original_disposition = decision["original_disposition"]
+        policy_payload = dict(decision["proposal"])
+        if original_disposition == "CONTAIN_REVERSIBLE":
+            policy_payload["required_authority"] = "deterministic_policy_gate"
+            policy_payload["rollback_plan"] = dict(CONTAINMENT_ROLLBACK_PLAN)
+        elif original_disposition == "INVESTIGATE":
+            policy_payload["required_authority"] = "read_only_automation"
+        elif original_disposition == "ESCALATE_HUMAN":
+            policy_payload["required_authority"] = "soc_shift_lead_or_identity_owner"
+        else:
+            policy_payload["required_authority"] = "none"
+        if original_disposition != decision["final_disposition"]:
+            policy_payload.update(
+                {
+                    "disposition": original_disposition,
+                    "investigation_actions": [],
+                    "rationale": policy_payload["rationale"][:-1],
+                    "policy_rules_applied": policy_payload["policy_rules_applied"][:-1],
+                }
+            )
+        policy_payload["counterfactual_actions"] = (
+            list(BOUND_AUTONOMOUS_ACTIONS)
+            if original_disposition == "CONTAIN_REVERSIBLE"
+            else []
+        )
+        audit.append(
+            "CASE_RECEIVED",
+            {
+                "case_id": decision["case_id"],
+                "subject_id": decision["subject_id"],
+                "event_ids": decision["traceability"]["input_event_ids"],
+            },
+        )
+        audit.append(
+            "EVIDENCE_ASSESSED",
+            {
+                "case_id": decision["case_id"],
+                **decision["evidence_assessment"],
+            },
+        )
+        audit.append(
+            "MODEL_ASSESSED",
+            {
+                "case_id": decision["case_id"],
+                **decision["model_assessment"],
+            },
+        )
+        audit.append(
+            "POLICY_PROPOSED",
+            {
+                "case_id": decision["case_id"],
+                **policy_payload,
+            },
+        )
+        audit.append(
+            "INDEPENDENTLY_VERIFIED",
+            {
+                "case_id": decision["case_id"],
+                **decision["independent_verification"],
+            },
+        )
         audit.append(
             "EXECUTION_SUPPRESSED",
             {
                 "case_id": decision["case_id"],
                 "execution_mode": decision["execution_mode"],
-                "reason": "Test runner read-only suppression.",
+                "reason": "Historical replay and shadow modes are observation-only.",
                 "counterfactual_actions": decision["counterfactual_actions"],
                 "authorization_attempted": False,
                 "broker_invocations": 0,
@@ -135,16 +303,44 @@ def write_safe_read_only_audit(
                 "error": "",
             },
         )
-        if include_finalization:
-            audit.append(
-                "DECISION_FINALIZED",
-                {
-                    "case_id": decision["case_id"],
-                    "decision_id": decision["decision_id"],
-                    "final_disposition": decision["final_disposition"],
-                    "decision_record_hash": decision["decision_record_hash"],
-                },
-            )
+        audit.append(
+            "DECISION_FINALIZED",
+            {
+                "case_id": decision["case_id"],
+                "decision_id": decision["decision_id"],
+                "final_disposition": decision["final_disposition"],
+                "decision_record_hash": decision["decision_record_hash"],
+            },
+        )
+
+
+def rewrite_rechained_audit(
+    path: str | Path,
+    rows: list[dict],
+    *,
+    preserve_sequence: bool = False,
+    preserve_recorded_at: bool = False,
+) -> None:
+    target = Path(path)
+    previous_hash = "0" * 64
+    rechained = []
+    for index, row in enumerate(rows):
+        body = dict(row)
+        body.pop("record_hash", None)
+        body["previous_hash"] = previous_hash
+        if not preserve_sequence:
+            body["sequence"] = index
+        if not preserve_recorded_at:
+            body["recorded_at"] = "2026-01-01T00:00:00+00:00"
+        body["record_hash"] = sha256_json(body)
+        previous_hash = body["record_hash"]
+        rechained.append(body)
+    write_jsonl(target, rechained)
+    valid, errors = AuditLogger.verify(target)
+    if not valid:
+        raise AssertionError(
+            f"Test audit mutation was not correctly rechained: {errors}"
+        )
 
 
 def run_with_runner(harness: ReplayHarness, runner):
@@ -445,23 +641,296 @@ class ReplayHarnessTests(unittest.TestCase):
                 run_with_runner(harness, runner_with_unknown_audit_type)
 
     def test_audit_must_bind_every_finalized_decision(self) -> None:
+        for mutation in ("missing", "decision_id", "decision_record_hash"):
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+
+                def runner_with_invalid_finalization(**kwargs):
+                    cases = read_jsonl(kwargs["cases_path"])
+                    mode = kwargs["execution_mode"].value
+                    decisions = [
+                        safe_fake_decision(row["case_id"], mode) for row in cases
+                    ]
+                    write_jsonl(kwargs["decisions_path"], decisions)
+                    audit_path = kwargs["audit_path"]
+                    write_safe_read_only_audit(audit_path, decisions)
+                    rows = AuditLogger(audit_path).read_all()
+                    finalization_index = next(
+                        index
+                        for index, row in enumerate(rows)
+                        if row["record_type"] == "DECISION_FINALIZED"
+                        and row["payload"]["case_id"] == decisions[0]["case_id"]
+                    )
+                    if mutation == "missing":
+                        del rows[finalization_index]
+                    else:
+                        rows[finalization_index]["payload"][mutation] = "0" * 64
+                    rewrite_rechained_audit(audit_path, rows)
+                    return decisions
+
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                with self.assertRaises(ReplaySafetyViolation):
+                    run_with_runner(harness, runner_with_invalid_finalization)
+
+    def test_audit_requires_each_intermediate_stage_once_and_in_order(self) -> None:
+        for mutation in ("missing", "duplicate", "out_of_order", "payload_mismatch"):
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+
+                def runner_with_invalid_stage_sequence(**kwargs):
+                    cases = read_jsonl(kwargs["cases_path"])
+                    mode = kwargs["execution_mode"].value
+                    decisions = [
+                        safe_fake_decision(row["case_id"], mode) for row in cases
+                    ]
+                    write_jsonl(kwargs["decisions_path"], decisions)
+                    audit_path = kwargs["audit_path"]
+                    write_safe_read_only_audit(audit_path, decisions)
+                    rows = AuditLogger(audit_path).read_all()
+                    first_case_id = decisions[0]["case_id"]
+                    received_index = next(
+                        index
+                        for index, row in enumerate(rows)
+                        if row["record_type"] == "CASE_RECEIVED"
+                        and row["payload"]["case_id"] == first_case_id
+                    )
+                    if mutation == "missing":
+                        del rows[received_index]
+                    elif mutation == "duplicate":
+                        rows.insert(received_index + 1, dict(rows[received_index]))
+                    elif mutation == "out_of_order":
+                        rows[received_index], rows[received_index + 1] = (
+                            rows[received_index + 1],
+                            rows[received_index],
+                        )
+                    else:
+                        evidence_row = rows[received_index + 1]
+                        evidence_row["payload"]["evidence_quality"] = 0.1
+                    rewrite_rechained_audit(audit_path, rows)
+                    return decisions
+
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                with self.assertRaises(ReplaySafetyViolation):
+                    run_with_runner(harness, runner_with_invalid_stage_sequence)
+
+    def test_audit_metadata_shapes_and_code_owned_payloads_fail_closed(self) -> None:
+        mutations = (
+            "sequence",
+            "invalid_recorded_at",
+            "naive_recorded_at",
+            "decreasing_recorded_at",
+            "extra_row_member",
+            "extra_payload_member",
+            "duplicate_json_member",
+            "suppression_reason",
+            "policy_rationale",
+            "policy_required_authority",
+        )
+        for mutation in mutations:
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+
+                def runner_with_invalid_audit_contract(**kwargs):
+                    cases = read_jsonl(kwargs["cases_path"])
+                    mode = kwargs["execution_mode"].value
+                    decisions = [
+                        safe_fake_decision(row["case_id"], mode) for row in cases
+                    ]
+                    write_jsonl(kwargs["decisions_path"], decisions)
+                    audit_path = kwargs["audit_path"]
+                    write_safe_read_only_audit(audit_path, decisions)
+                    rows = AuditLogger(audit_path).read_all()
+                    preserve_sequence = False
+                    preserve_recorded_at = False
+                    if mutation == "sequence":
+                        rows[0]["sequence"] = 999
+                        preserve_sequence = True
+                    elif mutation == "invalid_recorded_at":
+                        rows[0]["recorded_at"] = "not-an-iso-timestamp"
+                        preserve_recorded_at = True
+                    elif mutation == "naive_recorded_at":
+                        rows[0]["recorded_at"] = "2026-01-01T00:00:00"
+                        preserve_recorded_at = True
+                    elif mutation == "decreasing_recorded_at":
+                        rows[0]["recorded_at"] = "2026-01-02T00:00:00+00:00"
+                        rows[1]["recorded_at"] = "2026-01-01T00:00:00+00:00"
+                        preserve_recorded_at = True
+                    elif mutation == "extra_row_member":
+                        rows[0]["unexpected"] = "forged"
+                    elif mutation == "extra_payload_member":
+                        rows[0]["payload"]["unexpected"] = "forged"
+                    elif mutation == "duplicate_json_member":
+                        pass
+                    elif mutation == "suppression_reason":
+                        suppression = next(
+                            row
+                            for row in rows
+                            if row["record_type"] == "EXECUTION_SUPPRESSED"
+                        )
+                        suppression["payload"]["reason"] = "forged"
+                    else:
+                        policy = next(
+                            row
+                            for row in rows
+                            if row["record_type"] == "POLICY_PROPOSED"
+                        )
+                        field = (
+                            "rationale"
+                            if mutation == "policy_rationale"
+                            else "required_authority"
+                        )
+                        policy["payload"][field] = (
+                            ["forged"] if field == "rationale" else "forged"
+                        )
+                    rewrite_rechained_audit(
+                        audit_path,
+                        rows,
+                        preserve_sequence=preserve_sequence,
+                        preserve_recorded_at=preserve_recorded_at,
+                    )
+                    if mutation == "duplicate_json_member":
+                        serialized = Path(audit_path).read_text(encoding="utf-8")
+                        serialized = serialized.replace(
+                            '"sequence":0}',
+                            '"sequence":999,"sequence":0}',
+                            1,
+                        )
+                        Path(audit_path).write_text(serialized, encoding="utf-8")
+                        collapsed_rows = [
+                            json.loads(line)
+                            for line in serialized.splitlines()
+                            if line.strip()
+                        ]
+                        self.assertEqual(
+                            AuditLogger.verify_rows(collapsed_rows), (True, [])
+                        )
+                    return decisions
+
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                with self.assertRaises(ReplaySafetyViolation):
+                    run_with_runner(harness, runner_with_invalid_audit_contract)
+
+    def test_bound_policy_actions_accept_only_engine_consistent_traces(self) -> None:
+        for scenario in ("noncontain", "contain", "verifier_downgrade"):
+            with (
+                self.subTest(scenario=scenario),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+
+                def runner_with_bound_policy_trace(**kwargs):
+                    cases = read_jsonl(kwargs["cases_path"])
+                    mode = kwargs["execution_mode"].value
+                    decisions = [
+                        safe_fake_decision(row["case_id"], mode) for row in cases
+                    ]
+                    if scenario != "noncontain":
+                        decisions[0] = make_containment_decision(
+                            decisions[0]["case_id"],
+                            mode,
+                            verifier_downgrade=scenario == "verifier_downgrade",
+                        )
+                    write_jsonl(kwargs["decisions_path"], decisions)
+                    write_safe_read_only_audit(kwargs["audit_path"], decisions)
+                    return decisions
+
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                result = run_with_runner(harness, runner_with_bound_policy_trace)
+                self.assertEqual(result.metrics["scope"]["cases_evaluated"], 3)
+
+    def test_bound_policy_actions_reject_rechained_action_list_forgery(self) -> None:
+        action_mutations = ("omit", "duplicate", "reorder", "substitute")
+        scenarios = ("contain", "verifier_downgrade")
+        for scenario in scenarios:
+            for mutation in action_mutations:
+                with (
+                    self.subTest(scenario=scenario, mutation=mutation),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    root = Path(directory)
+                    config_path = make_repository(root)
+
+                    def runner_with_forged_policy_actions(**kwargs):
+                        cases = read_jsonl(kwargs["cases_path"])
+                        mode = kwargs["execution_mode"].value
+                        decisions = [
+                            safe_fake_decision(row["case_id"], mode) for row in cases
+                        ]
+                        decisions[0] = make_containment_decision(
+                            decisions[0]["case_id"],
+                            mode,
+                            verifier_downgrade=scenario == "verifier_downgrade",
+                        )
+                        write_jsonl(kwargs["decisions_path"], decisions)
+                        audit_path = kwargs["audit_path"]
+                        write_safe_read_only_audit(audit_path, decisions)
+                        rows = AuditLogger(audit_path).read_all()
+                        policy = next(
+                            row
+                            for row in rows
+                            if row["record_type"] == "POLICY_PROPOSED"
+                            and row["payload"]["case_id"] == decisions[0]["case_id"]
+                        )
+                        forged = list(BOUND_AUTONOMOUS_ACTIONS)
+                        if mutation == "omit":
+                            forged.pop()
+                        elif mutation == "duplicate":
+                            forged.append(forged[0])
+                        elif mutation == "reorder":
+                            forged.reverse()
+                        else:
+                            forged[0] = "disable_account"
+                        policy["payload"]["counterfactual_actions"] = forged
+                        rewrite_rechained_audit(audit_path, rows)
+                        return decisions
+
+                    harness = ReplayHarness.from_config(
+                        config_path, repository_root=root
+                    )
+                    with self.assertRaises(ReplaySafetyViolation):
+                        run_with_runner(harness, runner_with_forged_policy_actions)
+
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             config_path = make_repository(root)
 
-            def runner_without_finalization(**kwargs):
+            def runner_with_noncontain_human_action(**kwargs):
                 cases = read_jsonl(kwargs["cases_path"])
                 mode = kwargs["execution_mode"].value
                 decisions = [safe_fake_decision(row["case_id"], mode) for row in cases]
+                decisions[0]["counterfactual_actions"] = ["disable_account"]
+                rehash_decision(decisions[0])
                 write_jsonl(kwargs["decisions_path"], decisions)
-                write_safe_read_only_audit(
-                    kwargs["audit_path"], decisions, include_finalization=False
-                )
+                audit_path = kwargs["audit_path"]
+                write_safe_read_only_audit(audit_path, decisions)
+                rows = AuditLogger(audit_path).read_all()
+                for row in rows:
+                    if row["payload"]["case_id"] != decisions[0]["case_id"]:
+                        continue
+                    if row["record_type"] in {
+                        "POLICY_PROPOSED",
+                        "EXECUTION_SUPPRESSED",
+                    }:
+                        row["payload"]["counterfactual_actions"] = ["disable_account"]
+                rewrite_rechained_audit(audit_path, rows)
                 return decisions
 
             harness = ReplayHarness.from_config(config_path, repository_root=root)
             with self.assertRaises(ReplaySafetyViolation):
-                run_with_runner(harness, runner_without_finalization)
+                run_with_runner(harness, runner_with_noncontain_human_action)
 
     def test_harness_rejects_any_reported_authorization_or_effect(self) -> None:
         unsafe_fields = (

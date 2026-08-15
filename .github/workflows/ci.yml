@@ -37,6 +37,8 @@ jobs:
         run: python run_phase2.py --config config/phase2_qualification.json --validate-only
       - name: Run Phase 2.1 qualification replay
         run: python run_phase2.py --config config/phase2_qualification.json
+      - name: Validate commit-frozen Gate B campaign plan
+        run: python scripts/generate_gate_b_ce2_campaign.py --validate-plan
       - name: Validate committed Phase 2 claim evidence
         run: python scripts/validate_claim_evidence.py
       - name: Validate committed Phase 2.1 qualification evidence

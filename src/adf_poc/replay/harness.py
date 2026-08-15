@@ -7,6 +7,7 @@ import os
 import stat
 from copy import deepcopy
 from dataclasses import dataclass, replace
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
@@ -62,6 +63,117 @@ RecordEngineRunner = Callable[
     ...,
     tuple[list[dict[str, Any]], list[dict[str, Any]]],
 ]
+
+
+_READ_ONLY_AUDIT_STAGE_ORDER = (
+    "CASE_RECEIVED",
+    "EVIDENCE_ASSESSED",
+    "MODEL_ASSESSED",
+    "POLICY_PROPOSED",
+    "INDEPENDENTLY_VERIFIED",
+    "EXECUTION_SUPPRESSED",
+    "AUTHORIZATION_EVALUATED",
+    "DECISION_FINALIZED",
+)
+_AUDIT_ROW_FIELDS = {
+    "sequence",
+    "recorded_at",
+    "record_type",
+    "previous_hash",
+    "payload",
+    "record_hash",
+}
+_AUDIT_PAYLOAD_FIELDS = {
+    "CASE_RECEIVED": {"case_id", "subject_id", "event_ids"},
+    "EVIDENCE_ASSESSED": {
+        "case_id",
+        "evidence_quality",
+        "provenance_valid_ratio",
+        "integrity_verified_ratio",
+        "freshness_score",
+        "source_diversity_score",
+        "mean_source_trust",
+        "independent_supporting_sources",
+        "positive_event_ids",
+        "benign_event_ids",
+        "missing_expected_sources",
+        "conflict_count",
+        "poisoned_evidence",
+        "poisoned_event_ids",
+        "reasons",
+    },
+    "MODEL_ASSESSED": {
+        "case_id",
+        "compromise_probability",
+        "model_version",
+        "top_positive_factors",
+        "top_negative_factors",
+        "feature_values",
+        "feature_trace",
+    },
+    "POLICY_PROPOSED": {
+        "case_id",
+        "disposition",
+        "executable_actions",
+        "recommended_human_actions",
+        "investigation_actions",
+        "rationale",
+        "policy_rules_applied",
+        "evidence_event_ids",
+        "required_authority",
+        "rollback_plan",
+        "counterfactual_actions",
+    },
+    "INDEPENDENTLY_VERIFIED": {
+        "case_id",
+        "passed",
+        "checks",
+        "blocking_reasons",
+    },
+    "EXECUTION_SUPPRESSED": {
+        "case_id",
+        "execution_mode",
+        "reason",
+        "counterfactual_actions",
+        "authorization_attempted",
+        "broker_invocations",
+        "operational_effects",
+    },
+    "AUTHORIZATION_EVALUATED": {
+        "case_id",
+        "execution_mode",
+        "attempted",
+        "issued",
+        "token_id",
+        "permitted_actions",
+        "error",
+    },
+    "DECISION_FINALIZED": {
+        "case_id",
+        "decision_id",
+        "final_disposition",
+        "decision_record_hash",
+    },
+}
+_READ_ONLY_SUPPRESSION_REASON = (
+    "Historical replay and shadow modes are observation-only."
+)
+_VERIFIER_DOWNGRADE_REASON = (
+    "Independent verification failed; the action proposal was downgraded to "
+    "investigation."
+)
+_VERIFIER_DOWNGRADE_RULE = "FAIL-SAFE-VERIFIER-DOWNGRADE"
+_VERIFIER_DOWNGRADE_INVESTIGATION_ACTIONS = [
+    "resolve_independent_verifier_failure",
+    "collect_additional_evidence",
+]
+_CONTAINMENT_ROLLBACK_PLAN = {
+    "revoke_active_sessions": (
+        "restore only through normal reauthentication; no session token is reinstated"
+    ),
+    "force_step_up_auth": ("remove temporary step-up requirement after analyst review"),
+    "increase_monitoring": "return telemetry policy to baseline after closure",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -517,6 +629,12 @@ class ReplayHarness:
         audit_assurance = self._validate_audit_assurance(
             audit_path,
             decisions=decisions,
+            autonomous_actions=self._autonomous_actions_from_policy_bytes(
+                self._read_bounded_snapshot_source(
+                    input_snapshots.paths["policy"],
+                    expected_sha256=input_snapshots.sha256["policy"],
+                )
+            ),
         )
         if qualification_enabled:
             # The engine never receives qualification artifact paths. Emit the
@@ -830,6 +948,9 @@ class ReplayHarness:
                 audit_path,
                 decisions=decisions,
                 audit_rows=audit_rows,
+                autonomous_actions=self._autonomous_actions_from_policy_bytes(
+                    bytes(gate_b.policy_bytes)
+                ),
             )
 
             guard.write_jsonl(
@@ -1741,6 +1862,48 @@ class ReplayHarness:
                     )
 
     @staticmethod
+    def _autonomous_actions_from_policy_bytes(policy_bytes: bytes) -> tuple[str, ...]:
+        def reject_duplicate_pairs(
+            pairs: list[tuple[str, Any]],
+        ) -> dict[str, Any]:
+            value: dict[str, Any] = {}
+            for key, child in pairs:
+                if key in value:
+                    raise ValueError
+                value[key] = child
+            return value
+
+        try:
+            policy = json.loads(
+                policy_bytes.decode("utf-8"),
+                object_pairs_hook=reject_duplicate_pairs,
+            )
+            authority = policy["authority"]
+            actions = authority["autonomous_actions"]
+        except (
+            UnicodeError,
+            json.JSONDecodeError,
+            TypeError,
+            KeyError,
+            ValueError,
+        ):
+            raise ReplaySafetyViolation(
+                "Bound replay policy has no canonical autonomous-action contract."
+            ) from None
+        if (
+            not isinstance(policy, dict)
+            or not isinstance(authority, dict)
+            or not isinstance(actions, list)
+            or not actions
+            or not all(isinstance(action, str) and action for action in actions)
+            or len(set(actions)) != len(actions)
+        ):
+            raise ReplaySafetyViolation(
+                "Bound replay policy has no canonical autonomous-action contract."
+            )
+        return tuple(actions)
+
+    @staticmethod
     def _default_engine_runner() -> EngineRunner:
         from adf_poc.engine import run_engine
 
@@ -1918,8 +2081,20 @@ class ReplayHarness:
         audit_path: Path,
         *,
         decisions: list[dict[str, Any]],
+        autonomous_actions: tuple[str, ...],
         audit_rows: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        if (
+            type(autonomous_actions) is not tuple
+            or not autonomous_actions
+            or not all(
+                isinstance(action, str) and action for action in autonomous_actions
+            )
+            or len(set(autonomous_actions)) != len(autonomous_actions)
+        ):
+            raise ReplaySafetyViolation(
+                "Audit assurance requires an exact bound-policy action contract."
+            )
         try:
             valid, errors = (
                 AuditLogger.verify_rows(audit_rows)
@@ -1950,121 +2125,321 @@ class ReplayHarness:
                 ) from exc
         else:
             rows = deepcopy(audit_rows)
-        allowed_record_types = {
-            "CASE_RECEIVED",
-            "EVIDENCE_ASSESSED",
-            "MODEL_ASSESSED",
-            "POLICY_PROPOSED",
-            "INDEPENDENTLY_VERIFIED",
-            "EXECUTION_SUPPRESSED",
-            "AUTHORIZATION_EVALUATED",
-            "DECISION_FINALIZED",
-        }
-        if any(row.get("record_type") not in allowed_record_types for row in rows):
-            raise ReplaySafetyViolation(
-                "Replay audit evidence contains a record type outside the read-only contract."
-            )
-        suppression_rows = [
-            row for row in rows if row.get("record_type") == "EXECUTION_SUPPRESSED"
-        ]
-        authorization_rows = [
-            row for row in rows if row.get("record_type") == "AUTHORIZATION_EVALUATED"
-        ]
-        finalization_rows = [
-            row for row in rows if row.get("record_type") == "DECISION_FINALIZED"
-        ]
-        action_rows = [
-            row
-            for row in rows
-            if row.get("record_type")
-            in {"ACTION_EXECUTED", "ACTION_REJECTED", "POST_ACTION_VERIFIED"}
-        ]
+        allowed_record_types = set(_READ_ONLY_AUDIT_STAGE_ORDER)
+        previous_recorded_at: datetime | None = None
+        for index, row in enumerate(rows):
+            if set(row) != _AUDIT_ROW_FIELDS:
+                raise ReplaySafetyViolation(
+                    "Replay audit evidence contains a noncanonical record shape."
+                )
+            sequence = row.get("sequence")
+            if type(sequence) is not int or sequence != index:
+                raise ReplaySafetyViolation(
+                    "Replay audit sequence must be contiguous and begin at zero."
+                )
+            recorded_at = row.get("recorded_at")
+            if not isinstance(recorded_at, str):
+                raise ReplaySafetyViolation(
+                    "Replay audit record has no valid timezone-aware timestamp."
+                )
+            try:
+                parsed_recorded_at = datetime.fromisoformat(recorded_at)
+                offset = parsed_recorded_at.utcoffset()
+            except (TypeError, ValueError, OverflowError):
+                raise ReplaySafetyViolation(
+                    "Replay audit record has no valid timezone-aware timestamp."
+                ) from None
+            if offset is None:
+                raise ReplaySafetyViolation(
+                    "Replay audit record has no valid timezone-aware timestamp."
+                )
+            if (
+                previous_recorded_at is not None
+                and parsed_recorded_at < previous_recorded_at
+            ):
+                raise ReplaySafetyViolation(
+                    "Replay audit timestamps must be nondecreasing."
+                )
+            previous_recorded_at = parsed_recorded_at
+            record_type = row.get("record_type")
+            if (
+                not isinstance(record_type, str)
+                or record_type not in allowed_record_types
+            ):
+                raise ReplaySafetyViolation(
+                    "Replay audit evidence contains a record type outside the read-only contract."
+                )
+            payload = row.get("payload")
+            if not isinstance(payload, dict):
+                raise ReplaySafetyViolation(
+                    f"{record_type} audit record has no structured payload."
+                )
+            if set(payload) != _AUDIT_PAYLOAD_FIELDS[str(record_type)]:
+                raise ReplaySafetyViolation(
+                    f"{record_type} audit payload has a noncanonical field set."
+                )
         decisions_by_case = {str(row["case_id"]): row for row in decisions}
         expected_case_ids = set(decisions_by_case)
+        stage_payloads: dict[str, dict[str, dict[str, Any]]] = {
+            record_type: {} for record_type in _READ_ONLY_AUDIT_STAGE_ORDER
+        }
+        observed_stage_order: dict[str, list[str]] = {
+            case_id: [] for case_id in expected_case_ids
+        }
+        for row in rows:
+            record_type = str(row["record_type"])
+            payload = row.get("payload")
+            if not isinstance(payload, dict):
+                raise ReplaySafetyViolation(
+                    f"{record_type} audit record has no structured payload."
+                )
+            case_id = payload.get("case_id")
+            if not isinstance(case_id, str) or not case_id:
+                raise ReplaySafetyViolation(
+                    f"{record_type} audit record has no valid case_id binding."
+                )
+            if case_id not in expected_case_ids:
+                raise ReplaySafetyViolation(
+                    f"{record_type} audit record references an unknown case_id."
+                )
+            if case_id in stage_payloads[record_type]:
+                raise ReplaySafetyViolation(
+                    f"Audit evidence contains duplicate {record_type} records for {case_id!r}."
+                )
+            stage_payloads[record_type][case_id] = payload
+            observed_stage_order[case_id].append(record_type)
 
-        def rows_by_case(
-            records: list[dict[str, Any]], record_type: str
-        ) -> dict[str, dict[str, Any]]:
-            indexed: dict[str, dict[str, Any]] = {}
-            for record in records:
-                payload = record.get("payload")
-                if not isinstance(payload, dict):
-                    raise ReplaySafetyViolation(
-                        f"{record_type} audit record has no structured payload."
-                    )
-                case_id = str(payload.get("case_id", ""))
-                if case_id in indexed:
-                    raise ReplaySafetyViolation(
-                        f"Audit evidence contains duplicate {record_type} records for {case_id!r}."
-                    )
-                indexed[case_id] = payload
-            return indexed
+        for record_type in _READ_ONLY_AUDIT_STAGE_ORDER:
+            if set(stage_payloads[record_type]) != expected_case_ids:
+                raise ReplaySafetyViolation(
+                    f"Audit evidence must contain exactly one {record_type} record per decision."
+                )
+        for case_id, observed in observed_stage_order.items():
+            if tuple(observed) != _READ_ONLY_AUDIT_STAGE_ORDER:
+                raise ReplaySafetyViolation(
+                    f"Audit evidence stages for {case_id!r} are not in the required engine order."
+                )
 
-        suppression_by_case = rows_by_case(suppression_rows, "EXECUTION_SUPPRESSED")
-        authorization_by_case = rows_by_case(
-            authorization_rows, "AUTHORIZATION_EVALUATED"
-        )
-        finalization_by_case = rows_by_case(finalization_rows, "DECISION_FINALIZED")
-        if set(suppression_by_case) != expected_case_ids:
+        def without_case_id(payload: dict[str, Any]) -> dict[str, Any]:
+            return {key: value for key, value in payload.items() if key != "case_id"}
+
+        def policy_authority_and_rollback(
+            disposition: Any, policy_rules: Any
+        ) -> tuple[str, dict[str, str]]:
+            if not isinstance(policy_rules, list) or not all(
+                isinstance(rule, str) for rule in policy_rules
+            ):
+                raise ReplaySafetyViolation(
+                    "POLICY_PROPOSED audit payload has invalid policy rules."
+                )
+            if disposition == "NO_ACTION":
+                return "none", {}
+            if disposition == "INVESTIGATE":
+                return "read_only_automation", {}
+            if disposition == "CONTAIN_REVERSIBLE":
+                return "deterministic_policy_gate", dict(_CONTAINMENT_ROLLBACK_PLAN)
+            if disposition == "ESCALATE_HUMAN":
+                authority = (
+                    "incident_commander_or_identity_owner"
+                    if "AUTH-BREAK-GLASS-HUMAN" in policy_rules
+                    else "soc_shift_lead_or_identity_owner"
+                )
+                return authority, {}
             raise ReplaySafetyViolation(
-                "Audit evidence must contain exactly one EXECUTION_SUPPRESSED record per decision."
+                "POLICY_PROPOSED audit payload has an unsupported disposition."
             )
-        if set(authorization_by_case) != expected_case_ids:
-            raise ReplaySafetyViolation(
-                "Audit evidence must contain exactly one AUTHORIZATION_EVALUATED record per decision."
+
+        def expected_policy_payload(
+            case_id: str,
+            decision: dict[str, Any],
+            actual_policy: dict[str, Any],
+        ) -> dict[str, Any]:
+            proposal = decision.get("proposal")
+            verification = decision.get("independent_verification")
+            expected_proposal_fields = _AUDIT_PAYLOAD_FIELDS["POLICY_PROPOSED"] - {
+                "case_id",
+                "counterfactual_actions",
+            }
+            if (
+                not isinstance(proposal, dict)
+                or set(proposal) != expected_proposal_fields
+                or not isinstance(verification, dict)
+                or type(verification.get("passed")) is not bool
+            ):
+                raise ReplaySafetyViolation(
+                    f"Decision {case_id!r} has no canonical policy/verifier binding."
+                )
+            original_disposition = decision.get("original_disposition")
+            final_disposition = decision.get("final_disposition")
+            expected_counterfactual_actions = (
+                list(autonomous_actions)
+                if original_disposition == "CONTAIN_REVERSIBLE"
+                else []
             )
-        if set(finalization_by_case) != expected_case_ids:
-            raise ReplaySafetyViolation(
-                "Audit evidence must contain exactly one DECISION_FINALIZED record per decision."
+            final_rules = proposal.get("policy_rules_applied")
+            final_rationale = proposal.get("rationale")
+            if not isinstance(final_rules, list) or not isinstance(
+                final_rationale, list
+            ):
+                raise ReplaySafetyViolation(
+                    f"Decision {case_id!r} has no canonical policy trace."
+                )
+            downgraded = (
+                original_disposition != final_disposition
+                or bool(final_rules)
+                and final_rules[-1] == _VERIFIER_DOWNGRADE_RULE
             )
+            if downgraded:
+                if (
+                    verification["passed"] is not False
+                    or original_disposition != "CONTAIN_REVERSIBLE"
+                    or final_disposition != "INVESTIGATE"
+                    or proposal.get("disposition") != "INVESTIGATE"
+                    or proposal.get("executable_actions") != []
+                    or proposal.get("recommended_human_actions") != []
+                    or proposal.get("investigation_actions")
+                    != _VERIFIER_DOWNGRADE_INVESTIGATION_ACTIONS
+                    or proposal.get("required_authority") != "read_only_observation"
+                    or proposal.get("rollback_plan") != {}
+                    or decision.get("counterfactual_actions") != []
+                    or not final_rules
+                    or final_rules[-1] != _VERIFIER_DOWNGRADE_RULE
+                    or not final_rationale
+                    or final_rationale[-1] != _VERIFIER_DOWNGRADE_REASON
+                ):
+                    raise ReplaySafetyViolation(
+                        f"Decision {case_id!r} has an invalid verifier-downgrade trace."
+                    )
+                original_rules = final_rules[:-1]
+                original_rationale = final_rationale[:-1]
+                authority, rollback_plan = policy_authority_and_rollback(
+                    original_disposition, original_rules
+                )
+                counterfactual_actions = actual_policy.get("counterfactual_actions")
+                if counterfactual_actions != expected_counterfactual_actions:
+                    raise ReplaySafetyViolation(
+                        f"POLICY_PROPOSED audit payload for {case_id!r} does not bind the downgraded policy actions."
+                    )
+                return {
+                    "case_id": case_id,
+                    "disposition": original_disposition,
+                    "executable_actions": [],
+                    "recommended_human_actions": [],
+                    "investigation_actions": [],
+                    "rationale": original_rationale,
+                    "policy_rules_applied": original_rules,
+                    "evidence_event_ids": proposal.get("evidence_event_ids"),
+                    "required_authority": authority,
+                    "rollback_plan": rollback_plan,
+                    "counterfactual_actions": expected_counterfactual_actions,
+                }
+
+            if (
+                final_disposition != original_disposition
+                or proposal.get("disposition") != original_disposition
+                or proposal.get("executable_actions") != []
+                or proposal.get("required_authority") != "read_only_observation"
+                or proposal.get("rollback_plan") != {}
+                or _VERIFIER_DOWNGRADE_RULE in final_rules
+                or decision.get("counterfactual_actions")
+                != expected_counterfactual_actions
+            ):
+                raise ReplaySafetyViolation(
+                    f"Decision {case_id!r} has an invalid read-only policy trace."
+                )
+            authority, rollback_plan = policy_authority_and_rollback(
+                original_disposition, final_rules
+            )
+            expected = deepcopy(proposal)
+            expected.update(
+                {
+                    "case_id": case_id,
+                    "required_authority": authority,
+                    "rollback_plan": rollback_plan,
+                    "counterfactual_actions": expected_counterfactual_actions,
+                }
+            )
+            return expected
 
         for case_id, decision in decisions_by_case.items():
-            suppression = suppression_by_case[case_id]
-            if (
-                suppression.get("execution_mode") != decision["execution_mode"]
-                or suppression.get("authorization_attempted") is not False
-                or suppression.get("broker_invocations") != 0
-                or suppression.get("operational_effects") != 0
-                or suppression.get("counterfactual_actions")
-                != decision.get("counterfactual_actions", [])
+            case_received = stage_payloads["CASE_RECEIVED"][case_id]
+            if case_received != {
+                "case_id": case_id,
+                "subject_id": decision.get("subject_id"),
+                "event_ids": decision.get("traceability", {}).get("input_event_ids"),
+            }:
+                raise ReplaySafetyViolation(
+                    f"CASE_RECEIVED audit payload for {case_id!r} does not bind the decision input."
+                )
+            evidence = stage_payloads["EVIDENCE_ASSESSED"][case_id]
+            if without_case_id(evidence) != decision.get("evidence_assessment"):
+                raise ReplaySafetyViolation(
+                    f"EVIDENCE_ASSESSED audit payload for {case_id!r} does not bind the decision."
+                )
+            model = stage_payloads["MODEL_ASSESSED"][case_id]
+            if without_case_id(model) != decision.get("model_assessment"):
+                raise ReplaySafetyViolation(
+                    f"MODEL_ASSESSED audit payload for {case_id!r} does not bind the decision."
+                )
+            policy = stage_payloads["POLICY_PROPOSED"][case_id]
+            if policy != expected_policy_payload(case_id, decision, policy):
+                raise ReplaySafetyViolation(
+                    f"POLICY_PROPOSED audit payload for {case_id!r} does not bind the read-only decision."
+                )
+            verification = stage_payloads["INDEPENDENTLY_VERIFIED"][case_id]
+            if without_case_id(verification) != decision.get(
+                "independent_verification"
             ):
+                raise ReplaySafetyViolation(
+                    f"INDEPENDENTLY_VERIFIED audit payload for {case_id!r} does not bind the decision."
+                )
+            suppression = stage_payloads["EXECUTION_SUPPRESSED"][case_id]
+            if suppression != {
+                "case_id": case_id,
+                "execution_mode": decision["execution_mode"],
+                "reason": _READ_ONLY_SUPPRESSION_REASON,
+                "counterfactual_actions": decision.get("counterfactual_actions", []),
+                "authorization_attempted": False,
+                "broker_invocations": 0,
+                "operational_effects": 0,
+            }:
                 raise ReplaySafetyViolation(
                     f"EXECUTION_SUPPRESSED audit payload for {case_id!r} violates the read-only contract."
                 )
-            authorization = authorization_by_case[case_id]
-            if (
-                authorization.get("execution_mode") != decision["execution_mode"]
-                or authorization.get("attempted") is not False
-                or authorization.get("issued") is not False
-                or authorization.get("token_id", "") != ""
-                or authorization.get("permitted_actions", []) != []
-                or authorization.get("error", "") != decision["authorization"]["error"]
-            ):
+            authorization = stage_payloads["AUTHORIZATION_EVALUATED"][case_id]
+            if authorization != {
+                "case_id": case_id,
+                "execution_mode": decision["execution_mode"],
+                "attempted": False,
+                "issued": False,
+                "token_id": "",
+                "permitted_actions": [],
+                "error": decision["authorization"]["error"],
+            }:
                 raise ReplaySafetyViolation(
                     f"AUTHORIZATION_EVALUATED audit payload for {case_id!r} violates the read-only contract."
                 )
-            finalization = finalization_by_case[case_id]
-            if (
-                finalization.get("decision_id") != decision["decision_id"]
-                or finalization.get("final_disposition")
-                != decision["final_disposition"]
-                or finalization.get("decision_record_hash")
-                != decision["decision_record_hash"]
-            ):
+            finalization = stage_payloads["DECISION_FINALIZED"][case_id]
+            if finalization != {
+                "case_id": case_id,
+                "decision_id": decision["decision_id"],
+                "final_disposition": decision["final_disposition"],
+                "decision_record_hash": decision["decision_record_hash"],
+            }:
                 raise ReplaySafetyViolation(
                     f"DECISION_FINALIZED audit payload for {case_id!r} does not bind the decision."
                 )
-        if action_rows:
-            raise ReplaySafetyViolation(
-                "Replay audit evidence contains an action or post-action record."
-            )
         return {
             "audit_validation_enforced": True,
             "audit_chain_valid": True,
             "audit_record_count": len(rows),
-            "execution_suppression_records": len(suppression_rows),
-            "authorization_evaluated_records": len(authorization_rows),
-            "decision_finalized_records": len(finalization_rows),
+            "execution_suppression_records": len(
+                stage_payloads["EXECUTION_SUPPRESSED"]
+            ),
+            "authorization_evaluated_records": len(
+                stage_payloads["AUTHORIZATION_EVALUATED"]
+            ),
+            "decision_finalized_records": len(stage_payloads["DECISION_FINALIZED"]),
             "action_executed_audit_records": 0,
         }
 

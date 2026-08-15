@@ -1,0 +1,558 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/gate-b-ce2-campaign.schema.json",
+  "title": "AI Decision Firewall synthetic Gate B CE-2 campaign artifacts",
+  "oneOf": [
+    {"$ref": "#/$defs/campaignPlan"},
+    {"$ref": "#/$defs/campaignProfile"},
+    {"$ref": "#/$defs/campaignResult"},
+    {"$ref": "#/$defs/campaignSummary"}
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*\\\\)[A-Za-z0-9][A-Za-z0-9._-]*(?:/[A-Za-z0-9][A-Za-z0-9._-]*)*$"
+    },
+    "sourceRole": {
+      "enum": [
+        "CAMPAIGN_GENERATOR",
+        "CAMPAIGN_PLAN",
+        "CAMPAIGN_SCHEMA",
+        "CLAIM_VALIDATOR",
+        "GATE_B_IMPLEMENTATION",
+        "REPLAY_CONTRACTS_IMPLEMENTATION",
+        "REPLAY_HARNESS_IMPLEMENTATION",
+        "GATE_B_AUTHORIZATION_SCHEMA",
+        "STARTER_MANIFEST",
+        "STARTER_CASES",
+        "STARTER_ADJUDICATIONS",
+        "QUALIFICATION_MANIFEST",
+        "QUALIFICATION_CASES",
+        "QUALIFICATION_ADJUDICATIONS",
+        "MODEL",
+        "POLICY"
+      ]
+    },
+    "sourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "path", "sha256"],
+      "properties": {
+        "role": {"$ref": "#/$defs/sourceRole"},
+        "path": {"$ref": "#/$defs/repositoryPath"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "payloadRole": {
+      "enum": ["adjudications", "cases"]
+    },
+    "runtimeFingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python_implementation",
+        "python_version",
+        "jsonschema_version",
+        "numpy_version",
+        "platform_system",
+        "platform_release",
+        "platform_machine"
+      ],
+      "properties": {
+        "python_implementation": {"type": "string", "minLength": 1, "maxLength": 64},
+        "python_version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "jsonschema_version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "numpy_version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "platform_system": {"type": "string", "minLength": 1, "maxLength": 64},
+        "platform_release": {"type": "string", "minLength": 1, "maxLength": 128},
+        "platform_machine": {"type": "string", "minLength": 1, "maxLength": 64}
+      }
+    },
+    "payloadRoles": {
+      "type": "array",
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/payloadRole"}
+    },
+    "attemptId": {
+      "enum": [
+        "GB-POS-001",
+        "GB-NEG-001",
+        "GB-NEG-002",
+        "GB-NEG-003",
+        "GB-NEG-004",
+        "GB-NEG-005",
+        "GB-NEG-006",
+        "GB-NEG-007",
+        "GB-NEG-008",
+        "GB-NEG-009",
+        "GB-NEG-010",
+        "GB-NEG-011",
+        "GB-NEG-012",
+        "GB-NEG-013",
+        "GB-NEG-014",
+        "GB-NEG-015"
+      ]
+    },
+    "mutationId": {
+      "enum": [
+        "NONE",
+        "STATUS_DRAFT",
+        "MISSING_APPROVAL_ROLE",
+        "DUPLICATE_APPROVAL_ROLE",
+        "MANIFEST_DIGEST_MISMATCH",
+        "MODEL_DIGEST_MISMATCH",
+        "POLICY_DIGEST_MISMATCH",
+        "CONTROL_ARTIFACT_DIGEST_MISMATCH",
+        "ACTION_CREDENTIALS_PRESENT",
+        "LIVE_FEED_CONNECTED",
+        "WRITE_CONNECTOR_PRESENT",
+        "NETWORK_EGRESS_ENABLED",
+        "AUTHORIZATION_EXPIRED",
+        "REVIEWER_NOT_INDEPENDENT",
+        "CUSTODY_FREEZE_PREDATES_WINDOW",
+        "QUARANTINE_THRESHOLD_EXCEEDED"
+      ]
+    },
+    "expectedOutcome": {
+      "enum": [
+        "PASS_TEST_ONLY",
+        "BLOCKED_PREPAYLOAD",
+        "BLOCKED_POSTQUALIFICATION_PREENGINE"
+      ]
+    },
+    "errorClass": {
+      "enum": ["NONE", "GateBStopConditionViolation", "GateBValidationError"]
+    },
+    "fixture": {
+      "enum": ["QUALIFICATION_THRESHOLD", "STARTER_VALID"]
+    },
+    "operation": {
+      "enum": ["RUN", "VALIDATE_ONLY"]
+    },
+    "expectedAttempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "attempt_id",
+        "fixture",
+        "operation",
+        "mutation_id",
+        "expected_outcome",
+        "expected_error_class",
+        "expected_accessed_payload_roles"
+      ],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 16},
+        "attempt_id": {"$ref": "#/$defs/attemptId"},
+        "fixture": {"$ref": "#/$defs/fixture"},
+        "operation": {"$ref": "#/$defs/operation"},
+        "mutation_id": {"$ref": "#/$defs/mutationId"},
+        "expected_outcome": {"$ref": "#/$defs/expectedOutcome"},
+        "expected_error_class": {"$ref": "#/$defs/errorClass"},
+        "expected_accessed_payload_roles": {"$ref": "#/$defs/payloadRoles"}
+      }
+    },
+    "fixtureConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "execution_mode",
+        "live_actions_enabled",
+        "dataset_manifest",
+        "model_path",
+        "policy_path",
+        "output_dir",
+        "contract_adapter",
+        "deterministic_outputs",
+        "zero_effects_required",
+        "record_failure_policy",
+        "gate_b_authorization"
+      ],
+      "properties": {
+        "schema_version": {"const": "0.2.0"},
+        "execution_mode": {"const": "HISTORICAL_REPLAY"},
+        "live_actions_enabled": {"const": false},
+        "dataset_manifest": {"const": "data/campaign/manifest.json"},
+        "model_path": {"const": "outputs/baseline/model.json"},
+        "policy_path": {"const": "config/policy.json"},
+        "output_dir": {"const": "outputs/replay/gate_b_ce2_campaign"},
+        "contract_adapter": {"const": "canonical_jsonl_v0.2"},
+        "deterministic_outputs": {"const": true},
+        "zero_effects_required": {"const": true},
+        "record_failure_policy": {"const": "QUARANTINE_RECORD"},
+        "gate_b_authorization": {"const": "local/gate_b/gate_b_authorization.json"}
+      }
+    },
+    "campaignPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "schema_version",
+        "campaign_id",
+        "claim_id",
+        "campaign_seed",
+        "design",
+        "public_input_bindings",
+        "configuration_binding",
+        "budget",
+        "expected_attempts"
+      ],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_PLAN"},
+        "schema_version": {"const": "1.0.0"},
+        "campaign_id": {"const": "P2-CE-003-GATE-B-SYNTHETIC"},
+        "claim_id": {"const": "P2-CE-003"},
+        "campaign_seed": {"const": 20260814},
+        "design": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data_origin",
+            "simulated_runtime_origin",
+            "actual_historical_records",
+            "stored_approval_package",
+            "stored_historical_data",
+            "execution_authority",
+            "attempt_order_frozen",
+            "result_capture"
+          ],
+          "properties": {
+            "data_origin": {"const": "SYNTHETIC_FIXTURE"},
+            "simulated_runtime_origin": {"const": "HISTORICAL_DEIDENTIFIED"},
+            "actual_historical_records": {"const": 0},
+            "stored_approval_package": {"const": false},
+            "stored_historical_data": {"const": false},
+            "execution_authority": {"const": "NONE"},
+            "attempt_order_frozen": {"const": true},
+            "result_capture": {"const": "SANITIZED_ENUMERATED_FIELDS_ONLY"}
+          }
+        },
+        "public_input_bindings": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/sourceBinding"}
+        },
+        "configuration_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["configuration", "canonical_sha256"],
+          "properties": {
+            "configuration": {"$ref": "#/$defs/fixtureConfiguration"},
+            "canonical_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evaluation_runs", "attempts_per_run", "total_attempt_executions", "retries", "engine_call_budget", "tokens"],
+          "properties": {
+            "evaluation_runs": {"const": 2},
+            "attempts_per_run": {"const": 16},
+            "total_attempt_executions": {"const": 32},
+            "retries": {"const": 0},
+            "engine_call_budget": {"const": 0},
+            "tokens": {"type": "null"}
+          }
+        },
+        "expected_attempts": {
+          "type": "array",
+          "minItems": 16,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/expectedAttempt"}
+        }
+      }
+    },
+    "campaignProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "schema_version",
+        "campaign_id",
+        "claim_id",
+        "campaign_seed",
+        "implementation_commit",
+        "evaluated_at",
+        "campaign_plan_sha256",
+        "runtime_fingerprint",
+        "design",
+        "source_bindings",
+        "configuration_binding",
+        "budget",
+        "expected_attempts"
+      ],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_PROFILE"},
+        "schema_version": {"const": "1.0.0"},
+        "campaign_id": {"const": "P2-CE-003-GATE-B-SYNTHETIC"},
+        "claim_id": {"const": "P2-CE-003"},
+        "campaign_seed": {"const": 20260814},
+        "implementation_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "campaign_plan_sha256": {"$ref": "#/$defs/sha256"},
+        "runtime_fingerprint": {"$ref": "#/$defs/runtimeFingerprint"},
+        "design": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "data_origin",
+            "simulated_runtime_origin",
+            "actual_historical_records",
+            "stored_approval_package",
+            "stored_historical_data",
+            "execution_authority",
+            "attempt_order_frozen",
+            "result_capture"
+          ],
+          "properties": {
+            "data_origin": {"const": "SYNTHETIC_FIXTURE"},
+            "simulated_runtime_origin": {"const": "HISTORICAL_DEIDENTIFIED"},
+            "actual_historical_records": {"const": 0},
+            "stored_approval_package": {"const": false},
+            "stored_historical_data": {"const": false},
+            "execution_authority": {"const": "NONE"},
+            "attempt_order_frozen": {"const": true},
+            "result_capture": {"const": "SANITIZED_ENUMERATED_FIELDS_ONLY"}
+          }
+        },
+        "source_bindings": {
+          "type": "array",
+          "minItems": 16,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/sourceBinding"}
+        },
+        "configuration_binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["configuration", "canonical_sha256"],
+          "properties": {
+            "configuration": {"$ref": "#/$defs/fixtureConfiguration"},
+            "canonical_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evaluation_runs", "attempts_per_run", "total_attempt_executions", "retries", "engine_call_budget", "tokens"],
+          "properties": {
+            "evaluation_runs": {"const": 2},
+            "attempts_per_run": {"const": 16},
+            "total_attempt_executions": {"const": 32},
+            "retries": {"const": 0},
+            "engine_call_budget": {"const": 0},
+            "tokens": {"type": "null"}
+          }
+        },
+        "expected_attempts": {
+          "type": "array",
+          "minItems": 16,
+          "maxItems": 16,
+          "items": {"$ref": "#/$defs/expectedAttempt"}
+        }
+      }
+    },
+    "campaignResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "schema_version",
+        "campaign_id",
+        "sequence",
+        "attempt_id",
+        "fixture",
+        "operation",
+        "mutation_id",
+        "expected_outcome",
+        "observed_outcome",
+        "matched",
+        "error_class",
+        "accessed_payload_roles",
+        "engine_calls",
+        "authorization_attempts",
+        "authorization_tokens_issued",
+        "broker_invocations",
+        "target_effect_calls",
+        "action_results",
+        "operational_effects",
+        "completed_run_manifests",
+        "decision_artifacts",
+        "audit_artifacts"
+      ],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_RESULT"},
+        "schema_version": {"const": "1.0.0"},
+        "campaign_id": {"const": "P2-CE-003-GATE-B-SYNTHETIC"},
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 16},
+        "attempt_id": {"$ref": "#/$defs/attemptId"},
+        "fixture": {"$ref": "#/$defs/fixture"},
+        "operation": {"$ref": "#/$defs/operation"},
+        "mutation_id": {"$ref": "#/$defs/mutationId"},
+        "expected_outcome": {"$ref": "#/$defs/expectedOutcome"},
+        "observed_outcome": {"$ref": "#/$defs/expectedOutcome"},
+        "matched": {"type": "boolean"},
+        "error_class": {"$ref": "#/$defs/errorClass"},
+        "accessed_payload_roles": {"$ref": "#/$defs/payloadRoles"},
+        "engine_calls": {"type": "integer", "minimum": 0},
+        "authorization_attempts": {"type": "integer", "minimum": 0},
+        "authorization_tokens_issued": {"type": "integer", "minimum": 0},
+        "broker_invocations": {"type": "integer", "minimum": 0},
+        "target_effect_calls": {"type": "integer", "minimum": 0},
+        "action_results": {"type": "integer", "minimum": 0},
+        "operational_effects": {"type": "integer", "minimum": 0},
+        "completed_run_manifests": {"type": "integer", "minimum": 0},
+        "decision_artifacts": {"type": "integer", "minimum": 0},
+        "audit_artifacts": {"type": "integer", "minimum": 0}
+      }
+    },
+    "campaignSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_kind",
+        "schema_version",
+        "campaign_id",
+        "claim_id",
+        "campaign_seed",
+        "evaluated_at",
+        "implementation_commit",
+        "campaign_plan_sha256",
+        "runtime_fingerprint",
+        "artifact_bindings",
+        "raw_outcomes",
+        "stage_outcomes",
+        "assurance",
+        "repeatability",
+        "evidence_boundary"
+      ],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_SUMMARY"},
+        "schema_version": {"const": "1.0.0"},
+        "campaign_id": {"const": "P2-CE-003-GATE-B-SYNTHETIC"},
+        "claim_id": {"const": "P2-CE-003"},
+        "campaign_seed": {"const": 20260814},
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "implementation_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "campaign_plan_sha256": {"$ref": "#/$defs/sha256"},
+        "runtime_fingerprint": {"$ref": "#/$defs/runtimeFingerprint"},
+        "artifact_bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["campaign_profile_sha256", "campaign_results_run1_sha256", "campaign_results_run2_sha256"],
+          "properties": {
+            "campaign_profile_sha256": {"$ref": "#/$defs/sha256"},
+            "campaign_results_run1_sha256": {"$ref": "#/$defs/sha256"},
+            "campaign_results_run2_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "raw_outcomes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["denominator", "matched", "mismatched", "excluded", "observed_pass_test_only", "observed_blocked"],
+          "properties": {
+            "denominator": {"const": 32},
+            "matched": {"type": "integer", "minimum": 0, "maximum": 32},
+            "mismatched": {"type": "integer", "minimum": 0, "maximum": 32},
+            "excluded": {"const": 0},
+            "observed_pass_test_only": {"type": "integer", "minimum": 0, "maximum": 32},
+            "observed_blocked": {"type": "integer", "minimum": 0, "maximum": 32}
+          }
+        },
+        "stage_outcomes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pass_test_only", "blocked_prepayload", "blocked_postqualification_preengine"],
+          "properties": {
+            "pass_test_only": {"type": "integer", "minimum": 0, "maximum": 32},
+            "blocked_prepayload": {"type": "integer", "minimum": 0, "maximum": 32},
+            "blocked_postqualification_preengine": {"type": "integer", "minimum": 0, "maximum": 32}
+          }
+        },
+        "assurance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "prepayload_attempts",
+            "prepayload_attempts_with_payload_access",
+            "engine_calls",
+            "authorization_attempts",
+            "authorization_tokens_issued",
+            "broker_invocations",
+            "target_effect_calls",
+            "action_results",
+            "operational_effects",
+            "completed_run_manifests",
+            "decision_artifacts",
+            "audit_artifacts"
+          ],
+          "properties": {
+            "prepayload_attempts": {"const": 28},
+            "prepayload_attempts_with_payload_access": {"type": "integer", "minimum": 0, "maximum": 28},
+            "engine_calls": {"type": "integer", "minimum": 0},
+            "authorization_attempts": {"type": "integer", "minimum": 0},
+            "authorization_tokens_issued": {"type": "integer", "minimum": 0},
+            "broker_invocations": {"type": "integer", "minimum": 0},
+            "target_effect_calls": {"type": "integer", "minimum": 0},
+            "action_results": {"type": "integer", "minimum": 0},
+            "operational_effects": {"type": "integer", "minimum": 0},
+            "completed_run_manifests": {"type": "integer", "minimum": 0},
+            "decision_artifacts": {"type": "integer", "minimum": 0},
+            "audit_artifacts": {"type": "integer", "minimum": 0}
+          }
+        },
+        "repeatability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evaluation_runs", "attempts_per_run", "total_attempt_executions", "byte_identical_result_ledgers"],
+          "properties": {
+            "evaluation_runs": {"const": 2},
+            "attempts_per_run": {"const": 16},
+            "total_attempt_executions": {"const": 32},
+            "byte_identical_result_ledgers": {"const": true}
+          }
+        },
+        "evidence_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stored_approval_package", "stored_historical_data", "review_type", "supported_claim_class"],
+          "properties": {
+            "stored_approval_package": {"const": false},
+            "stored_historical_data": {"const": false},
+            "review_type": {"const": "SELF"},
+            "supported_claim_class": {"const": "CONTROLLED_BEHAVIOR"}
+          }
+        }
+      }
+    }
+  }
+}

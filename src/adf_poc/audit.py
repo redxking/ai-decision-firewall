@@ -8,6 +8,29 @@ from typing import Any, Iterable
 from .utils import canonical_json, sha256_json, utc_now_iso
 
 
+class _DuplicateJSONMember(ValueError):
+    """Internal marker for an ambiguous serialized audit row."""
+
+
+def _reject_duplicate_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, child in pairs:
+        if key in value:
+            raise _DuplicateJSONMember
+        value[key] = child
+    return value
+
+
+def _decode_audit_row(line: str) -> dict[str, Any]:
+    try:
+        value = json.loads(line, object_pairs_hook=_reject_duplicate_json_pairs)
+    except _DuplicateJSONMember:
+        raise ValueError("Audit row contains duplicate JSON members.") from None
+    if not isinstance(value, dict):
+        raise ValueError("Audit row must be a JSON object.")
+    return value
+
+
 class AuditLogger:
     """Append-only, hash-chained audit log for POC decisions and actions."""
 
@@ -49,7 +72,7 @@ class AuditLogger:
         if not self.path.exists():
             return []
         return [
-            json.loads(line)
+            _decode_audit_row(line)
             for line in self.path.read_text(encoding="utf-8").splitlines()
             if line.strip()
         ]
@@ -71,7 +94,7 @@ class AuditLogger:
         for index, line in enumerate(target.read_text(encoding="utf-8").splitlines()):
             if not line.strip():
                 continue
-            indexed_rows.append((index, json.loads(line)))
+            indexed_rows.append((index, _decode_audit_row(line)))
         return _verify_indexed_rows(indexed_rows)
 
 

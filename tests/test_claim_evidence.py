@@ -1,18 +1,32 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 import shutil
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
+
+from jsonschema import Draft202012Validator
 
 from adf_poc.replay import ReplayHarness
 from adf_poc.utils import sha256_json
 from scripts.validate_claim_evidence import (
     EvidenceValidationError,
     validate_evidence_record,
+)
+from scripts.generate_gate_b_ce2_campaign import (
+    CAMPAIGN_SCHEMA,
+    SENSITIVE_CANARY,
+    build_campaign_artifacts,
+    check_artifacts,
+    generate_artifacts,
+    load_and_validate_plan,
 )
 
 
@@ -265,6 +279,77 @@ def _refresh_manifest_artifact_binding(
         raise AssertionError(f"Run manifest does not declare artifact role {role!r}.")
     _write_json(run_manifest_path, run_manifest)
     run_manifest_artifact["sha256"] = _sha256(run_manifest_path)
+
+
+def _build_gate_b_campaign_evidence(
+    temporary_root: Path,
+) -> tuple[Path, Path, Path]:
+    output_dir = temporary_root / "evidence/phase2_gate_b_ce2"
+    record_path = temporary_root / "phase2-gate-b-ce2-evidence-record.json"
+    generate_artifacts(
+        output_dir,
+        implementation_commit="1" * 40,
+        evaluated_at="2026-08-15T00:00:00Z",
+        record_path=record_path,
+    )
+    return record_path, output_dir, temporary_root
+
+
+def _refresh_gate_b_campaign_record(
+    record_path: Path,
+    output_dir: Path,
+    *,
+    results_role: str = "campaign_results_run1",
+    update_results_binding: bool = True,
+) -> None:
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    if results_role not in {"campaign_results_run1", "campaign_results_run2"}:
+        raise ValueError("Unsupported Gate B result role.")
+    results_path = output_dir / f"{results_role}.jsonl"
+    summary_path = output_dir / "campaign_summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if update_results_binding:
+        summary["artifact_bindings"][f"{results_role}_sha256"] = _sha256(results_path)
+        _write_json(summary_path, summary)
+    for role, path in (
+        (results_role, results_path),
+        ("campaign_summary", summary_path),
+    ):
+        artifact = _artifact_by_role(record, role)
+        artifact["sha256"] = _sha256(path)
+        if role == results_role:
+            artifact["record_count"] = sum(
+                bool(line.strip())
+                for line in results_path.read_text(encoding="utf-8").splitlines()
+            )
+    _write_json(record_path, record)
+
+
+def _validate_gate_b_test_record(record_path: Path) -> dict:
+    def committed_digest(
+        repository_root: Path,
+        *,
+        commit: str,
+        relative_path: str,
+    ) -> str:
+        del repository_root, commit
+        return _sha256(ROOT / relative_path)
+
+    with (
+        patch(
+            "scripts.validate_claim_evidence._git_blob_digest",
+            side_effect=committed_digest,
+        ),
+        patch(
+            "scripts.validate_claim_evidence._git_commit_timestamp",
+            return_value=datetime(2026, 8, 14, tzinfo=timezone.utc),
+        ),
+    ):
+        return validate_evidence_record(
+            record_path,
+            repository_root=ROOT,
+            profile_id="P2-CE-003",
+        )
 
 
 class ClaimEvidenceContractTests(unittest.TestCase):
@@ -610,6 +695,299 @@ class ClaimEvidenceContractTests(unittest.TestCase):
             )
 
         self.assertEqual(validated["artifact_count"], 18)
+
+    def test_gate_b_campaign_plan_and_core_outputs_are_closed_and_sanitized(
+        self,
+    ) -> None:
+        plan = load_and_validate_plan()
+        self.assertEqual(plan["campaign_seed"], 20260814)
+        self.assertEqual(plan["budget"]["evaluation_runs"], 2)
+        self.assertEqual(plan["budget"]["attempts_per_run"], 16)
+        self.assertEqual(plan["budget"]["total_attempt_executions"], 32)
+        self.assertEqual(plan["budget"]["retries"], 0)
+        self.assertEqual(plan["budget"]["engine_call_budget"], 0)
+        self.assertEqual(plan["design"]["data_origin"], "SYNTHETIC_FIXTURE")
+        self.assertEqual(
+            plan["design"]["simulated_runtime_origin"],
+            "HISTORICAL_DEIDENTIFIED",
+        )
+        self.assertEqual(plan["design"]["actual_historical_records"], 0)
+
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            (
+                profile_bytes,
+                results_run1_bytes,
+                results_run2_bytes,
+                summary_bytes,
+            ) = build_campaign_artifacts(
+                "1" * 40,
+                "2026-08-15T00:00:00Z",
+            )
+        combined = (
+            profile_bytes + results_run1_bytes + results_run2_bytes + summary_bytes
+        )
+        self.assertNotIn(SENSITIVE_CANARY.encode("utf-8"), combined)
+        self.assertNotIn(SENSITIVE_CANARY, stdout.getvalue())
+        self.assertNotIn(SENSITIVE_CANARY, stderr.getvalue())
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stderr.getvalue(), "")
+
+        schema = json.loads(CAMPAIGN_SCHEMA.read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+        profile = json.loads(profile_bytes)
+        summary = json.loads(summary_bytes)
+        rows_run1 = [json.loads(line) for line in results_run1_bytes.splitlines()]
+        rows_run2 = [json.loads(line) for line in results_run2_bytes.splitlines()]
+        validator.validate(profile)
+        validator.validate(summary)
+        for row in rows_run1 + rows_run2:
+            validator.validate(row)
+        self.assertEqual(len(rows_run1), 16)
+        self.assertEqual(len(rows_run2), 16)
+        self.assertEqual(results_run1_bytes, results_run2_bytes)
+        self.assertEqual(rows_run1, rows_run2)
+        self.assertEqual(
+            summary["raw_outcomes"],
+            {
+                "denominator": 32,
+                "matched": 32,
+                "mismatched": 0,
+                "excluded": 0,
+                "observed_pass_test_only": 2,
+                "observed_blocked": 30,
+            },
+        )
+        self.assertEqual(
+            summary["repeatability"],
+            {
+                "evaluation_runs": 2,
+                "attempts_per_run": 16,
+                "total_attempt_executions": 32,
+                "byte_identical_result_ledgers": True,
+            },
+        )
+        rows = rows_run1 + rows_run2
+        self.assertTrue(all(row["matched"] for row in rows))
+        self.assertEqual(
+            [row["observed_outcome"] for row in rows].count("PASS_TEST_ONLY"),
+            2,
+        )
+        self.assertEqual(
+            [row["observed_outcome"] for row in rows].count("BLOCKED_PREPAYLOAD"),
+            28,
+        )
+        self.assertEqual(
+            [row["observed_outcome"] for row in rows].count(
+                "BLOCKED_POSTQUALIFICATION_PREENGINE"
+            ),
+            2,
+        )
+        safe_result_fields = {
+            "artifact_kind",
+            "schema_version",
+            "campaign_id",
+            "sequence",
+            "attempt_id",
+            "fixture",
+            "operation",
+            "mutation_id",
+            "expected_outcome",
+            "observed_outcome",
+            "matched",
+            "error_class",
+            "accessed_payload_roles",
+            "engine_calls",
+            "authorization_attempts",
+            "authorization_tokens_issued",
+            "broker_invocations",
+            "target_effect_calls",
+            "action_results",
+            "operational_effects",
+            "completed_run_manifests",
+            "decision_artifacts",
+            "audit_artifacts",
+        }
+        for row in rows:
+            self.assertEqual(set(row), safe_result_fields)
+            for field in (
+                "engine_calls",
+                "authorization_attempts",
+                "authorization_tokens_issued",
+                "broker_invocations",
+                "target_effect_calls",
+                "action_results",
+                "operational_effects",
+                "completed_run_manifests",
+                "decision_artifacts",
+                "audit_artifacts",
+            ):
+                self.assertEqual(row[field], 0, (row["attempt_id"], field))
+
+    def test_gate_b_campaign_profile_validates_exact_commit_frozen_result(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix=".gate-b-ce2-test-",
+            dir=ROOT,
+        ) as directory:
+            record_path, output_dir, _ = _build_gate_b_campaign_evidence(
+                Path(directory)
+            )
+            validated = _validate_gate_b_test_record(record_path)
+            public_bundle = record_path.read_bytes() + b"".join(
+                path.read_bytes() for path in sorted(output_dir.iterdir())
+            )
+
+        self.assertEqual(validated["status"], "VALID")
+        self.assertNotIn(SENSITIVE_CANARY.encode("utf-8"), public_bundle)
+        self.assertEqual(validated["profile_id"], "P2-CE-003")
+        self.assertEqual(validated["artifact_count"], 6)
+        self.assertEqual(validated["historical_case_count"], 0)
+        self.assertEqual(
+            validated["campaign_outcomes"],
+            {
+                "unique_scenarios": 16,
+                "evaluation_runs": 2,
+                "denominator": 32,
+                "pass_test_only": 2,
+                "blocked_prepayload": 28,
+                "blocked_postqualification_preengine": 2,
+                "byte_identical_result_ledgers": True,
+            },
+        )
+
+    def test_gate_b_campaign_check_preserves_recorded_runtime_fingerprint(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix=".gate-b-ce2-runtime-check-",
+            dir=ROOT,
+        ) as directory:
+            root = Path(directory)
+            record_path, output_dir, _ = _build_gate_b_campaign_evidence(root)
+            with patch(
+                "scripts.generate_gate_b_ce2_campaign._runtime_fingerprint",
+                return_value={
+                    "python_implementation": "DifferentPython",
+                    "python_version": "0.0.0",
+                    "jsonschema_version": "0.0.0",
+                    "numpy_version": "0.0.0",
+                    "platform_system": "DifferentOS",
+                    "platform_release": "different",
+                    "platform_machine": "different",
+                },
+            ):
+                check_artifacts(
+                    output_dir,
+                    implementation_commit="1" * 40,
+                    evaluated_at="2026-08-15T00:00:00Z",
+                    record_path=record_path,
+                )
+
+    def test_gate_b_campaign_validator_rejects_drift_leakage_and_ambiguity(
+        self,
+    ) -> None:
+        mutations = (
+            "extra_payload_field",
+            "outcome_drift",
+            "reordered_attempts",
+            "missing_attempt",
+            "nonzero_engine_counter",
+            "nonzero_effect_counter",
+            "payload_role_drift",
+            "source_reference_mismatch",
+            "duplicate_json_member",
+            "authorization_canary",
+            "run2_only_outcome_drift",
+            "both_ledgers_identical_outcome_drift",
+        )
+        for mutation in mutations:
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory(
+                    prefix=".gate-b-ce2-negative-",
+                    dir=ROOT,
+                ) as directory,
+            ):
+                record_path, output_dir, _ = _build_gate_b_campaign_evidence(
+                    Path(directory)
+                )
+                results_path = output_dir / "campaign_results_run1.jsonl"
+                if mutation in {
+                    "extra_payload_field",
+                    "outcome_drift",
+                    "reordered_attempts",
+                    "missing_attempt",
+                    "nonzero_engine_counter",
+                    "nonzero_effect_counter",
+                    "payload_role_drift",
+                    "run2_only_outcome_drift",
+                    "both_ledgers_identical_outcome_drift",
+                }:
+                    selected_role = (
+                        "campaign_results_run2"
+                        if mutation == "run2_only_outcome_drift"
+                        else "campaign_results_run1"
+                    )
+                    results_path = output_dir / f"{selected_role}.jsonl"
+                    rows = [
+                        json.loads(line)
+                        for line in results_path.read_text(
+                            encoding="utf-8"
+                        ).splitlines()
+                    ]
+                    if mutation == "extra_payload_field":
+                        rows[0]["raw_payload"] = "prohibited"
+                    elif mutation == "outcome_drift":
+                        rows[1]["observed_outcome"] = "PASS_TEST_ONLY"
+                    elif mutation == "reordered_attempts":
+                        rows.reverse()
+                    elif mutation == "missing_attempt":
+                        rows.pop()
+                    elif mutation == "nonzero_engine_counter":
+                        rows[0]["engine_calls"] = 1
+                    elif mutation == "nonzero_effect_counter":
+                        rows[0]["target_effect_calls"] = 1
+                    elif mutation in {
+                        "run2_only_outcome_drift",
+                        "both_ledgers_identical_outcome_drift",
+                    }:
+                        rows[1]["observed_outcome"] = "PASS_TEST_ONLY"
+                    else:
+                        rows[1]["accessed_payload_roles"] = ["cases"]
+                    _write_jsonl(results_path, rows)
+                    _refresh_gate_b_campaign_record(
+                        record_path,
+                        output_dir,
+                        results_role=selected_role,
+                    )
+                    if mutation == "both_ledgers_identical_outcome_drift":
+                        second_path = output_dir / "campaign_results_run2.jsonl"
+                        _write_jsonl(second_path, rows)
+                        _refresh_gate_b_campaign_record(
+                            record_path,
+                            output_dir,
+                            results_role="campaign_results_run2",
+                        )
+                elif mutation == "duplicate_json_member":
+                    lines = results_path.read_text(encoding="utf-8").splitlines()
+                    lines[0] = lines[0][:-1] + ',"matched":true}'
+                    results_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                    _refresh_gate_b_campaign_record(record_path, output_dir)
+                else:
+                    record = json.loads(record_path.read_text(encoding="utf-8"))
+                    if mutation == "source_reference_mismatch":
+                        record["system_under_test"]["source_reference"] = (
+                            "Git commit "
+                            + "2" * 40
+                            + " (https://github.com/redxking/ai-decision-firewall/commit/"
+                            + "2" * 40
+                            + ")"
+                        )
+                    else:
+                        record["limitations"].append(SENSITIVE_CANARY)
+                    _write_json(record_path, record)
+
+                with self.assertRaises(EvidenceValidationError):
+                    _validate_gate_b_test_record(record_path)
 
     def test_standard_cites_primary_research_and_states_nonclaim(self) -> None:
         standard = (ROOT / "docs/phase2/CLAIM_EVIDENCE_STANDARD.md").read_text(
