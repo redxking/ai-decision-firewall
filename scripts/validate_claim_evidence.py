@@ -40,6 +40,10 @@ from adf_poc.replay.reference_features import (  # noqa: E402
     ReferenceFeatureAssuranceError,
     verify_reference_feature_projections,
 )
+from adf_poc.replay.reference_decision import (  # noqa: E402
+    ReferenceDecisionAssuranceError,
+    verify_reference_decision_path,
+)
 
 
 DEFAULT_SCHEMA = ROOT / "contracts/v0.2.0/evaluation-evidence.schema.json"
@@ -89,37 +93,78 @@ FEATURE_ASSURANCE_CAMPAIGN_PLAN = (
 FEATURE_ASSURANCE_CAMPAIGN_ID = "P2-CE-004-FEATURE-ASSURANCE-SYNTHETIC"
 FEATURE_ASSURANCE_CAMPAIGN_SEED = 20260815
 FEATURE_ASSURANCE_CAMPAIGN_MAX_BYTES = 256 * 1024
+SOURCE_TO_DECISION_ASSURANCE_SCHEMA = (
+    ROOT / "contracts/v0.2.0/source-to-decision-assurance.schema.json"
+)
+SOURCE_TO_DECISION_CAMPAIGN_SCHEMA = (
+    ROOT / "contracts/v0.2.0/source-to-decision-ce2-campaign.schema.json"
+)
+SOURCE_TO_DECISION_CAMPAIGN_PLAN = (
+    ROOT / "config/source_to_decision_ce2_campaign_plan.json"
+)
+SOURCE_TO_DECISION_CAMPAIGN_ID = "P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC"
+SOURCE_TO_DECISION_CAMPAIGN_SEED = 2026081505
+SOURCE_TO_DECISION_CAMPAIGN_MAX_BYTES = 512 * 1024
 
 
-def _feature_assurance_source_paths() -> dict[str, str]:
-    package_paths: dict[str, str] = {}
-    for path in sorted((ROOT / "src/adf_poc").rglob("*.py")):
-        relative = str(path.relative_to(ROOT))
-        role = "ADF_" + re.sub(r"[^A-Za-z0-9]+", "_", relative).strip("_").upper()
-        package_paths[role] = relative
-    return {
-        "CAMPAIGN_GENERATOR": "scripts/generate_feature_assurance_ce2_campaign.py",
-        "CAMPAIGN_PLAN": "config/feature_assurance_ce2_campaign_plan.json",
-        "CAMPAIGN_SCHEMA": (
-            "contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json"
-        ),
-        "CLAIM_VALIDATOR": "scripts/validate_claim_evidence.py",
-        "EVIDENCE_SCHEMA": "contracts/v0.2.0/evaluation-evidence.schema.json",
-        "EVIDENCE_TEMPLATE": (
-            "contracts/v0.2.0/examples/phase2-qualification-evidence-record.json"
-        ),
-        "QUALIFICATION_SCHEMA": ("contracts/v0.2.0/replay-qualification.schema.json"),
-        "REFERENCE_ASSURANCE_SCHEMA": (
-            "contracts/v0.2.0/reference-feature-assurance.schema.json"
-        ),
-        "REPLAY_CASE_SCHEMA": "contracts/v0.2.0/replay-case.schema.json",
-        "PROJECT_METADATA": "pyproject.toml",
-        "DEPENDENCY_DECLARATIONS": "requirements.txt",
-        **package_paths,
-    }
+FEATURE_ASSURANCE_CAMPAIGN_FIXED_SOURCE_PATHS = {
+    "CAMPAIGN_GENERATOR": "scripts/generate_feature_assurance_ce2_campaign.py",
+    "CAMPAIGN_PLAN": "config/feature_assurance_ce2_campaign_plan.json",
+    "CAMPAIGN_SCHEMA": ("contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json"),
+    "CLAIM_VALIDATOR": "scripts/validate_claim_evidence.py",
+    "EVIDENCE_SCHEMA": "contracts/v0.2.0/evaluation-evidence.schema.json",
+    "EVIDENCE_TEMPLATE": (
+        "contracts/v0.2.0/examples/phase2-qualification-evidence-record.json"
+    ),
+    "QUALIFICATION_SCHEMA": "contracts/v0.2.0/replay-qualification.schema.json",
+    "REFERENCE_ASSURANCE_SCHEMA": (
+        "contracts/v0.2.0/reference-feature-assurance.schema.json"
+    ),
+    "REPLAY_CASE_SCHEMA": "contracts/v0.2.0/replay-case.schema.json",
+    "PROJECT_METADATA": "pyproject.toml",
+    "DEPENDENCY_DECLARATIONS": "requirements.txt",
+}
+SOURCE_TO_DECISION_CAMPAIGN_SUPPORTED_WORDING = (
+    "Across two complete executions of P2-CE-005's fixed 20-attempt synthetic "
+    "campaign and exact bound source/configuration, all 40 attempt observations "
+    "matched the 20 commit-frozen, project-controlled expected outcomes (20/20 "
+    "per run): each run produced ten clean source-to-decision matches and ten "
+    "coherently rehashed mutations blocked by the separately implemented "
+    "in-process recomputation, with exactly two blocks at each of evidence, "
+    "model, policy, verifier, and final read-only surface. Every presented "
+    "mutation first passed the named existing read-only decision, eight-stage "
+    "audit, and Phase 2.4 feature-assurance checks. The two sanitized result "
+    "ledgers were byte-identical. The ten twins in each run shared ten directly "
+    "instrumented production baselines (20 total): measured engine, evidence, "
+    "model, policy, and verifier calls each totaled 20, while the reference path "
+    "was invoked 40 times. Direct authorization-gate, broker, target-effect, and "
+    "scoped artifact-write calls were zero; the produced decisions also reported "
+    "zero authorization tokens, action results, and operational effects. This "
+    "is project-controlled SELF-reviewed synthetic CE-2 evidence only."
+)
 
 
-FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS = _feature_assurance_source_paths()
+SOURCE_TO_DECISION_CAMPAIGN_FIXED_SOURCE_PATHS = {
+    "CAMPAIGN_GENERATOR": "scripts/generate_source_to_decision_ce2_campaign.py",
+    "CAMPAIGN_PLAN": "config/source_to_decision_ce2_campaign_plan.json",
+    "CAMPAIGN_SCHEMA": ("contracts/v0.2.0/source-to-decision-ce2-campaign.schema.json"),
+    "CLAIM_VALIDATOR": "scripts/validate_claim_evidence.py",
+    "EVIDENCE_SCHEMA": "contracts/v0.2.0/evaluation-evidence.schema.json",
+    "EVIDENCE_TEMPLATE": (
+        "contracts/v0.2.0/examples/phase2-qualification-evidence-record.json"
+    ),
+    "REFERENCE_FEATURE_SCHEMA": (
+        "contracts/v0.2.0/reference-feature-assurance.schema.json"
+    ),
+    "SOURCE_TO_DECISION_SCHEMA": (
+        "contracts/v0.2.0/source-to-decision-assurance.schema.json"
+    ),
+    "REPLAY_CASE_SCHEMA": "contracts/v0.2.0/replay-case.schema.json",
+    "MODEL": "outputs/baseline/model.json",
+    "POLICY": "config/policy.json",
+    "PROJECT_METADATA": "pyproject.toml",
+    "DEPENDENCY_DECLARATIONS": "requirements.txt",
+}
 FEATURE_ASSURANCE_SUPPORTED_WORDING = (
     "Across two complete executions of P2-CE-004's fixed 16-attempt synthetic "
     "campaign and exact bound source/configuration, all 32 attempt observations "
@@ -257,6 +302,23 @@ EVIDENCE_PROFILES: dict[str, EvidenceValidationProfile] = {
             "authorized"
         ),
         profile_kind="FEATURE_ASSURANCE_CAMPAIGN",
+    ),
+    "P2-CE-005": EvidenceValidationProfile(
+        claim_id="P2-CE-005",
+        decision_count=0,
+        source_record_count=20,
+        accepted_record_count=20,
+        rejected_record_count=0,
+        expected_result_counts=(40, 40, 0, 0),
+        expected_record_failure_policy=None,
+        supplemental_artifact_roles=frozenset(),
+        expected_rejection_reasons=(),
+        result_summary=(
+            "40/40 observations across two complete executions of 20 fixed "
+            "synthetic source-to-decision outcomes matched; no broader inference "
+            "authorized"
+        ),
+        profile_kind="SOURCE_TO_DECISION_CAMPAIGN",
     ),
 }
 
@@ -588,6 +650,8 @@ def _validate_run_manifest(
     }
     if "reference_feature_assurance" in manifest_entries:
         exact_role_counts["reference_feature_assurance"] = profile.decision_count
+    if "source_to_decision_assurance" in manifest_entries:
+        exact_role_counts["source_to_decision_assurance"] = profile.decision_count
     if profile.qualification_enabled:
         exact_role_counts.update(
             {
@@ -787,6 +851,31 @@ def _validate_decisions_and_audit(
                 "reference_feature_cases_matched": profile.decision_count,
             }
         )
+    if "source_to_decision_assurance" in artifacts:
+        try:
+            expected_source_to_decision_records = verify_reference_decision_path(
+                cases_jsonl=artifacts["normalized_cases"].read_bytes(),
+                decisions_jsonl=artifacts["engine_decisions"].read_bytes(),
+                model_json=artifacts["model"].read_bytes(),
+                policy_json=artifacts["policy"].read_bytes(),
+                expected_execution_mode=execution_mode.value,
+            )
+        except (ReferenceDecisionAssuranceError, OSError) as exc:
+            raise EvidenceValidationError(
+                "Committed source-to-decision evidence violates the reference contract."
+            ) from exc
+        observed_source_to_decision_records = _read_jsonl(
+            artifacts["source_to_decision_assurance"]
+        )
+        _validate_rows_against_schema(
+            observed_source_to_decision_records,
+            schema_path=SOURCE_TO_DECISION_ASSURANCE_SCHEMA,
+            label="Source-to-decision assurance",
+        )
+        if observed_source_to_decision_records != expected_source_to_decision_records:
+            raise EvidenceValidationError(
+                "Committed source-to-decision evidence does not match recomputation."
+            )
     if manifest.get("read_only_assurance") != exact_manifest_assurance:
         raise EvidenceValidationError(
             "Run-manifest assurance does not exactly match recomputed decision/audit evidence."
@@ -903,6 +992,11 @@ def _validate_cross_artifact_bindings(
         if "reference_feature_assurance" in artifacts
         else None
     )
+    source_to_decision_records = (
+        _read_jsonl(artifacts["source_to_decision_assurance"])
+        if "source_to_decision_assurance" in artifacts
+        else None
+    )
     expected_metrics = compute_replay_metrics(
         dataset_id=str(manifest["dataset_id"]),
         data_origin=str(manifest["data_origin"]),
@@ -913,6 +1007,7 @@ def _validate_cross_artifact_bindings(
         audit_assurance=audit_assurance,
         qualification_records=qualification_records,
         reference_feature_records=reference_feature_records,
+        source_to_decision_records=source_to_decision_records,
     )
     if _load_json(artifacts["replay_metrics"]) != expected_metrics:
         raise EvidenceValidationError(
@@ -1178,6 +1273,95 @@ def _git_blob_digest(
             "Gate B campaign source binding is absent from the implementation commit."
         )
     return hashlib.sha256(completed.stdout).hexdigest()
+
+
+def _package_source_role(relative_path: str) -> str:
+    return "ADF_" + re.sub(r"[^A-Za-z0-9]+", "_", relative_path).strip("_").upper()
+
+
+def _git_package_source_paths(
+    repository_root: Path,
+    *,
+    commit: str,
+) -> dict[str, str]:
+    """Return Python package bindings from the exact implementation Git tree.
+
+    Published campaign evidence must remain closed over the tree it names.  A
+    later checkout may add or remove modules, but it cannot redefine the role
+    registry used to validate an earlier immutable record.
+    """
+
+    try:
+        completed = subprocess.run(
+            [
+                "git",
+                "ls-tree",
+                "-r",
+                "-z",
+                "--full-tree",
+                commit,
+                "--",
+                "src/adf_poc",
+            ],
+            cwd=repository_root,
+            check=False,
+            capture_output=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        raise EvidenceValidationError(
+            "Unable to verify the campaign implementation source tree."
+        ) from None
+    if completed.returncode != 0:
+        raise EvidenceValidationError(
+            "Campaign implementation source tree is absent from the named commit."
+        )
+
+    package_paths: dict[str, str] = {}
+    try:
+        records = [record for record in completed.stdout.split(b"\0") if record]
+        for record in records:
+            metadata, raw_path = record.split(b"\t", 1)
+            mode, object_type, _object_id = metadata.split(b" ", 2)
+            relative = raw_path.decode("utf-8", errors="strict")
+            if not relative.endswith(".py"):
+                continue
+            if (
+                object_type != b"blob"
+                or mode not in {b"100644", b"100755"}
+                or not relative.startswith("src/adf_poc/")
+                or Path(relative).is_absolute()
+                or any(part in {"", ".", ".."} for part in Path(relative).parts)
+            ):
+                raise ValueError
+            role = _package_source_role(relative)
+            if role in package_paths:
+                raise ValueError
+            package_paths[role] = relative
+    except (UnicodeDecodeError, ValueError):
+        raise EvidenceValidationError(
+            "Campaign implementation source tree is malformed or ambiguous."
+        ) from None
+    if not package_paths:
+        raise EvidenceValidationError(
+            "Campaign implementation source tree contains no Python package files."
+        )
+    return dict(sorted(package_paths.items()))
+
+
+def _campaign_source_paths(
+    repository_root: Path,
+    *,
+    commit: str,
+    fixed_paths: dict[str, str],
+) -> dict[str, str]:
+    package_paths = _git_package_source_paths(repository_root, commit=commit)
+    overlap = set(fixed_paths).intersection(package_paths)
+    if overlap:
+        raise EvidenceValidationError(
+            "Campaign implementation source roles are ambiguous."
+        )
+    return {**fixed_paths, **package_paths}
 
 
 def _git_commit_timestamp(repository_root: Path, *, commit: str) -> datetime:
@@ -1904,29 +2088,34 @@ def _validate_feature_assurance_campaign_evidence(
             "Feature-assurance source_reference does not bind one exact commit."
         )
 
+    expected_source_paths = _campaign_source_paths(
+        repository_root,
+        commit=implementation_commit,
+        fixed_paths=FEATURE_ASSURANCE_CAMPAIGN_FIXED_SOURCE_PATHS,
+    )
     bindings = campaign_profile.get("source_bindings")
-    if not isinstance(bindings, list) or len(bindings) != len(
-        FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS
-    ):
+    if not isinstance(bindings, list) or len(bindings) != len(expected_source_paths):
         raise EvidenceValidationError(
             "Feature-assurance source-binding count is invalid."
         )
     bound_roles: set[str] = set()
     for binding in bindings:
         role = str(binding.get("role"))
-        if role in bound_roles or role not in FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS:
+        if role in bound_roles or role not in expected_source_paths:
             raise EvidenceValidationError(
                 "Feature-assurance source-binding role set is invalid."
             )
         bound_roles.add(role)
-        relative = FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS[role]
+        relative = expected_source_paths[role]
         if binding.get("path") != relative:
             raise EvidenceValidationError(
                 "Feature-assurance source-binding path is not canonical."
             )
-        current = _confined_path(repository_root, relative)
         digest = binding.get("sha256")
-        if digest != _sha256(current) or digest != _git_blob_digest(
+        # P2-CE-004 is immutable commit-bound evidence.  Later source evolution
+        # must not invalidate it or silently widen it: validate the closed role
+        # and path registry above against the exact named Git object only.
+        if digest != _git_blob_digest(
             repository_root,
             commit=implementation_commit,
             relative_path=relative,
@@ -1934,7 +2123,7 @@ def _validate_feature_assurance_campaign_evidence(
             raise EvidenceValidationError(
                 "Feature-assurance sources do not match the implementation commit."
             )
-    if bound_roles != set(FEATURE_ASSURANCE_CAMPAIGN_SOURCE_PATHS):
+    if bound_roles != set(expected_source_paths):
         raise EvidenceValidationError(
             "Feature-assurance source-binding roles are incomplete."
         )
@@ -2154,6 +2343,438 @@ def _validate_feature_assurance_campaign_evidence(
     }
 
 
+def _validate_source_to_decision_campaign_evidence(
+    record: dict[str, Any],
+    artifacts: dict[str, Path],
+    profile: EvidenceValidationProfile,
+    repository_root: Path,
+) -> dict[str, Any]:
+    """Validate the exact commit-bound P2-CE-005 CE-2 campaign bundle."""
+
+    exact_roles = {
+        "campaign_profile",
+        "campaign_results_run1",
+        "campaign_results_run2",
+        "campaign_summary",
+        "campaign_plan",
+        "campaign_schema",
+    }
+    if set(artifacts) != exact_roles:
+        raise EvidenceValidationError(
+            "Source-to-decision campaign evidence does not contain the exact six roles."
+        )
+    if artifacts["campaign_schema"] != SOURCE_TO_DECISION_CAMPAIGN_SCHEMA.resolve():
+        raise EvidenceValidationError(
+            "Source-to-decision evidence does not bind the canonical campaign schema."
+        )
+    if artifacts["campaign_plan"] != SOURCE_TO_DECISION_CAMPAIGN_PLAN.resolve():
+        raise EvidenceValidationError(
+            "Source-to-decision evidence does not bind the canonical campaign plan."
+        )
+    for path in artifacts.values():
+        try:
+            size = path.stat().st_size
+        except OSError:
+            raise EvidenceValidationError(
+                "Source-to-decision campaign artifact is unavailable."
+            ) from None
+        if size > SOURCE_TO_DECISION_CAMPAIGN_MAX_BYTES:
+            raise EvidenceValidationError(
+                "Source-to-decision campaign artifact exceeds its public size bound."
+            )
+
+    schema = _load_json(artifacts["campaign_schema"])
+    try:
+        Draft202012Validator.check_schema(schema)
+    except Exception:
+        raise EvidenceValidationError(
+            "Source-to-decision campaign schema is invalid."
+        ) from None
+    validator = Draft202012Validator(schema)
+
+    def validate_closed(value: dict[str, Any], label: str) -> None:
+        errors = sorted(validator.iter_errors(value), key=lambda item: list(item.path))
+        if errors:
+            location = ".".join(str(part) for part in errors[0].absolute_path) or "$"
+            raise EvidenceValidationError(
+                f"{label} violates the closed source-to-decision schema at {location}."
+            )
+
+    plan = _load_json(SOURCE_TO_DECISION_CAMPAIGN_PLAN)
+    campaign_profile = _load_json(artifacts["campaign_profile"])
+    results_run1 = _read_jsonl(artifacts["campaign_results_run1"])
+    results_run2 = _read_jsonl(artifacts["campaign_results_run2"])
+    campaign_summary = _load_json(artifacts["campaign_summary"])
+    for value, label in (
+        (plan, "Campaign plan"),
+        (campaign_profile, "Campaign profile"),
+        (campaign_summary, "Campaign summary"),
+    ):
+        validate_closed(value, label)
+    for row in results_run1 + results_run2:
+        validate_closed(row, "Campaign result")
+
+    if (
+        campaign_profile.get("campaign_id") != SOURCE_TO_DECISION_CAMPAIGN_ID
+        or campaign_profile.get("claim_id") != profile.claim_id
+        or campaign_profile.get("campaign_seed") != SOURCE_TO_DECISION_CAMPAIGN_SEED
+        or campaign_profile.get("campaign_plan_sha256")
+        != _sha256(SOURCE_TO_DECISION_CAMPAIGN_PLAN)
+        or campaign_profile.get("design") != plan.get("design")
+        or campaign_profile.get("configuration_binding")
+        != plan.get("configuration_binding")
+        or campaign_profile.get("budget") != plan.get("budget")
+        or campaign_profile.get("expected_attempts") != plan.get("expected_attempts")
+        or campaign_summary.get("runtime_fingerprint")
+        != campaign_profile.get("runtime_fingerprint")
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision profile does not exactly bind the frozen plan."
+        )
+    configuration = campaign_profile["configuration_binding"]["configuration"]
+    if configuration != {
+        "campaign_mode": "SYNTHETIC_SOURCE_TO_DECISION_ASSURANCE",
+        "execution_mode": "historical_replay",
+        "legacy_audit_assurance": "ReplayHarness._validate_audit_assurance",
+        "legacy_decision_validation": "ReplayHarness._validate_read_only_decisions",
+        "legacy_feature_assurance": "verify_reference_feature_projections",
+        "live_actions_enabled": False,
+        "model_path": "outputs/baseline/model.json",
+        "policy_path": "config/policy.json",
+        "production_api": "DecisionFirewallEngine.process",
+        "reference_api": "verify_reference_decision_path",
+        "reference_scope": "EVIDENCE_MODEL_POLICY_VERIFIER_READ_ONLY_FINAL",
+        "schema_version": "0.2.0",
+        "zero_effects_required": True,
+    }:
+        raise EvidenceValidationError(
+            "Source-to-decision campaign configuration is not exact."
+        )
+
+    implementation_commit = campaign_profile.get("implementation_commit")
+    if not isinstance(implementation_commit, str) or not re.fullmatch(
+        r"[0-9a-f]{40}", implementation_commit
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision campaign lacks an exact implementation commit."
+        )
+    evaluated_at = campaign_profile.get("evaluated_at")
+    if (
+        not isinstance(evaluated_at, str)
+        or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", evaluated_at)
+        or campaign_summary.get("evaluated_at") != evaluated_at
+        or record.get("evaluated_at") != evaluated_at
+        or record.get("review", {}).get("reviewed_at") != evaluated_at
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision evaluation timestamp binding is not exact."
+        )
+    try:
+        evaluated_time = datetime.fromisoformat(
+            evaluated_at[:-1] + "+00:00"
+        ).astimezone(timezone.utc)
+    except ValueError:
+        raise EvidenceValidationError(
+            "Source-to-decision evaluation timestamp is invalid."
+        ) from None
+    if evaluated_time > datetime.now(timezone.utc) + timedelta(minutes=5):
+        raise EvidenceValidationError(
+            "Source-to-decision evaluation timestamp is later than validation time."
+        )
+    if evaluated_time < _git_commit_timestamp(
+        repository_root, commit=implementation_commit
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision evaluation predates its implementation commit."
+        )
+    expected_expiry = (
+        (evaluated_time + timedelta(days=90)).isoformat().replace("+00:00", "Z")
+    )
+    if record.get("review", {}).get("claim_expires_at") != expected_expiry:
+        raise EvidenceValidationError(
+            "Source-to-decision claim expiry is not derived from evaluation time."
+        )
+
+    source_reference = str(record["system_under_test"].get("source_reference", ""))
+    commit_url = (
+        "https://github.com/redxking/ai-decision-firewall/commit/"
+        + implementation_commit
+    )
+    referenced_commits = set(
+        re.findall(r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])", source_reference)
+    )
+    if (
+        f"Git commit {implementation_commit} " not in source_reference
+        or commit_url not in source_reference
+        or referenced_commits != {implementation_commit}
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision source_reference does not bind one exact commit."
+        )
+
+    expected_source_paths = _campaign_source_paths(
+        repository_root,
+        commit=implementation_commit,
+        fixed_paths=SOURCE_TO_DECISION_CAMPAIGN_FIXED_SOURCE_PATHS,
+    )
+    bindings = campaign_profile.get("source_bindings")
+    if not isinstance(bindings, list) or len(bindings) != len(expected_source_paths):
+        raise EvidenceValidationError(
+            "Source-to-decision source-binding count is invalid."
+        )
+    bound_roles: set[str] = set()
+    for binding in bindings:
+        role = str(binding.get("role"))
+        if role in bound_roles or role not in expected_source_paths:
+            raise EvidenceValidationError(
+                "Source-to-decision source-binding role set is invalid."
+            )
+        bound_roles.add(role)
+        relative = expected_source_paths[role]
+        if binding.get("path") != relative:
+            raise EvidenceValidationError(
+                "Source-to-decision source-binding path is not canonical."
+            )
+        digest = binding.get("sha256")
+        if digest != _git_blob_digest(
+            repository_root,
+            commit=implementation_commit,
+            relative_path=relative,
+        ):
+            raise EvidenceValidationError(
+                "Source-to-decision sources do not match the implementation commit."
+            )
+    if bound_roles != set(expected_source_paths):
+        raise EvidenceValidationError(
+            "Source-to-decision source bindings are incomplete."
+        )
+
+    if len(campaign_profile.get("expected_attempts", [])) != 20 or any(
+        len(rows) != 20 for rows in (results_run1, results_run2)
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision evidence must contain two complete 20-attempt runs."
+        )
+    try:
+        from scripts.generate_source_to_decision_ce2_campaign import (
+            _jsonl_bytes as source_jsonl_bytes,
+            build_summary as build_source_summary,
+            run_campaign as run_source_campaign,
+        )
+
+        # The exact implementation-commit registry and Git blob digests were
+        # validated above.  A later checkout may add unrelated package modules;
+        # it must not silently widen or invalidate that frozen registry during
+        # compatible evaluator re-execution.
+        recomputed_run1 = run_source_campaign(
+            campaign_profile,
+            verify_checkout_source_bindings=False,
+        )
+        recomputed_run2 = run_source_campaign(
+            campaign_profile,
+            verify_checkout_source_bindings=False,
+        )
+        recomputed_run1_bytes = source_jsonl_bytes(recomputed_run1)
+        recomputed_run2_bytes = source_jsonl_bytes(recomputed_run2)
+    except Exception as exc:
+        raise EvidenceValidationError(
+            "Source-to-decision campaign could not be freshly re-executed."
+        ) from exc
+    committed_profile_bytes = artifacts["campaign_profile"].read_bytes()
+    committed_run1_bytes = artifacts["campaign_results_run1"].read_bytes()
+    committed_run2_bytes = artifacts["campaign_results_run2"].read_bytes()
+    if (
+        committed_run1_bytes != recomputed_run1_bytes
+        or committed_run2_bytes != recomputed_run2_bytes
+        or committed_run1_bytes != committed_run2_bytes
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision ledgers do not match fresh frozen-plan execution."
+        )
+    recomputed_summary = build_source_summary(
+        committed_profile_bytes,
+        committed_run1_bytes,
+        committed_run2_bytes,
+        recomputed_run1,
+        recomputed_run2,
+        evaluated_at=evaluated_at,
+    )
+    if campaign_summary != recomputed_summary:
+        raise EvidenceValidationError(
+            "Source-to-decision summary does not exactly recompute from the ledgers."
+        )
+
+    public_bundle = b"\n".join(
+        (
+            committed_profile_bytes,
+            committed_run1_bytes,
+            committed_run2_bytes,
+            artifacts["campaign_summary"].read_bytes(),
+        )
+    )
+    prohibited_tokens = (
+        b'"case_id"',
+        b'"subject_id"',
+        b'"asset_id"',
+        b'"events"',
+        b'"evidence_assessment"',
+        b'"model_assessment"',
+        b'"proposal"',
+        b'"checks"',
+        b'"untrusted_text"',
+        b'"raw_payload"',
+        b'"exception_text"',
+    )
+    if any(token in public_bundle for token in prohibited_tokens):
+        raise EvidenceValidationError(
+            "Source-to-decision public artifacts contain prohibited raw content."
+        )
+
+    scope = record["evaluation_scope"]
+    budget = record["budget"]
+    result = record["results"]
+    if (
+        record.get("claim_class") != "CONTROLLED_BEHAVIOR"
+        or record.get("claim_status") != "OBSERVED"
+        or scope.get("data_origin") != "SYNTHETIC_FIXTURE"
+        or scope.get("historical_case_count") != 0
+        or scope.get("case_count") != 40
+        or scope.get("adjudicated_case_count") != 0
+        or scope.get("network_access") is not True
+        or scope.get("action_credentials_present") is not False
+        or budget.get("evaluation_runs") != 2
+        or budget.get("case_evaluations") != 40
+        or budget.get("retries") != 0
+        or (
+            result.get("denominator"),
+            result.get("passed"),
+            result.get("failed"),
+            result.get("excluded"),
+        )
+        != (40, 40, 0, 0)
+        or record.get("supported_wording")
+        != SOURCE_TO_DECISION_CAMPAIGN_SUPPORTED_WORDING
+        or record.get("review", {}).get("review_type") != "SELF"
+        or record.get("review", {}).get("reviewer_role")
+        != "automated project-controlled evidence self-check"
+    ):
+        raise EvidenceValidationError(
+            "Source-to-decision record does not preserve its exact CE-2 boundary."
+        )
+    exact_metrics = {
+        "unique_scenarios": 20,
+        "evaluation_runs": 2,
+        "total_attempt_executions": 40,
+        "byte_identical_result_ledgers": True,
+        "clean_reference_matches": 20,
+        "evidence_blocks": 4,
+        "model_blocks": 4,
+        "policy_blocks": 4,
+        "verifier_blocks": 4,
+        "final_surface_blocks": 4,
+        "legacy_decision_validation_passes": 40,
+        "legacy_audit_assurance_passes": 40,
+        "legacy_feature_assurance_passes": 40,
+        "mutations": 20,
+        "decision_record_rehashes": 20,
+        "audit_chain_rechains": 20,
+        "production_baseline_generation_calls": 20,
+        "engine_calls": 20,
+        "evidence_calls": 20,
+        "model_calls": 20,
+        "policy_calls": 20,
+        "verifier_calls": 20,
+        "audit_record_appends": 160,
+        "reference_path_calls": 40,
+        "authorization_gate_instantiations": 0,
+        "broker_instantiations": 0,
+        "target_instantiations": 0,
+        "authorization_attempts": 0,
+        "authorization_attempted_reported": 0,
+        "authorization_tokens": 0,
+        "broker_invocations": 0,
+        "broker_invocations_reported": 0,
+        "target_effect_calls": 0,
+        "action_results_observed": 0,
+        "operational_effects": 0,
+        "decision_artifact_write_calls": 0,
+        "audit_artifact_write_calls": 0,
+        "run_manifest_write_calls": 0,
+        "scoped_filesystem_write_calls": 0,
+        "historical_case_count": 0,
+    }
+    if result.get("metrics") != exact_metrics:
+        raise EvidenceValidationError(
+            "Source-to-decision evidence metrics are not exact."
+        )
+    if result.get("strata") != [
+        {"name": "RUN_1", "denominator": 20, "passed": 20, "failed": 0, "excluded": 0},
+        {"name": "RUN_2", "denominator": 20, "passed": 20, "failed": 0, "excluded": 0},
+    ]:
+        raise EvidenceValidationError(
+            "Source-to-decision result strata do not reconcile."
+        )
+
+    bindings_by_role = {row["role"]: row for row in bindings}
+    model_binding = bindings_by_role["MODEL"]
+    policy_binding = bindings_by_role["POLICY"]
+    if record["system_under_test"].get("model") != {
+        "path": model_binding["path"],
+        "sha256": model_binding["sha256"],
+    } or record["system_under_test"].get("policy") != {
+        "path": policy_binding["path"],
+        "sha256": policy_binding["sha256"],
+    }:
+        raise EvidenceValidationError(
+            "Source-to-decision model or policy binding drifted."
+        )
+    prohibited = " ".join(record.get("prohibited_inferences", [])).lower()
+    for phrase in (
+        "historical or live",
+        "source truth",
+        "outcome correctness",
+        "operational calibration",
+        "privacy",
+        "os-level",
+        "network nonuse",
+        "production ready",
+        "agentic misalignment",
+        "zero risk",
+        "organizational independence",
+        "external assurance",
+        "statistical",
+    ):
+        if phrase not in prohibited:
+            raise EvidenceValidationError(
+                "Source-to-decision record omits a required prohibited inference."
+            )
+
+    return {
+        "status": "VALID",
+        "profile_id": profile.claim_id,
+        "claim_id": record["claim_id"],
+        "claim_class": record["claim_class"],
+        "data_origin": scope["data_origin"],
+        "historical_case_count": 0,
+        "artifact_count": len(artifacts),
+        "audit_record_count": 0,
+        "implementation_commit": implementation_commit,
+        "result": profile.result_summary,
+        "campaign_outcomes": {
+            "unique_scenarios": 20,
+            "evaluation_runs": 2,
+            "denominator": 40,
+            "clean_reference_matches": 20,
+            "evidence_blocks": 4,
+            "model_blocks": 4,
+            "policy_blocks": 4,
+            "verifier_blocks": 4,
+            "final_surface_blocks": 4,
+            "byte_identical_result_ledgers": True,
+        },
+    }
+
+
 def validate_evidence_record(
     record_path: Path = DEFAULT_RECORD,
     *,
@@ -2181,6 +2802,13 @@ def validate_evidence_record(
             profile,
             repository_root,
         )
+    if profile.profile_kind == "SOURCE_TO_DECISION_CAMPAIGN":
+        return _validate_source_to_decision_campaign_evidence(
+            record,
+            artifacts,
+            profile,
+            repository_root,
+        )
     record_resolved = record_path.resolve()
     legacy_digest = LEGACY_REPLAY_RECORD_FINGERPRINTS.get(record_resolved)
     exact_legacy_replay_record = (
@@ -2194,6 +2822,13 @@ def validate_evidence_record(
     ):
         raise EvidenceValidationError(
             "Nonlegacy replay evidence requires reference_feature_assurance."
+        )
+    if (
+        "source_to_decision_assurance" not in artifacts
+        and not exact_legacy_replay_record
+    ):
+        raise EvidenceValidationError(
+            "Nonlegacy replay evidence requires source_to_decision_assurance."
         )
     manifest = _validate_run_manifest(record, artifacts, profile, repository_root)
     decisions, audit_assurance = _validate_decisions_and_audit(

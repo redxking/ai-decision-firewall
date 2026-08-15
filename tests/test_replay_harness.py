@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import tempfile
@@ -16,6 +17,7 @@ from adf_poc.replay.contracts import (
     sha256_file,
 )
 from adf_poc.replay.harness import ReplayHarness, ReplaySafetyViolation
+from adf_poc.replay.reference_decision import ReferenceDecisionAssuranceError
 from adf_poc.schemas import IdentityCase
 from adf_poc.utils import read_jsonl, sha256_json, write_jsonl
 
@@ -359,7 +361,59 @@ def rewrite_rechained_audit(
 
 
 def run_with_runner(harness: ReplayHarness, runner):
-    with patch.object(harness, "_default_engine_runner", return_value=runner):
+    def isolated_source_to_decision_receipts(**kwargs):
+        cases = [
+            json.loads(line)
+            for line in kwargs["cases_jsonl"].decode("utf-8").splitlines()
+            if line.strip()
+        ]
+        model_digest = hashlib.sha256(kwargs["model_json"]).hexdigest()
+        policy_digest = hashlib.sha256(kwargs["policy_json"]).hexdigest()
+        records = []
+        for case in sorted(cases, key=lambda row: row["case_id"]):
+            stage_digest = sha256_json(
+                {"case_id": case["case_id"], "test_boundary": "isolated"}
+            )
+            records.append(
+                {
+                    "schema_version": "0.2.0",
+                    "assurance_kind": "SEPARATE_SOURCE_TO_DECISION_RECOMPUTATION",
+                    "recomputation_scope": (
+                        "EVIDENCE_MODEL_POLICY_VERIFIER_READ_ONLY_FINAL"
+                    ),
+                    "case_id": case["case_id"],
+                    "normalized_case_sha256": sha256_json(case),
+                    "model_source_sha256": model_digest,
+                    "policy_source_sha256": policy_digest,
+                    "expected_evidence_sha256": stage_digest,
+                    "observed_evidence_sha256": stage_digest,
+                    "expected_model_sha256": stage_digest,
+                    "observed_model_sha256": stage_digest,
+                    "expected_policy_sha256": stage_digest,
+                    "observed_policy_sha256": stage_digest,
+                    "expected_verifier_sha256": stage_digest,
+                    "observed_verifier_sha256": stage_digest,
+                    "expected_final_surface_sha256": stage_digest,
+                    "observed_final_surface_sha256": stage_digest,
+                    "expected_source_to_decision_sha256": stage_digest,
+                    "observed_source_to_decision_sha256": stage_digest,
+                    "execution_mode": kwargs["expected_execution_mode"],
+                    "read_only": True,
+                    "matched": True,
+                }
+            )
+        return records
+
+    # Custom runners in these tests isolate earlier harness and audit controls.
+    # The real source-to-decision path is exercised by the default-run and
+    # dedicated fail-closed integration tests below.
+    with (
+        patch.object(harness, "_default_engine_runner", return_value=runner),
+        patch(
+            "adf_poc.replay.harness.verify_reference_decision_path",
+            side_effect=isolated_source_to_decision_receipts,
+        ),
+    ):
         return harness.run()
 
 
@@ -423,6 +477,40 @@ class ReplayHarnessTests(unittest.TestCase):
             reference_records = read_jsonl(result.reference_feature_assurance_path)
             self.assertEqual(len(reference_records), 3)
             self.assertTrue(all(row["matched"] is True for row in reference_records))
+            source_assurance = result.metrics["source_to_decision_assurance"]
+            self.assertEqual(source_assurance["cases_checked"], 3)
+            self.assertEqual(source_assurance["matched_cases"], 3)
+            self.assertEqual(source_assurance["mismatched_cases"], 0)
+            self.assertTrue(source_assurance["complete"])
+            source_records = read_jsonl(result.source_to_decision_assurance_path)
+            self.assertEqual(len(source_records), 3)
+            self.assertEqual(
+                [row["case_id"] for row in source_records],
+                sorted(row["case_id"] for row in source_records),
+            )
+            for row in source_records:
+                self.assertEqual(
+                    row["assurance_kind"],
+                    "SEPARATE_SOURCE_TO_DECISION_RECOMPUTATION",
+                )
+                self.assertEqual(
+                    row["recomputation_scope"],
+                    "EVIDENCE_MODEL_POLICY_VERIFIER_READ_ONLY_FINAL",
+                )
+                self.assertTrue(row["read_only"])
+                self.assertTrue(row["matched"])
+                for stage in (
+                    "evidence",
+                    "model",
+                    "policy",
+                    "verifier",
+                    "final_surface",
+                    "source_to_decision",
+                ):
+                    self.assertEqual(
+                        row[f"expected_{stage}_sha256"],
+                        row[f"observed_{stage}_sha256"],
+                    )
             decisions = read_jsonl(result.raw_decisions_path)
             self.assertTrue(any(row["counterfactual_actions"] for row in decisions))
             for row in decisions:
@@ -454,6 +542,14 @@ class ReplayHarnessTests(unittest.TestCase):
                 reference_artifact["sha256"],
                 sha256_file(result.reference_feature_assurance_path),
             )
+            source_artifact = run_manifest["deterministic_artifacts"][
+                "source_to_decision_assurance"
+            ]
+            self.assertEqual(source_artifact["record_count"], 3)
+            self.assertEqual(
+                source_artifact["sha256"],
+                sha256_file(result.source_to_decision_assurance_path),
+            )
             inputs = run_manifest["inputs"]
             self.assertTrue(
                 inputs["snapshot_integrity_verified_before_and_after_execution"]
@@ -461,6 +557,11 @@ class ReplayHarnessTests(unittest.TestCase):
             for name in ("configuration", "dataset_manifest", "model", "policy"):
                 snapshot_path = result.output_dir / inputs[name]["path"]
                 self.assertEqual(inputs[name]["sha256"], sha256_file(snapshot_path))
+            for row in source_records:
+                self.assertEqual(row["model_source_sha256"], inputs["model"]["sha256"])
+                self.assertEqual(
+                    row["policy_source_sha256"], inputs["policy"]["sha256"]
+                )
 
     def test_shadow_read_only_mode_is_supported_without_effects(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -700,6 +801,157 @@ class ReplayHarnessTests(unittest.TestCase):
                 (root / "outputs/replay/test/replay_run_manifest.json").exists()
             )
 
+    def test_source_to_decision_mismatch_blocks_all_assurance_and_evaluation_outputs(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with (
+                patch(
+                    "adf_poc.replay.harness.verify_reference_decision_path",
+                    side_effect=ReferenceDecisionAssuranceError(
+                        "REFERENCE_DECISION_POLICY_MISMATCH"
+                    ),
+                ),
+                self.assertRaisesRegex(
+                    ReplaySafetyViolation,
+                    "Source-to-decision assurance rejected",
+                ),
+            ):
+                harness.run()
+
+            output = root / "outputs/replay/test"
+            for relative in (
+                "reference_feature_assurance.jsonl",
+                "source_to_decision_assurance.jsonl",
+                "qualification_accounting.jsonl",
+                "rejections.jsonl",
+                "input_snapshot/adjudications.jsonl",
+                "adjudication_comparison.jsonl",
+                "replay_metrics.json",
+                "replay_run_manifest.json",
+            ):
+                with self.subTest(relative=relative):
+                    self.assertFalse((output / relative).exists())
+            for relative in (
+                "normalized_cases.jsonl",
+                "engine_decisions.jsonl",
+                "replay_decisions.jsonl",
+                "replay_audit.jsonl",
+            ):
+                with self.subTest(incomplete_artifact=relative):
+                    self.assertTrue((output / relative).exists())
+
+    def test_source_to_decision_artifact_mutation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+
+            def tampering_write_jsonl(path, rows):
+                count = write_jsonl(path, rows)
+                if Path(path).name == "source_to_decision_assurance.jsonl":
+                    mutated = read_jsonl(path)
+                    mutated[0]["unexpected_payload"] = "blocked"
+                    write_jsonl(path, mutated)
+                return count
+
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with (
+                patch(
+                    "adf_poc.replay.harness.write_jsonl",
+                    side_effect=tampering_write_jsonl,
+                ),
+                self.assertRaisesRegex(
+                    ReplaySafetyViolation,
+                    "artifact changed after validation",
+                ),
+            ):
+                harness.run()
+            self.assertFalse(
+                (root / "outputs/replay/test/adjudication_comparison.jsonl").exists()
+            )
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_metrics.json").exists()
+            )
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_duplicate_source_to_decision_artifact_member_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+
+            def duplicate_member_write(path, rows):
+                count = write_jsonl(path, rows)
+                if Path(path).name == "source_to_decision_assurance.jsonl":
+                    lines = Path(path).read_text(encoding="utf-8").splitlines()
+                    lines[0] = lines[0].replace(
+                        '"matched":true',
+                        '"matched":false,"matched":true',
+                        1,
+                    )
+                    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+                return count
+
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with (
+                patch(
+                    "adf_poc.replay.harness.write_jsonl",
+                    side_effect=duplicate_member_write,
+                ),
+                self.assertRaisesRegex(ReplaySafetyViolation, "artifact is invalid"),
+            ):
+                harness.run()
+            self.assertFalse(
+                (root / "outputs/replay/test/adjudication_comparison.jsonl").exists()
+            )
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_metrics.json").exists()
+            )
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_nonfinite_source_to_decision_artifact_value_is_rejected(self) -> None:
+        for spelling in ("NaN", "1e400"):
+            with (
+                self.subTest(spelling=spelling),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+
+                def nonfinite_write(path, rows):
+                    count = write_jsonl(path, rows)
+                    if Path(path).name == "source_to_decision_assurance.jsonl":
+                        content = Path(path).read_text(encoding="utf-8")
+                        content = content.replace(
+                            '"matched":true', f'"matched":{spelling}', 1
+                        )
+                        Path(path).write_text(content, encoding="utf-8")
+                    return count
+
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                with (
+                    patch(
+                        "adf_poc.replay.harness.write_jsonl",
+                        side_effect=nonfinite_write,
+                    ),
+                    self.assertRaisesRegex(
+                        ReplaySafetyViolation, "artifact is invalid"
+                    ),
+                ):
+                    harness.run()
+                self.assertFalse(
+                    (root / "outputs/replay/test/replay_metrics.json").exists()
+                )
+                self.assertFalse(
+                    (root / "outputs/replay/test/replay_run_manifest.json").exists()
+                )
+
     def test_reference_feature_artifact_mutation_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -810,6 +1062,134 @@ class ReplayHarnessTests(unittest.TestCase):
             self.assertFalse(
                 (root / "outputs/replay/test/replay_run_manifest.json").exists()
             )
+
+    def test_manifest_construction_rejects_late_source_to_decision_mutation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path = make_repository(root)
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            original = harness._build_run_manifest
+
+            def mutate_before_manifest(**kwargs):
+                records = read_jsonl(kwargs["source_to_decision_path"])
+                records[0]["expected_source_to_decision_sha256"] = "0" * 64
+                write_jsonl(kwargs["source_to_decision_path"], records)
+                return original(**kwargs)
+
+            with (
+                patch.object(
+                    harness,
+                    "_build_run_manifest",
+                    side_effect=mutate_before_manifest,
+                ),
+                self.assertRaisesRegex(
+                    ReplaySafetyViolation,
+                    "bound replay artifact changed",
+                ),
+            ):
+                harness.run()
+            self.assertFalse(
+                (root / "outputs/replay/test/replay_run_manifest.json").exists()
+            )
+
+    def test_manifest_cannot_bind_decision_or_audit_bytes_not_previously_checked(
+        self,
+    ) -> None:
+        for argument in (
+            "raw_decisions_path",
+            "deterministic_path",
+            "audit_path",
+        ):
+            with (
+                self.subTest(argument=argument),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                original = harness._build_run_manifest
+
+                def mutate_before_manifest(**kwargs):
+                    records = read_jsonl(kwargs[argument])
+                    records[0]["late_unvalidated_mutation"] = argument
+                    write_jsonl(kwargs[argument], records)
+                    return original(**kwargs)
+
+                with (
+                    patch.object(
+                        harness,
+                        "_build_run_manifest",
+                        side_effect=mutate_before_manifest,
+                    ),
+                    self.assertRaisesRegex(
+                        ReplaySafetyViolation,
+                        "bound replay artifact changed",
+                    ),
+                ):
+                    harness.run()
+                self.assertFalse(
+                    (root / "outputs/replay/test/replay_run_manifest.json").exists()
+                )
+
+    def test_manifest_rejects_late_mutation_of_every_deterministic_artifact(
+        self,
+    ) -> None:
+        artifacts = (
+            ("normalized_path", "jsonl"),
+            ("diagnostics_path", "json"),
+            ("deterministic_path", "jsonl"),
+            ("reference_features_path", "jsonl"),
+            ("source_to_decision_path", "jsonl"),
+            ("qualification_path", "jsonl"),
+            ("rejections_path", "jsonl"),
+            ("comparisons_path", "jsonl"),
+            ("metrics_path", "json"),
+        )
+        for argument, artifact_type in artifacts:
+            with (
+                self.subTest(argument=argument),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path = make_repository(root)
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                config["record_failure_policy"] = "QUARANTINE_RECORD"
+                write_json(config_path, config)
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                original = harness._build_run_manifest
+
+                def mutate_before_manifest(**kwargs):
+                    target = kwargs[argument]
+                    if artifact_type == "json":
+                        value = json.loads(target.read_text(encoding="utf-8"))
+                        value["late_unvalidated_mutation"] = argument
+                        write_json(target, value)
+                    else:
+                        rows = read_jsonl(target)
+                        if rows:
+                            rows[0]["late_unvalidated_mutation"] = argument
+                        else:
+                            rows.append({"late_unvalidated_mutation": argument})
+                        write_jsonl(target, rows)
+                    return original(**kwargs)
+
+                with (
+                    patch.object(
+                        harness,
+                        "_build_run_manifest",
+                        side_effect=mutate_before_manifest,
+                    ),
+                    self.assertRaisesRegex(
+                        ReplaySafetyViolation,
+                        "bound replay artifact changed",
+                    ),
+                ):
+                    harness.run()
+                self.assertFalse(
+                    (root / "outputs/replay/test/replay_run_manifest.json").exists()
+                )
 
     def test_nonfinite_case_json_is_rejected_before_engine_invocation(self) -> None:
         for spelling in ("NaN", "1e400"):

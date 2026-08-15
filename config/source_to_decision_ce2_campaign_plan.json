@@ -1,0 +1,75 @@
+{
+  "artifact_kind": "CAMPAIGN_PLAN",
+  "budget": {
+    "attempts_per_run": 20,
+    "evaluation_runs": 2,
+    "production_baselines_per_run": 10,
+    "reference_path_calls_per_run": 20,
+    "retries": 0,
+    "total_attempt_executions": 40,
+    "total_production_baseline_executions": 20,
+    "total_reference_path_calls": 40
+  },
+  "campaign_id": "P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC",
+  "campaign_seed": 2026081505,
+  "claim_id": "P2-CE-005",
+  "configuration_binding": {
+    "canonical_sha256": "e8143a10931824abc232782a76403c99a81273740834ba7b7d628c1cef5c9a9e",
+    "configuration": {
+      "campaign_mode": "SYNTHETIC_SOURCE_TO_DECISION_ASSURANCE",
+      "execution_mode": "historical_replay",
+      "legacy_audit_assurance": "ReplayHarness._validate_audit_assurance",
+      "legacy_decision_validation": "ReplayHarness._validate_read_only_decisions",
+      "legacy_feature_assurance": "verify_reference_feature_projections",
+      "live_actions_enabled": false,
+      "model_path": "outputs/baseline/model.json",
+      "policy_path": "config/policy.json",
+      "production_api": "DecisionFirewallEngine.process",
+      "reference_api": "verify_reference_decision_path",
+      "reference_scope": "EVIDENCE_MODEL_POLICY_VERIFIER_READ_ONLY_FINAL",
+      "schema_version": "0.2.0",
+      "zero_effects_required": true
+    }
+  },
+  "design": {
+    "actual_historical_records": 0,
+    "attempt_order_frozen": true,
+    "data_origin": "SYNTHETIC_FIXTURE",
+    "execution_authority": "NONE",
+    "failure_policy": "ABORT_WITHOUT_EVIDENCE_NO_RETRY",
+    "input_authorization": "FIXED_GENERATED_SCENARIOS_ONLY",
+    "network_capability_status": "UNVERIFIED_AVAILABLE_CAPABILITY",
+    "output_authorization": "SANITIZED_ENUMERATED_METADATA_ONLY",
+    "result_capture": "NO_RAW_CASE_DECISION_OR_AUDIT_CONTENT",
+    "review_type": "SELF",
+    "stored_approval_package": false,
+    "stored_historical_data": false
+  },
+  "expected_attempts": [
+    {"sequence": 1, "attempt_id": "P2-CE-005-P01-CLEAN", "pair_id": "P01", "control_kind": "CLEAN", "base_disposition": "NO_ACTION", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 2, "attempt_id": "P2-CE-005-P01-MUTANT-EVIDENCE-FRESHNESS-REHASH", "pair_id": "P01", "control_kind": "MUTANT", "base_disposition": "NO_ACTION", "mutation_id": "EVIDENCE_FRESHNESS_REHASH", "expected_stage": "EVIDENCE", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_EVIDENCE_MISMATCH"},
+    {"sequence": 3, "attempt_id": "P2-CE-005-P02-CLEAN", "pair_id": "P02", "control_kind": "CLEAN", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 4, "attempt_id": "P2-CE-005-P02-MUTANT-EVIDENCE-CONFLICT-CHAIN-REHASH", "pair_id": "P02", "control_kind": "MUTANT", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "EVIDENCE_CONFLICT_CHAIN_REHASH", "expected_stage": "EVIDENCE", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_EVIDENCE_MISMATCH"},
+    {"sequence": 5, "attempt_id": "P2-CE-005-P03-CLEAN", "pair_id": "P03", "control_kind": "CLEAN", "base_disposition": "NO_ACTION", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 6, "attempt_id": "P2-CE-005-P03-MUTANT-MODEL-PROBABILITY-CHAIN-REHASH", "pair_id": "P03", "control_kind": "MUTANT", "base_disposition": "NO_ACTION", "mutation_id": "MODEL_PROBABILITY_CHAIN_REHASH", "expected_stage": "MODEL", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_MODEL_MISMATCH"},
+    {"sequence": 7, "attempt_id": "P2-CE-005-P04-CLEAN", "pair_id": "P04", "control_kind": "CLEAN", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 8, "attempt_id": "P2-CE-005-P04-MUTANT-MODEL-FACTOR-REHASH", "pair_id": "P04", "control_kind": "MUTANT", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "MODEL_FACTOR_ORDER_REHASH", "expected_stage": "MODEL", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_MODEL_MISMATCH"},
+    {"sequence": 9, "attempt_id": "P2-CE-005-P05-CLEAN", "pair_id": "P05", "control_kind": "CLEAN", "base_disposition": "NO_ACTION", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 10, "attempt_id": "P2-CE-005-P05-MUTANT-POLICY-FALSE-INVESTIGATE-REHASH", "pair_id": "P05", "control_kind": "MUTANT", "base_disposition": "NO_ACTION", "mutation_id": "POLICY_FALSE_INVESTIGATE_REHASH", "expected_stage": "POLICY", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_POLICY_MISMATCH"},
+    {"sequence": 11, "attempt_id": "P2-CE-005-P06-CLEAN", "pair_id": "P06", "control_kind": "CLEAN", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 12, "attempt_id": "P2-CE-005-P06-MUTANT-POLICY-FALSE-NO-ACTION-REHASH", "pair_id": "P06", "control_kind": "MUTANT", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "POLICY_FALSE_NO_ACTION_REHASH", "expected_stage": "POLICY", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_POLICY_MISMATCH"},
+    {"sequence": 13, "attempt_id": "P2-CE-005-P07-CLEAN", "pair_id": "P07", "control_kind": "CLEAN", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 14, "attempt_id": "P2-CE-005-P07-MUTANT-VERIFIER-FALSE-BLOCKER-WITHOUT-DOWNGRADE-REHASH", "pair_id": "P07", "control_kind": "MUTANT", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "VERIFIER_FALSE_BLOCKER_WITHOUT_DOWNGRADE_REHASH", "expected_stage": "VERIFIER", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_VERIFIER_MISMATCH"},
+    {"sequence": 15, "attempt_id": "P2-CE-005-P08-CLEAN", "pair_id": "P08", "control_kind": "CLEAN", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 16, "attempt_id": "P2-CE-005-P08-MUTANT-VERIFIER-CHECK-OMISSION-REHASH", "pair_id": "P08", "control_kind": "MUTANT", "base_disposition": "CONTAIN_REVERSIBLE", "mutation_id": "VERIFIER_CHECK_OMISSION_REHASH", "expected_stage": "VERIFIER", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_VERIFIER_MISMATCH"},
+    {"sequence": 17, "attempt_id": "P2-CE-005-P09-CLEAN", "pair_id": "P09", "control_kind": "CLEAN", "base_disposition": "ESCALATE_HUMAN", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 18, "attempt_id": "P2-CE-005-P09-MUTANT-FINAL-ASSET-REBIND-REHASH", "pair_id": "P09", "control_kind": "MUTANT", "base_disposition": "ESCALATE_HUMAN", "mutation_id": "FINAL_ASSET_ID_REBIND_REHASH", "expected_stage": "FINAL_SURFACE", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_FINAL_SURFACE_MISMATCH"},
+    {"sequence": 19, "attempt_id": "P2-CE-005-P10-CLEAN", "pair_id": "P10", "control_kind": "CLEAN", "base_disposition": "INVESTIGATE", "mutation_id": "NONE", "expected_stage": "FINAL_SURFACE", "expected_outcome": "ACCEPTED_REFERENCE_PATH_MATCH", "expected_error_category": "NONE", "expected_error_code": "NONE"},
+    {"sequence": 20, "attempt_id": "P2-CE-005-P10-MUTANT-FINAL-CITATION-REHASH", "pair_id": "P10", "control_kind": "MUTANT", "base_disposition": "INVESTIGATE", "mutation_id": "FINAL_CITATION_SET_REHASH", "expected_stage": "FINAL_SURFACE", "expected_outcome": "BLOCKED_REFERENCE_PATH", "expected_error_category": "REFERENCE", "expected_error_code": "REFERENCE_DECISION_FINAL_SURFACE_MISMATCH"}
+  ],
+  "public_input_bindings": [
+    {"path": "outputs/baseline/model.json", "role": "MODEL", "sha256": "ab3ea55a2d7fcb88a0dda1b2756418f24432b4089ace92d3e8e6a34a3986b2cd"},
+    {"path": "config/policy.json", "role": "POLICY", "sha256": "3f40d35784942bd72730e592d7a875ca15ff8c723481b2096359cf4a2576e561"}
+  ],
+  "schema_version": "1.0.0"
+}

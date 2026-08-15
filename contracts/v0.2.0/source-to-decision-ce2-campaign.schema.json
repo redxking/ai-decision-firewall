@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/redxking/ai-decision-firewall/main/contracts/v0.2.0/source-to-decision-ce2-campaign.schema.json",
+  "title": "AI Decision Firewall P2-CE-005 Source-to-Decision Campaign",
+  "description": "Closed shapes for the fixed project-controlled synthetic source-to-decision campaign. Public result rows contain metadata, enumerated outcomes, counters, and digests only.",
+  "oneOf": [
+    {"$ref": "#/$defs/plan"},
+    {"$ref": "#/$defs/profile"},
+    {"$ref": "#/$defs/result"},
+    {"$ref": "#/$defs/summary"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "utc": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "counter": {"type": "integer", "minimum": 0},
+    "stage": {"enum": ["EVIDENCE", "MODEL", "POLICY", "VERIFIER", "FINAL_SURFACE"]},
+    "outcome": {"enum": ["ACCEPTED_REFERENCE_PATH_MATCH", "BLOCKED_REFERENCE_PATH"]},
+    "errorCategory": {"enum": ["NONE", "REFERENCE"]},
+    "errorCode": {
+      "enum": [
+        "NONE",
+        "REFERENCE_DECISION_EVIDENCE_MISMATCH",
+        "REFERENCE_DECISION_MODEL_MISMATCH",
+        "REFERENCE_DECISION_POLICY_MISMATCH",
+        "REFERENCE_DECISION_VERIFIER_MISMATCH",
+        "REFERENCE_DECISION_FINAL_SURFACE_MISMATCH"
+      ]
+    },
+    "disposition": {"enum": ["NO_ACTION", "INVESTIGATE", "CONTAIN_REVERSIBLE", "ESCALATE_HUMAN"]},
+    "controlKind": {"enum": ["CLEAN", "MUTANT"]},
+    "mutation": {
+      "enum": [
+        "NONE",
+        "EVIDENCE_FRESHNESS_REHASH",
+        "EVIDENCE_CONFLICT_CHAIN_REHASH",
+        "MODEL_PROBABILITY_CHAIN_REHASH",
+        "MODEL_FACTOR_ORDER_REHASH",
+        "POLICY_FALSE_INVESTIGATE_REHASH",
+        "POLICY_FALSE_NO_ACTION_REHASH",
+        "VERIFIER_FALSE_BLOCKER_WITHOUT_DOWNGRADE_REHASH",
+        "VERIFIER_CHECK_OMISSION_REHASH",
+        "FINAL_ASSET_ID_REBIND_REHASH",
+        "FINAL_CITATION_SET_REHASH"
+      ]
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempts_per_run", "evaluation_runs", "production_baselines_per_run", "reference_path_calls_per_run", "retries", "total_attempt_executions", "total_production_baseline_executions", "total_reference_path_calls"],
+      "properties": {
+        "attempts_per_run": {"const": 20},
+        "evaluation_runs": {"const": 2},
+        "production_baselines_per_run": {"const": 10},
+        "reference_path_calls_per_run": {"const": 20},
+        "retries": {"const": 0},
+        "total_attempt_executions": {"const": 40},
+        "total_production_baseline_executions": {"const": 20},
+        "total_reference_path_calls": {"const": 40}
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["campaign_mode", "execution_mode", "legacy_audit_assurance", "legacy_decision_validation", "legacy_feature_assurance", "live_actions_enabled", "model_path", "policy_path", "production_api", "reference_api", "reference_scope", "schema_version", "zero_effects_required"],
+      "properties": {
+        "campaign_mode": {"const": "SYNTHETIC_SOURCE_TO_DECISION_ASSURANCE"},
+        "execution_mode": {"const": "historical_replay"},
+        "legacy_audit_assurance": {"const": "ReplayHarness._validate_audit_assurance"},
+        "legacy_decision_validation": {"const": "ReplayHarness._validate_read_only_decisions"},
+        "legacy_feature_assurance": {"const": "verify_reference_feature_projections"},
+        "live_actions_enabled": {"const": false},
+        "model_path": {"const": "outputs/baseline/model.json"},
+        "policy_path": {"const": "config/policy.json"},
+        "production_api": {"const": "DecisionFirewallEngine.process"},
+        "reference_api": {"const": "verify_reference_decision_path"},
+        "reference_scope": {"const": "EVIDENCE_MODEL_POLICY_VERIFIER_READ_ONLY_FINAL"},
+        "schema_version": {"const": "0.2.0"},
+        "zero_effects_required": {"const": true}
+      }
+    },
+    "configurationBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_sha256", "configuration"],
+      "properties": {
+        "canonical_sha256": {"$ref": "#/$defs/sha256"},
+        "configuration": {"$ref": "#/$defs/configuration"}
+      }
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actual_historical_records", "attempt_order_frozen", "data_origin", "execution_authority", "failure_policy", "input_authorization", "network_capability_status", "output_authorization", "result_capture", "review_type", "stored_approval_package", "stored_historical_data"],
+      "properties": {
+        "actual_historical_records": {"const": 0},
+        "attempt_order_frozen": {"const": true},
+        "data_origin": {"const": "SYNTHETIC_FIXTURE"},
+        "execution_authority": {"const": "NONE"},
+        "failure_policy": {"const": "ABORT_WITHOUT_EVIDENCE_NO_RETRY"},
+        "input_authorization": {"const": "FIXED_GENERATED_SCENARIOS_ONLY"},
+        "network_capability_status": {"const": "UNVERIFIED_AVAILABLE_CAPABILITY"},
+        "output_authorization": {"const": "SANITIZED_ENUMERATED_METADATA_ONLY"},
+        "result_capture": {"const": "NO_RAW_CASE_DECISION_OR_AUDIT_CONTENT"},
+        "review_type": {"const": "SELF"},
+        "stored_approval_package": {"const": false},
+        "stored_historical_data": {"const": false}
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "attempt_id", "pair_id", "control_kind", "base_disposition", "mutation_id", "expected_stage", "expected_outcome", "expected_error_category", "expected_error_code"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 20},
+        "attempt_id": {"type": "string", "pattern": "^P2-CE-005-P(0[1-9]|10)-[A-Z0-9-]+$"},
+        "pair_id": {"type": "string", "pattern": "^P(0[1-9]|10)$"},
+        "control_kind": {"$ref": "#/$defs/controlKind"},
+        "base_disposition": {"$ref": "#/$defs/disposition"},
+        "mutation_id": {"$ref": "#/$defs/mutation"},
+        "expected_stage": {"$ref": "#/$defs/stage"},
+        "expected_outcome": {"$ref": "#/$defs/outcome"},
+        "expected_error_category": {"$ref": "#/$defs/errorCategory"},
+        "expected_error_code": {"$ref": "#/$defs/errorCode"}
+      }
+    },
+    "inputBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role", "sha256"],
+      "properties": {
+        "path": {"enum": ["outputs/baseline/model.json", "config/policy.json"]},
+        "role": {"enum": ["MODEL", "POLICY"]},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "sourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role", "sha256"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^[A-Za-z0-9_.][A-Za-z0-9_./-]*$"},
+        "role": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jsonschema_version", "numpy_version", "platform_machine", "platform_release", "platform_system", "python_implementation", "python_version"],
+      "properties": {
+        "jsonschema_version": {"type": "string"},
+        "numpy_version": {"type": "string"},
+        "platform_machine": {"type": "string"},
+        "platform_release": {"type": "string"},
+        "platform_system": {"type": "string"},
+        "python_implementation": {"type": "string"},
+        "python_version": {"type": "string"}
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_kind", "budget", "campaign_id", "campaign_seed", "claim_id", "configuration_binding", "design", "expected_attempts", "public_input_bindings", "schema_version"],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_PLAN"},
+        "budget": {"$ref": "#/$defs/budget"},
+        "campaign_id": {"const": "P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC"},
+        "campaign_seed": {"const": 2026081505},
+        "claim_id": {"const": "P2-CE-005"},
+        "configuration_binding": {"$ref": "#/$defs/configurationBinding"},
+        "design": {"$ref": "#/$defs/design"},
+        "expected_attempts": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"$ref": "#/$defs/attempt"}},
+        "public_input_bindings": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/inputBinding"}},
+        "schema_version": {"const": "1.0.0"}
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_kind", "budget", "campaign_id", "campaign_plan_sha256", "campaign_seed", "claim_id", "configuration_binding", "design", "evaluated_at", "expected_attempts", "implementation_commit", "runtime_fingerprint", "schema_version", "source_bindings"],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_PROFILE"},
+        "budget": {"$ref": "#/$defs/budget"},
+        "campaign_id": {"const": "P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC"},
+        "campaign_plan_sha256": {"$ref": "#/$defs/sha256"},
+        "campaign_seed": {"const": 2026081505},
+        "claim_id": {"const": "P2-CE-005"},
+        "configuration_binding": {"$ref": "#/$defs/configurationBinding"},
+        "design": {"$ref": "#/$defs/design"},
+        "evaluated_at": {"$ref": "#/$defs/utc"},
+        "expected_attempts": {"type": "array", "minItems": 20, "maxItems": 20, "items": {"$ref": "#/$defs/attempt"}},
+        "implementation_commit": {"$ref": "#/$defs/commit"},
+        "runtime_fingerprint": {"$ref": "#/$defs/runtime"},
+        "schema_version": {"const": "1.0.0"},
+        "source_bindings": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceBinding"}}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_kind", "schema_version", "campaign_id", "sequence", "attempt_id", "pair_id", "control_kind", "base_disposition", "mutation_id", "expected_stage", "expected_outcome", "expected_error_category", "expected_error_code", "observed_stage", "observed_outcome", "observed_error_category", "observed_error_code", "matched", "input_records", "production_baseline_available", "production_baseline_generation_calls", "synthetic_input_sha256", "pre_mutation_decision_sha256", "presented_decision_sha256", "presented_audit_sha256", "reference_receipt_sha256", "twin_input_binding_preserved", "pre_mutation_baseline_preserved", "legacy_decision_validation_passed", "legacy_audit_assurance_passed", "legacy_feature_assurance_passed", "reference_path_attempted", "reference_path_passed", "mutation_applications", "decision_record_rehashes", "audit_chain_rechains", "engine_calls", "evidence_calls", "model_calls", "policy_calls", "verifier_calls", "audit_record_appends", "reference_path_calls", "authorization_gate_instantiations", "broker_instantiations", "target_instantiations", "authorization_attempts", "authorization_attempted_reported", "authorization_tokens", "broker_invocations", "broker_invocations_reported", "target_effect_calls", "action_results_observed", "operational_effects", "decision_artifact_write_calls", "audit_artifact_write_calls", "run_manifest_write_calls", "scoped_filesystem_write_calls"],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_RESULT"},
+        "schema_version": {"const": "1.0.0"},
+        "campaign_id": {"const": "P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC"},
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 20},
+        "attempt_id": {"type": "string"},
+        "pair_id": {"type": "string", "pattern": "^P(0[1-9]|10)$"},
+        "control_kind": {"$ref": "#/$defs/controlKind"},
+        "base_disposition": {"$ref": "#/$defs/disposition"},
+        "mutation_id": {"$ref": "#/$defs/mutation"},
+        "expected_stage": {"$ref": "#/$defs/stage"},
+        "expected_outcome": {"$ref": "#/$defs/outcome"},
+        "expected_error_category": {"$ref": "#/$defs/errorCategory"},
+        "expected_error_code": {"$ref": "#/$defs/errorCode"},
+        "observed_stage": {"$ref": "#/$defs/stage"},
+        "observed_outcome": {"$ref": "#/$defs/outcome"},
+        "observed_error_category": {"$ref": "#/$defs/errorCategory"},
+        "observed_error_code": {"$ref": "#/$defs/errorCode"},
+        "matched": {"type": "boolean"},
+        "input_records": {"const": 1},
+        "production_baseline_available": {"const": true},
+        "production_baseline_generation_calls": {"type": "integer", "minimum": 0, "maximum": 1},
+        "synthetic_input_sha256": {"$ref": "#/$defs/sha256"},
+        "pre_mutation_decision_sha256": {"$ref": "#/$defs/sha256"},
+        "presented_decision_sha256": {"$ref": "#/$defs/sha256"},
+        "presented_audit_sha256": {"$ref": "#/$defs/sha256"},
+        "reference_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "twin_input_binding_preserved": {"const": true},
+        "pre_mutation_baseline_preserved": {"const": true},
+        "legacy_decision_validation_passed": {"const": true},
+        "legacy_audit_assurance_passed": {"const": true},
+        "legacy_feature_assurance_passed": {"const": true},
+        "reference_path_attempted": {"const": true},
+        "reference_path_passed": {"type": "boolean"},
+        "mutation_applications": {"type": "integer", "minimum": 0, "maximum": 1},
+        "decision_record_rehashes": {"type": "integer", "minimum": 0, "maximum": 1},
+        "audit_chain_rechains": {"type": "integer", "minimum": 0, "maximum": 1},
+        "engine_calls": {"type": "integer", "minimum": 0, "maximum": 1},
+        "evidence_calls": {"type": "integer", "minimum": 0, "maximum": 1},
+        "model_calls": {"type": "integer", "minimum": 0, "maximum": 1},
+        "policy_calls": {"type": "integer", "minimum": 0, "maximum": 1},
+        "verifier_calls": {"type": "integer", "minimum": 0, "maximum": 1},
+        "audit_record_appends": {"type": "integer", "minimum": 0, "maximum": 8},
+        "reference_path_calls": {"const": 1},
+        "authorization_gate_instantiations": {"const": 0},
+        "broker_instantiations": {"const": 0},
+        "target_instantiations": {"const": 0},
+        "authorization_attempts": {"const": 0},
+        "authorization_attempted_reported": {"const": 0},
+        "authorization_tokens": {"const": 0},
+        "broker_invocations": {"const": 0},
+        "broker_invocations_reported": {"const": 0},
+        "target_effect_calls": {"const": 0},
+        "action_results_observed": {"const": 0},
+        "operational_effects": {"const": 0},
+        "decision_artifact_write_calls": {"const": 0},
+        "audit_artifact_write_calls": {"const": 0},
+        "run_manifest_write_calls": {"const": 0},
+        "scoped_filesystem_write_calls": {"const": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"control_kind": {"const": "CLEAN"}}},
+          "then": {"properties": {"production_baseline_generation_calls": {"const": 1}, "engine_calls": {"const": 1}, "evidence_calls": {"const": 1}, "model_calls": {"const": 1}, "policy_calls": {"const": 1}, "verifier_calls": {"const": 1}, "audit_record_appends": {"const": 8}}}
+        },
+        {
+          "if": {"properties": {"control_kind": {"const": "MUTANT"}}},
+          "then": {"properties": {"production_baseline_generation_calls": {"const": 0}, "engine_calls": {"const": 0}, "evidence_calls": {"const": 0}, "model_calls": {"const": 0}, "policy_calls": {"const": 0}, "verifier_calls": {"const": 0}, "audit_record_appends": {"const": 0}}}
+        }
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_kind", "schema_version", "campaign_id", "claim_id", "campaign_seed", "evaluated_at", "implementation_commit", "campaign_plan_sha256", "runtime_fingerprint", "artifact_bindings", "run_receipts", "raw_outcomes", "stage_outcomes", "twin_assurance", "legacy_control_assurance", "call_accounting", "derived_output_accounting", "repeatability", "evidence_boundary"],
+      "properties": {
+        "artifact_kind": {"const": "CAMPAIGN_SUMMARY"},
+        "schema_version": {"const": "1.0.0"},
+        "campaign_id": {"const": "P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC"},
+        "claim_id": {"const": "P2-CE-005"},
+        "campaign_seed": {"const": 2026081505},
+        "evaluated_at": {"$ref": "#/$defs/utc"},
+        "implementation_commit": {"$ref": "#/$defs/commit"},
+        "campaign_plan_sha256": {"$ref": "#/$defs/sha256"},
+        "runtime_fingerprint": {"$ref": "#/$defs/runtime"},
+        "artifact_bindings": {
+          "type": "object", "additionalProperties": false,
+          "required": ["campaign_profile_sha256", "campaign_results_run1_sha256", "campaign_results_run2_sha256"],
+          "properties": {"campaign_profile_sha256": {"$ref": "#/$defs/sha256"}, "campaign_results_run1_sha256": {"$ref": "#/$defs/sha256"}, "campaign_results_run2_sha256": {"$ref": "#/$defs/sha256"}}
+        },
+        "run_receipts": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "object", "additionalProperties": false, "required": ["run_id", "result_ledger_sha256"], "properties": {"run_id": {"enum": ["RUN_1", "RUN_2"]}, "result_ledger_sha256": {"$ref": "#/$defs/sha256"}}}},
+        "raw_outcomes": {"type": "object", "additionalProperties": false, "required": ["denominator", "matched", "mismatched", "excluded"], "properties": {"denominator": {"const": 40}, "matched": {"$ref": "#/$defs/counter"}, "mismatched": {"$ref": "#/$defs/counter"}, "excluded": {"const": 0}}},
+        "stage_outcomes": {"type": "object", "additionalProperties": false, "required": ["accepted_reference_path_match", "blocked_evidence", "blocked_model", "blocked_policy", "blocked_verifier", "blocked_final_surface"], "properties": {"accepted_reference_path_match": {"$ref": "#/$defs/counter"}, "blocked_evidence": {"$ref": "#/$defs/counter"}, "blocked_model": {"$ref": "#/$defs/counter"}, "blocked_policy": {"$ref": "#/$defs/counter"}, "blocked_verifier": {"$ref": "#/$defs/counter"}, "blocked_final_surface": {"$ref": "#/$defs/counter"}}},
+        "twin_assurance": {"type": "object", "additionalProperties": false, "required": ["pairs", "twin_input_matches", "pre_mutation_baseline_matches"], "properties": {"pairs": {"const": 20}, "twin_input_matches": {"$ref": "#/$defs/counter"}, "pre_mutation_baseline_matches": {"$ref": "#/$defs/counter"}}},
+        "legacy_control_assurance": {"type": "object", "additionalProperties": false, "required": ["decision_validation_passes", "audit_assurance_passes", "feature_assurance_passes"], "properties": {"decision_validation_passes": {"$ref": "#/$defs/counter"}, "audit_assurance_passes": {"$ref": "#/$defs/counter"}, "feature_assurance_passes": {"$ref": "#/$defs/counter"}}},
+        "call_accounting": {"type": "object", "additionalProperties": false, "required": ["production_baseline_generation_calls", "engine_calls", "evidence_calls", "model_calls", "policy_calls", "verifier_calls", "audit_record_appends", "reference_path_calls", "authorization_gate_instantiations", "broker_instantiations", "target_instantiations", "authorization_attempts", "broker_invocations", "target_effect_calls", "decision_artifact_write_calls", "audit_artifact_write_calls", "run_manifest_write_calls", "scoped_filesystem_write_calls"], "properties": {"production_baseline_generation_calls": {"const": 20}, "engine_calls": {"const": 20}, "evidence_calls": {"const": 20}, "model_calls": {"const": 20}, "policy_calls": {"const": 20}, "verifier_calls": {"const": 20}, "audit_record_appends": {"const": 160}, "reference_path_calls": {"const": 40}, "authorization_gate_instantiations": {"const": 0}, "broker_instantiations": {"const": 0}, "target_instantiations": {"const": 0}, "authorization_attempts": {"const": 0}, "broker_invocations": {"const": 0}, "target_effect_calls": {"const": 0}, "decision_artifact_write_calls": {"const": 0}, "audit_artifact_write_calls": {"const": 0}, "run_manifest_write_calls": {"const": 0}, "scoped_filesystem_write_calls": {"const": 0}}},
+        "derived_output_accounting": {"type": "object", "additionalProperties": false, "required": ["authorization_attempted_reported", "authorization_tokens", "broker_invocations_reported", "action_results_observed", "operational_effects"], "properties": {"authorization_attempted_reported": {"const": 0}, "authorization_tokens": {"const": 0}, "broker_invocations_reported": {"const": 0}, "action_results_observed": {"const": 0}, "operational_effects": {"const": 0}}},
+        "repeatability": {"type": "object", "additionalProperties": false, "required": ["evaluation_runs", "attempts_per_run", "total_attempt_executions", "byte_identical_result_ledgers"], "properties": {"evaluation_runs": {"const": 2}, "attempts_per_run": {"const": 20}, "total_attempt_executions": {"const": 40}, "byte_identical_result_ledgers": {"type": "boolean"}}},
+        "evidence_boundary": {"type": "object", "additionalProperties": false, "required": ["review_type", "stored_approval_package", "stored_historical_data", "supported_claim_class"], "properties": {"review_type": {"const": "SELF"}, "stored_approval_package": {"const": false}, "stored_historical_data": {"const": false}, "supported_claim_class": {"const": "CONTROLLED_BEHAVIOR"}}}
+      }
+    }
+  }
+}

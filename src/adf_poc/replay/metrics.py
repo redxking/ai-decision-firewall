@@ -54,6 +54,7 @@ def compute_replay_metrics(
     audit_assurance: dict[str, Any],
     qualification_records: list[dict[str, Any]] | None = None,
     reference_feature_records: list[dict[str, Any]] | None = None,
+    source_to_decision_records: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     counts = Counter(row["final_disposition"] for row in decisions)
     comparisons = build_comparisons(decisions, adjudications)
@@ -211,6 +212,28 @@ def compute_replay_metrics(
                 "decision "
                 "feature values and event traces; model, policy, source truth, and "
                 "external custody are not independently validated."
+            ),
+        }
+    if source_to_decision_records is not None:
+        matched_records = sum(
+            row.get("matched") is True for row in source_to_decision_records
+        )
+        result["source_to_decision_assurance"] = {
+            "assurance_kind": "SEPARATE_SOURCE_TO_DECISION_RECOMPUTATION",
+            "recomputation_scope": ("EVIDENCE_MODEL_POLICY_VERIFIER_READ_ONLY_FINAL"),
+            "cases_checked": len(source_to_decision_records),
+            "matched_cases": matched_records,
+            "mismatched_cases": len(source_to_decision_records) - matched_records,
+            "complete": (
+                len(source_to_decision_records) == len(decisions)
+                and matched_records == len(decisions)
+            ),
+            "assurance_boundary": (
+                "A separately implemented, in-process, project-controlled reference "
+                "path agrees with the serialized evidence, model, policy, verifier, "
+                "and read-only final-decision surfaces. It does not establish source "
+                "truth, outcome correctness, external custody, or organizational "
+                "independence."
             ),
         }
     return result

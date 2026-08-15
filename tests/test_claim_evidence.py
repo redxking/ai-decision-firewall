@@ -82,6 +82,7 @@ def _copy_qualification_run_inputs(repository_root: Path) -> None:
         "outputs/baseline/model.json",
         "contracts/v0.2.0/replay-qualification.schema.json",
         "contracts/v0.2.0/reference-feature-assurance.schema.json",
+        "contracts/v0.2.0/source-to-decision-assurance.schema.json",
         "data/phase2_qualification/manifest.json",
         "data/phase2_qualification/cases.jsonl",
         "data/phase2_qualification/adjudications.jsonl",
@@ -388,6 +389,12 @@ def _build_feature_campaign_evidence(
 
 
 def _validate_feature_campaign_test_record(record_path: Path) -> dict:
+    frozen_package_paths = {
+        role: path
+        for role, path in FEATURE_CAMPAIGN_SOURCE_PATHS.items()
+        if role.startswith("ADF_")
+    }
+
     def committed_digest(
         repository_root: Path,
         *,
@@ -405,6 +412,10 @@ def _validate_feature_campaign_test_record(record_path: Path) -> dict:
         patch(
             "scripts.validate_claim_evidence._git_commit_timestamp",
             return_value=datetime(2026, 8, 14, tzinfo=timezone.utc),
+        ),
+        patch(
+            "scripts.validate_claim_evidence._git_package_source_paths",
+            return_value=frozen_package_paths,
         ),
     ):
         return validate_evidence_record(
@@ -579,7 +590,7 @@ import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
 
         self.assertEqual(validated["status"], "VALID")
         self.assertEqual(validated["profile_id"], "P2-CE-002")
-        self.assertEqual(validated["artifact_count"], 18)
+        self.assertEqual(validated["artifact_count"], 19)
         self.assertEqual(validated["audit_record_count"], 24)
         self.assertEqual(
             validated["record_qualification"],
@@ -834,7 +845,7 @@ import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
                 repository_root=repository_root,
             )
 
-        self.assertEqual(validated["artifact_count"], 19)
+        self.assertEqual(validated["artifact_count"], 20)
 
     def test_gate_b_campaign_plan_and_core_outputs_are_closed_and_sanitized(
         self,
@@ -1432,6 +1443,84 @@ import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
             },
         )
 
+    def test_committed_feature_campaign_registry_ignores_later_package_module(
+        self,
+    ) -> None:
+        record_path = (
+            ROOT
+            / "contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json"
+        )
+        profile = json.loads(
+            (
+                ROOT / "evidence/phase2_feature_assurance_ce2/campaign_profile.json"
+            ).read_text(encoding="utf-8")
+        )
+        later_module = ROOT / "src/adf_poc/replay/reference_decision.py"
+        self.assertTrue(later_module.is_file())
+        self.assertNotIn(
+            str(later_module.relative_to(ROOT)),
+            {binding["path"] for binding in profile["source_bindings"]},
+        )
+
+        validated = validate_evidence_record(
+            record_path,
+            repository_root=ROOT,
+            profile_id="P2-CE-004",
+        )
+        self.assertEqual(validated["status"], "VALID")
+
+    def test_feature_campaign_rejects_missing_extra_or_changed_recorded_binding(
+        self,
+    ) -> None:
+        mutations = {
+            "missing": "source-binding count is invalid",
+            "extra": "source-binding count is invalid",
+            "changed_path": "source-binding path is not canonical",
+            "changed_digest": "sources do not match the implementation commit",
+        }
+        for mutation, expected_message in mutations.items():
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory(
+                    prefix=".feature-ce2-source-registry-",
+                    dir=ROOT,
+                ) as directory,
+            ):
+                record_path, output_dir = _build_feature_campaign_evidence(
+                    Path(directory)
+                )
+                profile_path = output_dir / "campaign_profile.json"
+                profile = json.loads(profile_path.read_text(encoding="utf-8"))
+                if mutation == "missing":
+                    profile["source_bindings"].pop()
+                elif mutation == "extra":
+                    profile["source_bindings"].append(
+                        {
+                            "role": "ADF_SRC_ADF_POC_FUTURE_MODULE_PY",
+                            "path": "src/adf_poc/future_module.py",
+                            "sha256": "0" * 64,
+                        }
+                    )
+                elif mutation == "changed_path":
+                    profile["source_bindings"][0][
+                        "path"
+                    ] = "src/adf_poc/changed_binding.py"
+                else:
+                    profile["source_bindings"][0]["sha256"] = "0" * 64
+                _write_json(profile_path, profile)
+
+                record = json.loads(record_path.read_text(encoding="utf-8"))
+                _artifact_by_role(record, "campaign_profile")["sha256"] = _sha256(
+                    profile_path
+                )
+                _write_json(record_path, record)
+
+                with self.assertRaisesRegex(
+                    EvidenceValidationError,
+                    expected_message,
+                ):
+                    _validate_feature_campaign_test_record(record_path)
+
     def test_feature_campaign_readers_reject_nonfinite_json_numbers(self) -> None:
         mutations = (
             {
@@ -1604,6 +1693,33 @@ import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
                     repository_root=repository_root,
                 )
 
+    def test_qualification_profile_recomputes_source_to_decision_after_rehash(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository_root = Path(directory)
+            record_path, record = _build_qualification_evidence(repository_root)
+            artifact = _artifact_by_role(record, "source_to_decision_assurance")
+            path = repository_root / artifact["path"]
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+            rows[0]["expected_source_to_decision_sha256"] = "0" * 64
+            rows[0]["observed_source_to_decision_sha256"] = "0" * 64
+            _write_jsonl(path, rows)
+            _refresh_manifest_artifact_binding(
+                repository_root,
+                record,
+                "source_to_decision_assurance",
+            )
+            _write_json(record_path, record)
+            with self.assertRaisesRegex(
+                EvidenceValidationError,
+                "source-to-decision evidence does not match recomputation",
+            ):
+                validate_evidence_record(
+                    record_path,
+                    repository_root=repository_root,
+                )
+
     def test_nonlegacy_replay_cannot_strip_and_rehash_reference_assurance(
         self,
     ) -> None:
@@ -1638,6 +1754,46 @@ import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
             with self.assertRaisesRegex(
                 EvidenceValidationError,
                 "Nonlegacy replay evidence requires reference_feature_assurance",
+            ):
+                validate_evidence_record(
+                    record_path,
+                    repository_root=repository_root,
+                )
+
+    def test_nonlegacy_replay_cannot_strip_and_rehash_source_to_decision_assurance(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository_root = Path(directory)
+            record_path, record = _build_qualification_evidence(repository_root)
+            manifest_artifact = _artifact_by_role(record, "run_manifest")
+            manifest_path = repository_root / manifest_artifact["path"]
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["deterministic_artifacts"].pop("source_to_decision_assurance")
+
+            metrics_artifact = _artifact_by_role(record, "replay_metrics")
+            metrics_path = repository_root / metrics_artifact["path"]
+            metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+            metrics.pop("source_to_decision_assurance")
+            _write_json(metrics_path, metrics)
+            metrics_digest = _sha256(metrics_path)
+            manifest["deterministic_artifacts"]["replay_metrics"][
+                "sha256"
+            ] = metrics_digest
+            _write_json(manifest_path, manifest)
+
+            record["evidence_artifacts"] = [
+                artifact
+                for artifact in record["evidence_artifacts"]
+                if artifact["artifact_role"] != "source_to_decision_assurance"
+            ]
+            _artifact_by_role(record, "replay_metrics")["sha256"] = metrics_digest
+            _artifact_by_role(record, "run_manifest")["sha256"] = _sha256(manifest_path)
+            _write_json(record_path, record)
+
+            with self.assertRaisesRegex(
+                EvidenceValidationError,
+                "Nonlegacy replay evidence requires source_to_decision_assurance",
             ):
                 validate_evidence_record(
                     record_path,

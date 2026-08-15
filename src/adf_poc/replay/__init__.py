@@ -33,6 +33,10 @@ from .reference_features import (
     ReferenceFeatureAssuranceError,
     verify_reference_feature_projections,
 )
+from .reference_decision import (
+    ReferenceDecisionAssuranceError,
+    verify_reference_decision_path,
+)
 
 __all__ = [
     "ALLOWED_REPLAY_MODES",
@@ -54,6 +58,7 @@ __all__ = [
     "QualificationFatalError",
     "QualificationResult",
     "ReferenceFeatureAssuranceError",
+    "ReferenceDecisionAssuranceError",
     "qualify_case_bytes",
     "qualify_case_file",
     "evaluate_qualification_stop_conditions",
@@ -61,5 +66,6 @@ __all__ = [
     "load_manifest_control",
     "validate_gate_b_current",
     "verify_reference_feature_projections",
+    "verify_reference_decision_path",
     "load_and_validate_manifest",
 ]

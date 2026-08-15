@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from statistics import mean
 from typing import Any
 
 from .feature_contract import select_evidence_attributes, select_modeled_attributes
@@ -139,11 +139,22 @@ def assess_evidence(case: IdentityCase) -> EvidenceAssessment:
         if text_is_instructional:
             poisoned_event_ids.append(event.event_id)
 
-    provenance_ratio = mean(1.0 if flag else 0.0 for flag in provenance_valid)
-    integrity_ratio = mean(1.0 if flag else 0.0 for flag in integrity_verified)
-    freshness_score = mean(freshness_values)
+    event_count = len(case.events)
+    # Use one explicit, ordered floating-point reduction rule shared by the
+    # production and separate reference paths.  statistics.mean first forms an
+    # exact rational total and can round differently from fsum()/count at the
+    # six-decimal serialized evidence boundary.
+    provenance_ratio = (
+        math.fsum(1.0 if flag else 0.0 for flag in provenance_valid) / event_count
+    )
+    integrity_ratio = (
+        math.fsum(1.0 if flag else 0.0 for flag in integrity_verified) / event_count
+    )
+    freshness_score = math.fsum(freshness_values) / event_count
     diversity_score = clamp(len(sources) / len(EXPECTED_SOURCES))
-    trust_score = mean(event.trust_score for event in case.events)
+    trust_score = (
+        math.fsum(float(event.trust_score) for event in case.events) / event_count
+    )
     missing = sorted(EXPECTED_SOURCES - sources)
     poisoned = bool(poisoned_event_ids)
 

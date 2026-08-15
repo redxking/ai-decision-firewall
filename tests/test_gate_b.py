@@ -44,6 +44,7 @@ from adf_poc.replay.reference_features import (
     ReferenceFeatureAssuranceError,
     verify_reference_feature_projections,
 )
+from adf_poc.replay.reference_decision import ReferenceDecisionAssuranceError
 from adf_poc.utils import sha256_json
 
 
@@ -1364,10 +1365,42 @@ class GateBIntegrationTests(unittest.TestCase):
             self.assertEqual(assurance["broker_invocations"], 0)
             self.assertEqual(assurance["operational_effects"], 0)
             self.assertEqual(assurance["action_results"], 0)
+            source_assurance = result.metrics["source_to_decision_assurance"]
+            self.assertEqual(source_assurance["cases_checked"], 3)
+            self.assertEqual(source_assurance["matched_cases"], 3)
+            self.assertEqual(source_assurance["mismatched_cases"], 0)
+            self.assertTrue(source_assurance["complete"])
+            source_records = [
+                json.loads(line)
+                for line in result.source_to_decision_assurance_path.read_text(
+                    encoding="utf-8"
+                ).splitlines()
+                if line.strip()
+            ]
+            self.assertEqual(len(source_records), 3)
+            self.assertTrue(all(row["read_only"] for row in source_records))
+            self.assertTrue(all(row["matched"] for row in source_records))
             run_manifest = json.loads(
                 result.run_manifest_path.read_text(encoding="utf-8")
             )
             self.assertIn("gate_b_preflight", run_manifest)
+            source_artifact = run_manifest["deterministic_artifacts"][
+                "source_to_decision_assurance"
+            ]
+            self.assertEqual(source_artifact["record_count"], 3)
+            self.assertEqual(
+                source_artifact["sha256"],
+                sha256_file(result.source_to_decision_assurance_path),
+            )
+            for row in source_records:
+                self.assertEqual(
+                    row["model_source_sha256"],
+                    run_manifest["inputs"]["model"]["sha256"],
+                )
+                self.assertEqual(
+                    row["policy_source_sha256"],
+                    run_manifest["inputs"]["policy"]["sha256"],
+                )
             for role in (
                 "gate_b_authorization",
                 "gate_b_source_mapping",
@@ -1379,6 +1412,10 @@ class GateBIntegrationTests(unittest.TestCase):
             self.assertNotIn("synthetic-test-data_owner", serialized)
             self.assertNotIn("local/gate_b/source_mapping.csv", serialized)
             self.assertEqual(result.output_dir.stat().st_mode & 0o077, 0)
+            self.assertEqual(
+                result.source_to_decision_assurance_path.stat().st_mode & 0o077,
+                0,
+            )
             snapshot_dir = result.output_dir / "input_snapshot"
             self.assertEqual(snapshot_dir.stat().st_mode & 0o077, 0)
             for path in snapshot_dir.iterdir():
@@ -1474,10 +1511,185 @@ class GateBIntegrationTests(unittest.TestCase):
                 self.assertTrue((output_dir / artifact_name).exists())
             for artifact_name in (
                 "reference_feature_assurance.jsonl",
+                "source_to_decision_assurance.jsonl",
+                "qualification_accounting.jsonl",
+                "rejections.jsonl",
+                "input_snapshot/adjudications.jsonl",
+                "adjudication_comparison.jsonl",
                 "replay_metrics.json",
                 "replay_run_manifest.json",
             ):
                 self.assertFalse((output_dir / artifact_name).exists())
+
+    def test_source_to_decision_mismatch_stops_historical_evaluator_outputs(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config_path, _, _, _ = make_gate_b_repository(root)
+            harness = ReplayHarness.from_config(config_path, repository_root=root)
+            with (
+                patch(
+                    "adf_poc.replay.harness.verify_reference_decision_path",
+                    side_effect=ReferenceDecisionAssuranceError(
+                        "REFERENCE_DECISION_VERIFIER_MISMATCH"
+                    ),
+                ),
+                self.assertRaisesRegex(
+                    ReplaySafetyViolation,
+                    "Historical replay safety validation failed",
+                ),
+            ):
+                harness.run()
+
+            output_dir = root / "outputs" / "replay" / "gate-b-test"
+            for artifact_name in (
+                "reference_feature_assurance.jsonl",
+                "source_to_decision_assurance.jsonl",
+                "qualification_accounting.jsonl",
+                "rejections.jsonl",
+                "input_snapshot/adjudications.jsonl",
+                "adjudication_comparison.jsonl",
+                "replay_metrics.json",
+                "replay_run_manifest.json",
+            ):
+                with self.subTest(artifact_name=artifact_name):
+                    self.assertFalse((output_dir / artifact_name).exists())
+
+    def test_historical_source_to_decision_artifact_tampering_fails_closed(
+        self,
+    ) -> None:
+        for mutation in ("payload", "duplicate", "nonfinite"):
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path, _, _, _ = make_gate_b_repository(root)
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                original_write_jsonl = HistoricalOutputGuard.write_jsonl
+
+                def tampering_write(instance, relative_path, rows, **kwargs):
+                    count = original_write_jsonl(
+                        instance, relative_path, rows, **kwargs
+                    )
+                    if relative_path == "source_to_decision_assurance.jsonl":
+                        target = instance.display_path / relative_path
+                        content = target.read_text(encoding="utf-8")
+                        if mutation == "payload":
+                            content = content.replace(
+                                '"matched":true',
+                                '"unexpected":"blocked","matched":true',
+                                1,
+                            )
+                        elif mutation == "duplicate":
+                            content = content.replace(
+                                '"matched":true',
+                                '"matched":false,"matched":true',
+                                1,
+                            )
+                        else:
+                            content = content.replace(
+                                '"matched":true', '"matched":NaN', 1
+                            )
+                        target.write_text(content, encoding="utf-8")
+                    return count
+
+                with (
+                    patch.object(
+                        HistoricalOutputGuard,
+                        "write_jsonl",
+                        new=tampering_write,
+                    ),
+                    self.assertRaisesRegex(
+                        ReplaySafetyViolation,
+                        "Historical replay safety validation failed",
+                    ),
+                ):
+                    harness.run()
+
+                output_dir = root / "outputs" / "replay" / "gate-b-test"
+                for artifact_name in (
+                    "qualification_accounting.jsonl",
+                    "rejections.jsonl",
+                    "input_snapshot/adjudications.jsonl",
+                    "adjudication_comparison.jsonl",
+                    "replay_metrics.json",
+                    "replay_run_manifest.json",
+                ):
+                    self.assertFalse((output_dir / artifact_name).exists())
+
+    def test_historical_manifest_rejects_late_mutation_of_every_deterministic_artifact(
+        self,
+    ) -> None:
+        artifacts = (
+            ("normalized_path", "jsonl"),
+            ("diagnostics_path", "json"),
+            ("deterministic_path", "jsonl"),
+            ("reference_features_path", "jsonl"),
+            ("source_to_decision_path", "jsonl"),
+            ("qualification_path", "jsonl"),
+            ("rejections_path", "jsonl"),
+            ("comparisons_path", "jsonl"),
+            ("metrics_path", "json"),
+        )
+        for argument, artifact_type in artifacts:
+            with (
+                self.subTest(argument=argument),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                config_path, _, _, _ = make_gate_b_repository(root)
+                harness = ReplayHarness.from_config(config_path, repository_root=root)
+                original = harness._build_run_manifest
+
+                def mutate_before_manifest(**kwargs):
+                    target = kwargs[argument]
+                    if artifact_type == "json":
+                        value = json.loads(target.read_text(encoding="utf-8"))
+                        value["late_unvalidated_mutation"] = argument
+                        write_json(target, value)
+                    else:
+                        rows = [
+                            json.loads(line)
+                            for line in target.read_text(encoding="utf-8").splitlines()
+                            if line.strip()
+                        ]
+                        if rows:
+                            rows[0]["late_unvalidated_mutation"] = argument
+                        else:
+                            rows.append({"late_unvalidated_mutation": argument})
+                        target.write_text(
+                            "".join(
+                                json.dumps(
+                                    row,
+                                    sort_keys=True,
+                                    separators=(",", ":"),
+                                )
+                                + "\n"
+                                for row in rows
+                            ),
+                            encoding="utf-8",
+                        )
+                    return original(**kwargs)
+
+                with (
+                    patch.object(
+                        harness,
+                        "_build_run_manifest",
+                        side_effect=mutate_before_manifest,
+                    ),
+                    self.assertRaisesRegex(
+                        ReplaySafetyViolation,
+                        "Historical replay safety validation failed",
+                    ),
+                ):
+                    harness.run()
+                self.assertFalse(
+                    (
+                        root / "outputs/replay/gate-b-test/replay_run_manifest.json"
+                    ).exists()
+                )
 
     def test_post_qualification_scope_gates_stop_before_engine(self) -> None:
         for mutation in ("quarantine_threshold", "case_window"):

@@ -2,23 +2,31 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import numpy as np
+from numpy.typing import NDArray
 
 from .features import FEATURE_NAMES, extract_features, vectorize
 from .schemas import IdentityCase
 from .utils import read_jsonl, write_json
 
 
+class FactorRow(TypedDict):
+    feature: str
+    contribution: float
+    value: float
+
+
 @dataclass(slots=True)
 class ModelAssessment:
     compromise_probability: float
     model_version: str
-    top_positive_factors: list[dict[str, float]]
-    top_negative_factors: list[dict[str, float]]
+    top_positive_factors: list[FactorRow]
+    top_negative_factors: list[FactorRow]
     feature_values: dict[str, float]
     feature_trace: dict[str, list[str]]
 
@@ -31,9 +39,15 @@ class LogisticRiskModel:
 
     def __init__(self) -> None:
         self.feature_names = list(FEATURE_NAMES)
-        self.means = np.zeros(len(self.feature_names), dtype=float)
-        self.scales = np.ones(len(self.feature_names), dtype=float)
-        self.weights = np.zeros(len(self.feature_names), dtype=float)
+        self.means: NDArray[np.float64] = np.zeros(
+            len(self.feature_names), dtype=np.float64
+        )
+        self.scales: NDArray[np.float64] = np.ones(
+            len(self.feature_names), dtype=np.float64
+        )
+        self.weights: NDArray[np.float64] = np.zeros(
+            len(self.feature_names), dtype=np.float64
+        )
         self.intercept = 0.0
         self.version = "synthetic-logistic-v0.1"
         self.training_metadata: dict[str, Any] = {}
@@ -55,7 +69,9 @@ class LogisticRiskModel:
         if x.ndim != 2 or x.shape[1] != len(self.feature_names):
             raise ValueError("Unexpected training matrix shape.")
         if len(x) != len(y) or len(y) == 0:
-            raise ValueError("Training features and labels must be non-empty and aligned.")
+            raise ValueError(
+                "Training features and labels must be non-empty and aligned."
+            )
 
         self.means = x.mean(axis=0)
         self.scales = x.std(axis=0)
@@ -66,7 +82,9 @@ class LogisticRiskModel:
 
         positives = max(1.0, float(y.sum()))
         negatives = max(1.0, float(len(y) - y.sum()))
-        sample_weights = np.where(y > 0.5, len(y) / (2.0 * positives), len(y) / (2.0 * negatives))
+        sample_weights = np.where(
+            y > 0.5, len(y) / (2.0 * positives), len(y) / (2.0 * negatives)
+        )
 
         for _ in range(epochs):
             logits = z @ weights + intercept
@@ -81,7 +99,12 @@ class LogisticRiskModel:
         self.intercept = intercept
         final_predictions = self._sigmoid(z @ weights + intercept)
         epsilon = 1e-12
-        loss = float(-np.mean(y * np.log(final_predictions + epsilon) + (1.0 - y) * np.log(1.0 - final_predictions + epsilon)))
+        loss = float(
+            -np.mean(
+                y * np.log(final_predictions + epsilon)
+                + (1.0 - y) * np.log(1.0 - final_predictions + epsilon)
+            )
+        )
         accuracy = float(np.mean((final_predictions >= 0.5) == (y >= 0.5)))
         self.training_metadata = {
             "examples": int(len(y)),
@@ -93,22 +116,40 @@ class LogisticRiskModel:
         }
         return {"log_loss": loss, "accuracy": accuracy}
 
-    def predict_probability(self, features: dict[str, float]) -> tuple[float, np.ndarray]:
+    def predict_probability(
+        self, features: dict[str, float]
+    ) -> tuple[float, np.ndarray]:
         x = np.asarray(vectorize(features), dtype=float)
         z = (x - self.means) / self.scales
         contributions = z * self.weights
-        probability = float(self._sigmoid(np.asarray([contributions.sum() + self.intercept]))[0])
+        # Use the same explicitly specified compensated summation algorithm as
+        # the separate Phase 2 reference path.  NumPy's reduction order can
+        # produce materially different logits for cancellation-heavy, but
+        # otherwise valid, model parameters.
+        logit = math.fsum(float(value) for value in contributions) + self.intercept
+        probability = float(self._sigmoid(np.asarray([logit]))[0])
         return probability, contributions
 
     def assess(self, case: IdentityCase) -> ModelAssessment:
         features, trace = extract_features(case)
         probability, contributions = self.predict_probability(features)
-        factor_rows = [
-            {"feature": name, "contribution": round(float(value), 6), "value": round(float(features[name]), 6)}
+        factor_rows: list[FactorRow] = [
+            {
+                "feature": name,
+                "contribution": round(float(value), 6),
+                "value": round(float(features[name]), 6),
+            }
             for name, value in zip(self.feature_names, contributions, strict=True)
         ]
-        positives = sorted((row for row in factor_rows if row["contribution"] > 0), key=lambda row: row["contribution"], reverse=True)[:5]
-        negatives = sorted((row for row in factor_rows if row["contribution"] < 0), key=lambda row: row["contribution"])[:5]
+        positives = sorted(
+            (row for row in factor_rows if row["contribution"] > 0),
+            key=lambda row: row["contribution"],
+            reverse=True,
+        )[:5]
+        negatives = sorted(
+            (row for row in factor_rows if row["contribution"] < 0),
+            key=lambda row: row["contribution"],
+        )[:5]
         return ModelAssessment(
             compromise_probability=round(probability, 8),
             model_version=self.version,
@@ -156,9 +197,13 @@ class LogisticRiskModel:
         return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
 
 
-def train_from_files(cases_path: str | Path, labels_path: str | Path, output_path: str | Path) -> LogisticRiskModel:
+def train_from_files(
+    cases_path: str | Path, labels_path: str | Path, output_path: str | Path
+) -> LogisticRiskModel:
     cases = [IdentityCase.from_dict(row) for row in read_jsonl(cases_path)]
-    labels_by_id = {row["case_id"]: bool(row["compromised"]) for row in read_jsonl(labels_path)}
+    labels_by_id = {
+        row["case_id"]: bool(row["compromised"]) for row in read_jsonl(labels_path)
+    }
     x_rows: list[list[float]] = []
     y_rows: list[float] = []
     for case in cases:
@@ -172,7 +217,9 @@ def train_from_files(cases_path: str | Path, labels_path: str | Path, output_pat
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train the synthetic POC compromise-risk model.")
+    parser = argparse.ArgumentParser(
+        description="Train the synthetic POC compromise-risk model."
+    )
     parser.add_argument("--cases", required=True)
     parser.add_argument("--labels", required=True)
     parser.add_argument("--output", required=True)
