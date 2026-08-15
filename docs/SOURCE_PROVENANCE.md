@@ -5,8 +5,9 @@
 > Commit `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
 > exact-commit CI/Dependency Graph checks passed. The tracked data, model, and
 > baseline outputs remain at their committed bytes. Phase 3 `0.3.0-alpha.1` is
-> an uncommitted local candidate and therefore has no final commit-bound provenance or CI
-> claim. `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`.
+> published at exact Commit `423685d105be813056617db738297eba83d3d9d0`, whose
+> exact-commit CI and Dependency Graph checks passed. `P2-CE-005` was not
+> executed and remains CE-0 `NOT_EVALUATED`.
 
 The repository was initialized from `AI_Decision_Firewall_POC_v0.1.zip`.
 
@@ -20,11 +21,12 @@ The initial public-release edits updated documentation, distribution markings, i
 
 `MANIFEST.sha256` is a repository snapshot, not the original archive manifest,
 a signature, or an external trust anchor. The manifest committed in exact Phase
-2.5 Commit `854b15c` applies only to that Git tree. The local Phase 3 files are
-new project-authored code, contracts, policy, tests, documentation, demos, and
-synthetic corpus fixtures layered on that commit; they are not derived from an
-external operational dataset or vendor connector. Their final manifest and
-provenance boundary remain pending candidate freeze.
+2.5 Commit `854b15c` applies only to that Git tree. The Phase 3 files are
+project-authored code, contracts, policy, tests, documentation, demos, and
+synthetic corpus fixtures published in exact Commit `423685d`; they are not
+derived from an external operational dataset or vendor connector. The Phase
+3.1 working candidate adds only digest-bound repository synthetic fixtures and
+has no historical/live source adapter.
 
 Phase 3 evidence attestations are runtime synthetic HMAC controls, not source
 provenance for this repository and not an independent source trust anchor. No

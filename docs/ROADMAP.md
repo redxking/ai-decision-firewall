@@ -8,11 +8,15 @@
 - `P2-CE-001` through `P2-CE-004` retain their version-bound evidence claims.
   `P2-CE-005` was not executed or published and remains CE-0
   `NOT_EVALUATED`.
-- Phase 3 is a working local `0.3.0-alpha.1` simulation-only operational-MVP
-  candidate. The focused suite passed 57/57; both raw-request demonstration
-  acceptance checks reported PASS; and the 46-case adversarial corpus passed
-  46/46 locally. The full repository suite passed 288/288 locally. The exact
-  Phase 3 commit, publication, and exact-commit CI remain pending.
+- Exact Phase 3 Commit
+  `423685d105be813056617db738297eba83d3d9d0` is published on `main`; exact-commit
+  CI and Dependency Graph checks passed. Its simulation-only boundary includes
+  57/57 focused tests, two demonstration checks PASS, a 46/46 corpus and the
+  then-current 288/288 repository aggregate.
+- Phase 3.1 is a working `0.3.1-alpha.1` synthetic-only model-evaluation
+  candidate. Its focused module passed 11/11 and the current repository suite
+  passed 299/299 locally. No historical/live adapter, owner promotion threshold
+  or action path exists.
 - No historical organizational data, approved Gate B package, live feed,
   test-tenant/production connector, operational credential, or live action is
   authorized or present.
@@ -57,9 +61,9 @@ support package/implementation status only. They do not create an observed
    adjudication, stop conditions, and complete-intake reporting before any
    historical payload is accessed.
 
-## Phase 3 — Simulation-only operational decision control (`0.3.0-alpha.1` candidate)
+## Phase 3 — Simulation-only operational decision control (`0.3.0-alpha.1` published)
 
-### Implemented locally
+### Published baseline
 
 - strict external v0.3.0 raw request and policy contracts;
 - opaque invocation credentials resolved to signed principals, plus trusted
@@ -84,28 +88,43 @@ Adversarial review found and closed release-blocking defects across consequence
 and evidence binding, credential/key-domain handling, immutable exact-type
 security values, machine-policy safety floors, replay/receipt atomicity,
 dependency-failure closure, and executed-path/post-effect audit semantics. The
-candidate remains synthetic and CE-1/local only. Its application boundaries are
+baseline remains synthetic and CE-1 only. Its application boundaries are
 not OS/process security; request/token ledgers are not durable/distributed;
 runtime HMAC fixture keys and self-custodied audit are not enterprise trust; and
 same-project verification is not external independence.
 
-### Immediate release gates
+**Exit condition:** met for the published simulation-only code baseline at
+`423685d`. This exit does not authorize live data or action.
 
-1. Finish living traceability/diagram and package reconciliation; no known
-   request/decision/authorization/broker/readback release blocker remains.
-2. Preserve the executable/test bytes behind the 57/57 focused, 288/288 full,
-   demo PASS, and 46/46 corpus results; rerun them if those bytes change, and
-   complete documentation/link/contract and artifact-integrity checks.
-3. Commit one exact Phase 3 candidate and record its final results.
-4. Publish only under explicit authorization; require exact-commit CI and
-   Dependency Graph success.
+## Phase 3.1A — Governed model-validation groundwork (`0.3.1-alpha.1` candidate)
 
-**Exit condition:** published simulation-only code baseline with exact-commit
-green CI, accurate living documentation, and no unresolved defect invalidating
-the request/decision/authorization/broker/readback separation. This exit does
-not authorize live data or action.
+The working candidate adds closed plan/result contracts, SHA-256-bound synthetic
+source pools, a disjoint temporal training/calibration/evaluation split, one
+logistic baseline, one Platt calibration challenger, aggregate discrimination,
+calibration, threshold, Wilson-interval, selective-risk and subgroup metrics,
+and an unconditional `NOT_AUTHORIZED` promotion state.
 
-## Phase 3.1 — Approved read-only evidence realism
+The current mechanism observation uses 720 training, 240 calibration and 240
+evaluation rows. It demonstrates reproducible comparison mechanics only. It
+does not establish source realism, operational calibration, practical
+significance, model superiority or promotion eligibility.
+
+### Immediate gates
+
+1. Freeze and verify the Phase 3.1 implementation, contracts, documentation,
+   diagram, focused tests and complete repository suite on one exact commit.
+2. Publish only under explicit authorization and require exact-commit CI.
+3. Before any historical payload access, obtain an authenticated external Gate
+   B package covering data authority, custody, privacy, source mapping,
+   adjudication, temporal split, owner thresholds and stop conditions.
+4. Keep the final temporal holdout evaluator-controlled and prohibit repeated
+   candidate selection against it.
+
+**Exit condition:** published synthetic evaluation mechanism with green
+exact-commit CI and no model-promotion claim. Historical evaluation remains a
+separate authority state.
+
+## Phase 3.1B — Approved read-only evidence realism
 
 After the external Gate B package and an offline historical pilot, evaluate an
 approved live read-only shadow service with authenticated sources, independent

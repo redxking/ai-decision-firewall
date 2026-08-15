@@ -2,7 +2,7 @@
 
 ## Executive assessment
 
-The program has two distinct current boundaries.
+The program has three distinct current boundaries.
 
 First, Phase 2.5 is published on `main` at exact Commit
 `854b15c56397a81de6326b719d3d7d1dc847608f`. GitHub CI and Dependency Graph
@@ -11,24 +11,30 @@ technical result, separate 9/9 public-site result, and 231/231 then-current
 repository aggregate. `P2-CE-005` was not executed or published and remains CE-0
 `NOT_EVALUATED`; green package CI is not campaign evidence.
 
-Second, Phase 3 is a working **local `0.3.0-alpha.1` simulation-only
-operational-MVP candidate**. It adds a raw external request, opaque-credential
+Second, Phase 3 `0.3.0-alpha.1` is published at exact Commit
+`423685d105be813056617db738297eba83d3d9d0`; exact-commit CI and Dependency
+Graph checks passed. It adds a raw external request, opaque-credential
 identity resolution, signed target-bound evidence, trusted policy/target
 context, deterministic four-way decision, consequence evaluation, exact-scope
 single-use authorization, mandatory in-memory broker, functionally separate
 same-project target readback, bounded human approval, lifecycle audit, metrics,
 two SOC demonstrations, and a 46-scenario adversarial corpus. The current
-checkout passed 57/57 focused Phase 3 tests; both demo acceptance checks
+published boundary passed 57/57 focused Phase 3 tests; both demo acceptance checks
 reported PASS; the corpus reported 46/46; and the full repository regression
-passed 288/288. No Phase 3 commit, publication, or exact-commit CI result exists
-yet.
+passed 288/288 locally and in exact-commit CI.
+
+Third, Phase 3.1 is a working **`0.3.1-alpha.1` synthetic model-evaluation
+candidate**. It adds digest-bound repository fixtures, disjoint temporal
+training/calibration/evaluation roles, a logistic baseline, a Platt calibration
+challenger, aggregate discrimination/calibration/error/abstention/subgroup
+metrics, and an unconditional `NOT_AUTHORIZED` promotion state. It contains no
+historical/live adapter or action path and has no owner-approved performance
+threshold or model-promotion authority.
 
 All Phase 3 observations are CE-1 implementation-conformance evidence over
 synthetic inputs and effects. They do not establish live containment,
 operational efficacy or calibration, production safety, statistical risk, or
 external independence.
-
-<!-- PAGE BREAK -->
 
 ## Decision table
 
@@ -37,10 +43,10 @@ external independence.
 | Published Phase 2.5 code/package | Exact Commit `854b15c56397a81de6326b719d3d7d1dc847608f` on `main`; exact-commit CI and Dependency Graph green |
 | Published Phase 2 evidence | `P2-CE-001` through `P2-CE-004`, version bound to their records and limitations |
 | Phase 2.5 campaign evidence | `P2-CE-005` CE-0 `NOT_EVALUATED`; no execution, result ledger, pass rate, CE-2 record, or evidence-only Commit B |
-| Phase 3 implementation | Working local candidate; raw request through optional synthetic effect and separate readback implemented |
-| Phase 3 local T&E | Required high-risk/no-effect and low-risk/verified-effect demo acceptance PASS; deterministic corpus 46/46; focused tests 57/57 |
-| Phase 3 repository aggregate | 288/288 passed in the settled local checkout; exact-commit CI pending |
-| Phase 3 external gates | Final exact commit, explicit publication authorization, GitHub CI and Dependency Graph |
+| Phase 3 implementation | Published at exact Commit `423685d`; raw request through optional synthetic effect and separate readback implemented |
+| Phase 3 T&E | Required high-risk/no-effect and low-risk/verified-effect demo acceptance PASS; deterministic corpus 46/46; focused tests 57/57; exact-commit CI passed |
+| Phase 3 repository aggregate | Then-current 288/288 passed locally and in exact-commit CI |
+| Phase 3.1 model evaluation | Working synthetic-only candidate; temporal baseline/challenger mechanism; no historical data or promotion authority |
 | Data/action boundary | Synthetic only; no historical organizational data, live feed, test tenant, production connector, credential, or live action |
 
 ## What Phase 3 adds
@@ -159,7 +165,7 @@ security assurance.
 
 <!-- PAGE BREAK -->
 
-## Reproduce the local Phase 3 observations
+## Reproduce the published Phase 3 observations
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest \
@@ -180,26 +186,38 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 run_phase3_corpus.py \
   --output-dir "$corpus_dir"
 ```
 
-Reproduce the settled local repository aggregate:
+Reproduce the current repository aggregate:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v
 ```
 
-Successful local return is diagnostic evidence for the checkout that ran. It
-does not substitute for an exact commit, CI, manifest verification, or external
-review.
+Successful local return is diagnostic evidence for the checkout that ran. The
+published Phase 3 result remains version-bound to exact Commit `423685d`; a
+later result requires its own exact commit, CI and manifest verification.
+
+## Phase 3.1 model-evaluation boundary
+
+![Figure 2. Phase 3.1 synthetic-only temporal model-evaluation and authority boundary.](architecture/09_phase31_model_evaluation.png)
+
+The working Phase 3.1 package trains only on the earliest temporal partition,
+fits the calibration challenger only on the middle partition, and evaluates
+both candidates once on the final partition. The same project-controlled
+evaluator holds all synthetic labels; this is logical role separation, not
+independent custody. Current results are mechanism observations only and cannot
+support superiority, promotion, operational calibration, or historical-data
+claims.
 
 ## Forward plan and gates
 
-1. **Close the local candidate.** Reconcile traceability and diagrams and
-   resolve every release-blocking finding.
-2. **Freeze and verify.** Run the focused Phase 3 modules, final repository
-   aggregate, both demos, corpus, documentation/link/schema/CSV checks, and
-   integrity/package checks against settled bytes.
-3. **Commit and publish deliberately.** Create one exact Phase 3 commit, record
-   its results, publish only under explicit authorization, and require green
-   exact-commit GitHub CI and Dependency Graph checks.
+1. **Freeze Phase 3.1 separately.** Reconcile the exact synthetic mechanism,
+   tests, traceability, diagram and integrity manifest without changing the
+   published Phase 3 boundary.
+2. **Publish deliberately.** Publish a Phase 3.1 commit only under explicit
+   authorization and require exact-commit CI and Dependency Graph checks.
+3. **Keep promotion prohibited.** Require owner-approved metrics, thresholds,
+   uncertainty rules, subgroup floors and rollback criteria before any model
+   replacement can be proposed.
 4. **Keep data-bearing work separate.** `P2-CE-005`, if pursued, retains its
    two-commit protocol. Historical replay requires an authenticated restricted
    Gate B package. Neither is implied by Phase 3 simulation success.

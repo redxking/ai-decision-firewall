@@ -7,7 +7,8 @@
 > aggregate, generated/verified manifest, and inspected renders. Site tests are
 > outside architecture/evidence claims. No tag or evidence package exists;
 > `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`. Phase 3
-> `0.3.0-alpha.1` is a separate local simulation-only package; its CE-1 results
+> `0.3.0-alpha.1` is a separate published simulation-only package at exact
+> Commit `423685d`; its CE-1 results
 > do not change Phase 2 read-only construction or constitute Phase 2 evidence.
 
 ## Purpose and boundary

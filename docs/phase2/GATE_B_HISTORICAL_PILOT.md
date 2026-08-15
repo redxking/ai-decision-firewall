@@ -7,7 +7,8 @@
 > outside Gate B evidence. Publication does not create an approved historical
 > execution baseline. No Gate B package is approved or stored here.
 > `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`; neither that
-> plan nor the local Phase 3 candidate authorizes historical access.
+> plan, the published Phase 3 simulation baseline, nor the Phase 3.1 synthetic
+> model-evaluation candidate authorizes historical access.
 
 Gate B is the authorization and evidence boundary for the first small, de-identified historical replay. It remains offline and read-only. It does not authorize a live feed, shadow-feed deployment, operational recommendation workflow, action credential, write-capable connector, or operational action.
 
@@ -47,8 +48,9 @@ Use the public templates only as starting points:
 
 Every committed template is `NOT APPROVED` and contains no historical data. Complete operational packages belong in an approved restricted system, not this repository.
 
-A design-freeze or published commit, unit-test/CI run, schema-valid draft, local
-Phase 3 candidate, or synthetic campaign plan is not an approved pilot
+A design-freeze or published commit, unit-test/CI run, schema-valid draft,
+published Phase 3 baseline, Phase 3.1 synthetic candidate, or synthetic
+campaign plan is not an approved pilot
 implementation. The restricted package must identify one exact released commit
 and the completion artifacts required by that release. The prior alpha.5
 baseline requires its Phase 2.4 reference-feature receipt for a newly generated

@@ -2,11 +2,11 @@
 
 ## Current state
 
-Phase 3 is a working **local `0.3.0-alpha.1` candidate** for an operational
+Phase 3 `0.3.0-alpha.1` is a **published simulation-only baseline** for an operational
 decision-control path over synthetic requests, evidence, identities, targets,
-and effects. It is not yet a committed or published Phase 3 baseline, and its
-exact commit and exact-commit CI remain pending. Local observations are CE-1
-implementation-conformance evidence only. They do not establish live
+and effects. Exact Commit `423685d105be813056617db738297eba83d3d9d0` is on
+`main`; exact-commit CI and Dependency Graph checks passed. These observations
+are simulation-only CE-1 implementation-conformance evidence. They do not establish live
 containment, operational efficacy or calibration, production safety, or
 external independence.
 
@@ -27,7 +27,7 @@ authorization is short lived, exact-scope, and single use. The broker can act
 only on the in-memory `NETWORK_ISOLATE` simulation target, and a separate
 read-only observer determines the post-action verification status.
 
-## Reproduce the local observations
+## Reproduce the published observations
 
 Run the two raw-request demonstrations into a new directory:
 
@@ -65,11 +65,11 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest \
   tests.test_phase3_release_blockers -v
 ```
 
-As of 2026-08-15, the current local candidate passed **57/57 focused Phase 3
+Exact Commit `423685d105be813056617db738297eba83d3d9d0` passed **57/57 focused Phase 3
 tests**, both demonstration acceptance checks reported **PASS**, and the corpus
 reported **46/46** passing scenarios. The complete repository suite passed
-**288/288** locally. These are checkout-local observations, not exact-commit CI
-evidence.
+**288/288** locally and in exact-commit CI. These are simulation-only CE-1
+observations, not operational evidence.
 
 Both command-line writers require an absent or empty destination and refuse to
 clobber a nonempty directory. Their outputs are local diagnostic artifacts,
@@ -137,7 +137,7 @@ See [Architecture](ARCHITECTURE.md), [Security and Safety Case](SECURITY_AND_SAF
 |---|---|---|
 | Phase 2.5 exact Commit `854b15c56397a81de6326b719d3d7d1dc847608f` | Published on `main`; exact-commit CI and Dependency Graph green | Phase 2.5 implementation/package status only |
 | `P2-CE-005` | CE-0 `NOT_EVALUATED`; not executed or published | Plan only; no campaign observation or CE-2 result |
-| Phase 3 code, tests, demonstrations, and corpus | Local candidate; exact commit and CI pending | CE-1 implementation conformance and local synthetic observations only |
+| Phase 3 code, tests, demonstrations, and corpus | Published at exact Commit `423685d`; exact-commit CI/Dependency Graph passed | CE-1 implementation conformance and synthetic observations only |
 | Live/operational behavior | Not evaluated | No operational efficacy, production safety, or authority claim |
 
 ## Safety findings closed during candidate review
@@ -154,17 +154,17 @@ fail-closed identifier, clock, dependency, and post-effect lifecycle handling.
 Post-effect prewrite append failures are accounted through one honest
 `POST_EFFECT_ACCOUNTING_FAILURE`, a `ROLLBACK_REQUIRED` result, and exactly-once
 decision/verification-failure metrics; no automated rollback is claimed.
-Focused negative regressions cover these classes. Their closure is CE-1 local
+Focused negative regressions cover these classes. Their closure is CE-1
 implementation evidence, not proof that the remaining attack surface is defect
 free.
 
 ## Next gates
 
-1. Complete documentation/diagram and package reconciliation while preserving
-   the executable/test bytes behind the settled local results; rerun if those
-   bytes change.
-2. Freeze one exact Phase 3 commit and regenerate integrity/package artifacts.
-3. Publish only with explicit authorization and require exact-commit CI.
-4. Keep all future live-data, test-tenant, and operational progression behind
+1. Keep the published Phase 3 exact-commit evidence boundary immutable.
+2. Develop the separate Phase 3.1 model-evaluation package without historical
+   data, live action, or model-promotion authority.
+3. Require a distinct exact commit, integrity freeze, publication decision and
+   exact-commit CI for any Phase 3.1 release.
+4. Keep all future historical/live-data, test-tenant, and operational progression behind
    separate data-governance, threat-model, architecture, safety, change-control,
    rollback, key-management, and authorizing-official gates.

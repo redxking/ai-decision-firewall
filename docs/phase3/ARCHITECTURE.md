@@ -2,7 +2,7 @@
 
 ## Purpose and scope
 
-The local `0.3.0-alpha.1` Phase 3 candidate adds an end-to-end operational
+Published Phase 3 `0.3.0-alpha.1` at exact Commit `423685d` adds an end-to-end operational
 control transaction while keeping every input, identity, target, and effect
 synthetic. It is additive:
 Phase 1 compatibility behavior and Phase 2 `historical_replay` /

@@ -10,8 +10,8 @@
 <title>Phase3OperationalMVP</title>
 <polygon fill="white" stroke="none" points="-17.28,17.28 -17.28,-1290.04 1068.02,-1290.04 1068.02,17.28 -17.28,17.28"/>
 <text xml:space="preserve" text-anchor="middle" x="525.37" y="-1252.61" font-family="Arial" font-size="17.00">AI Decision Firewall &#45; Phase 3 Operational MVP Architecture</text>
-<text xml:space="preserve" text-anchor="middle" x="525.37" y="-1233.11" font-family="Arial" font-size="17.00">Phase 2.5 @ 854b15c: published on main; exact&#45;commit CI green</text>
-<text xml:space="preserve" text-anchor="middle" x="525.37" y="-1213.61" font-family="Arial" font-size="17.00">Phase 3: local demo/corpus candidate; exact commit and CI pending</text>
+<text xml:space="preserve" text-anchor="middle" x="525.37" y="-1233.11" font-family="Arial" font-size="17.00">Phase 2.5 @ 854b15c: published; exact&#45;commit CI green</text>
+<text xml:space="preserve" text-anchor="middle" x="525.37" y="-1213.61" font-family="Arial" font-size="17.00">Phase 3 @ 423685d: published simulation&#45;only CE&#45;1; exact&#45;commit CI green</text>
 <text xml:space="preserve" text-anchor="middle" x="525.37" y="-1194.11" font-family="Arial" font-size="17.00">P2&#45;CE&#45;005: CE&#45;0 NOT_EVALUATED; separate from and unrelated to Phase 3</text>
 <g id="clust2" class="cluster">
 <title>cluster_execution</title>

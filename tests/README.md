@@ -6,7 +6,7 @@ Run from the repository root:
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` passed the **222/222** technical suite and exact-commit CI/Dependency Graph after publication. The separate public-site module passed **9/9**, yielding a then-current aggregate of **231/231**. Site tests are not Phase 2.5 or `P2-CE-005` evidence, and `P2-CE-005` remains CE-0 `NOT_EVALUATED`. The local Phase 3 `0.3.0-alpha.1` candidate adds focused contract, opaque-credential identity, evidence/consequence/decision, policy-safety-floor, authorization/broker/bypass/approval, verifier/fault, lifecycle/metrics/demo, and deterministic corpus tests. The current focused result is **57/57**, and the complete settled-candidate repository suite passed **288/288** locally.
+The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` passed the **222/222** technical suite and exact-commit CI/Dependency Graph after publication. The separate public-site module passed **9/9**, yielding a then-current aggregate of **231/231**. Site tests are not Phase 2.5 or `P2-CE-005` evidence, and `P2-CE-005` remains CE-0 `NOT_EVALUATED`. Published Phase 3 `0.3.0-alpha.1` at exact Commit `423685d105be813056617db738297eba83d3d9d0` passed **57/57** focused tests and the then-current **288/288** repository suite in exact-commit CI. The Phase 3.1 working candidate adds a separate synthetic-only model-evaluation module; its counts remain working-tree observations until the final freeze.
 
 ## Phase 3 focused suite
 
@@ -50,11 +50,11 @@ Coverage includes:
 - a deterministic 46-case declarative corpus whose project-controlled
   expectations passed 46/46 locally.
 
-The local candidate review found and closed release-blocking defects across the
+The Phase 3 review found and closed release-blocking defects across the
 consequence, evidence, identity, policy, replay/receipt, dependency-failure, and
 audit boundaries. The **57/57** result includes the dedicated release-blocker
-regressions. The full local repository result is **288/288**. The exact commit
-and CI remain pending. These tests do not establish
+regressions. The then-current repository result was **288/288** at exact Commit
+`423685d`; exact-commit CI passed. These tests do not establish
 OS/process isolation, durable/distributed replay control, enterprise source
 provenance, external verifier independence, live action safety, efficacy, or a
 statistical failure bound.

@@ -5,9 +5,13 @@
 > `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main`, and its
 > exact-commit CI/Dependency Graph checks passed. The tracked model and baseline
 > outputs remain at their committed bytes. `P2-CE-005` was not executed and
-> remains CE-0 `NOT_EVALUATED`. The local Phase 3 `0.3.0-alpha.1` candidate does
-> not retrain, evaluate, or grant authority to this model; it accepts an external agent
-> recommendation/confidence as explicitly non-authoritative request fields.
+> remains CE-0 `NOT_EVALUATED`. Published Phase 3 exact Commit
+> `423685d105be813056617db738297eba83d3d9d0` and its green exact-commit CI do not
+> retrain, evaluate, or grant authority to this model; Phase 3 accepts an
+> external recommendation/confidence as explicitly non-authoritative request
+> fields. The Phase 3.1 working candidate adds a separate synthetic-only
+> temporal evaluation mechanism. It does not replace the tracked v0.1 model or
+> authorize model promotion.
 
 ## Purpose
 
@@ -48,6 +52,28 @@ are unchanged. That
 supports model-output/authority separation in the tested deterministic path; it
 does not establish general agentic alignment, calibration, robustness, or
 monitor effectiveness.
+
+## Phase 3.1 evaluation mechanism
+
+The Phase 3.1 working candidate recombines the 1,200 committed synthetic cases
+as source pools and creates disjoint temporal partitions: 720 training, 240
+calibration and 240 evaluation rows. It fits a new logistic baseline on the
+training partition and a Platt calibration challenger on calibration scores and
+labels. Both are evaluated once on the final partition.
+
+The current synthetic observation preserved the ranking and threshold confusion
+matrix while the challenger reduced Brier score by `0.00098425`, log loss by
+`0.01113884`, and ten-bin expected calibration error by `0.00309615`. These
+values show that the evaluation/calibration mechanism works against the same
+generator family. They do not establish independent generalization, practical
+significance, model superiority, operational calibration or promotion
+eligibility. The machine result therefore returns `NOT_AUTHORIZED`.
+
+Future explainable boosting or monotonic gradient-boosted candidates require a
+separately approved historical-data package, frozen candidate and feature
+constraints, an evaluator-controlled temporal holdout, owner-defined thresholds
+and one clean evaluation. The final holdout cannot be repeatedly queried during
+candidate selection.
 
 ## Known risks
 

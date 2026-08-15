@@ -4,7 +4,7 @@
 
 This repository is a research proof of concept. It uses synthetic fixtures and
 in-memory simulators. Phase 2 replay and shadow modes are structurally read
-only. The local Phase 3 candidate can apply only a simulated
+only. The published Phase 3 baseline can apply only a simulated
 `NETWORK_ISOLATE` transition to its exact in-memory target type; it has no live
 or generic connector. The project is not approved for production integration,
 operational decision-making, or live containment.
@@ -21,10 +21,13 @@ Useful reports identify the affected version or commit, the violated safety or s
 
 Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f`
 is published on `main` and its exact-commit CI/Dependency Graph checks passed.
-`P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`. Phase 3 is an
-uncommitted local `0.3.0-alpha.1` candidate. Its 57/57 focused-test, 288/288
-full-suite, two-demo PASS, and 46/46 corpus observations are checkout-local CE-1
-evidence, not a published or exact-commit-CI evidence package.
+`P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`. Phase 3
+`0.3.0-alpha.1` is published at exact Commit
+`423685d105be813056617db738297eba83d3d9d0`; its exact-commit CI and Dependency
+Graph checks passed. Its 57/57 focused-test, then-current 288/288 full-suite,
+two-demo PASS, and 46/46 corpus observations are simulation-only CE-1 evidence,
+not operational validation. The Phase 3.1 working candidate remains
+synthetic-only and cannot authorize historical data access or model promotion.
 
 Phase 3 opaque credentials, private capabilities, exact-type construction, and
 deep-immutable records are application-level Python boundaries, not OS/process

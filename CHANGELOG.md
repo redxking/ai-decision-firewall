@@ -1,6 +1,44 @@
 # Changelog
 
-## Unreleased — `0.3.0-alpha.1` Phase 3 simulation-only operational MVP candidate
+## Unreleased — `0.3.1-alpha.1` Phase 3.1 governed model-evaluation candidate
+
+- Added closed v0.3.1 plan/result schemas and fixed plan `P3-1-MEV-001` for a
+  synthetic-only model-evaluation mechanism. The plan binds the four committed
+  source pools by SHA-256 and record count, prohibits historical/live access and
+  live action, and contains no owner-approved promotion thresholds.
+- Added a disjoint temporal 60/20/20 training/calibration/evaluation split that
+  moves equal timestamps forward so one timestamp cannot cross a boundary.
+- Added an interpretable logistic baseline and a deterministic Platt calibration
+  challenger. Both are evaluated once on the final temporal partition; the
+  challenger does not add authority or change the Phase 3 decision path.
+- Added ROC AUC, average precision, Brier score, log loss, expected calibration
+  error, threshold metrics, Wilson intervals, selective-risk curves, and
+  scenario/criticality/privilege strata. Results are aggregate only.
+- The fixed synthetic run used 720 training, 240 calibration and 240 evaluation
+  rows. The challenger preserved ranking and the threshold confusion matrix
+  while reducing synthetic Brier score by `0.00098425`, log loss by
+  `0.01113884`, and ten-bin expected calibration error by `0.00309615`. These
+  are mechanism observations, not practical-significance, superiority or
+  operational-performance claims.
+- Added 10 focused regressions for plan safety, source binding, temporal
+  separation, deterministic execution, metrics, calibration inputs, no-clobber
+  output, no action/historical imports, and structural refusal of promotion.
+  The focused module passed 11/11 and the current repository suite passed
+  299/299 locally; exact candidate commit and CI remain pending.
+- Added the Phase 3.1 architecture diagram, data-governance gate, model
+  evaluation plan, contracts, ADR 013, and traceability matrix. No historical
+  payload was accessed and no action credential, authorization, broker, target,
+  operational effect, model promotion or `P2-CE-005` execution occurred.
+
+## `0.3.0-alpha.1` — published Phase 3 simulation-only operational MVP baseline
+
+Exact Commit `423685d105be813056617db738297eba83d3d9d0` was published to `main`
+on 2026-08-15. Exact-commit CI passed on Python 3.11 and 3.12, and the Dependency
+Graph workflow passed. The release boundary retains 57/57 focused Phase 3 tests,
+both demonstration checks PASS, the 46/46 deterministic corpus, the then-current
+288/288 repository aggregate, a verified 269-entry manifest, and inspected
+seven-page DOCX/PDF artifacts. It remains simulation-only CE-1 implementation
+evidence, not operational validation.
 
 - Added a strict closed v0.3.0 raw decision-request contract and validated
   external policy contract. Duplicate members, non-finite numbers, unsupported
@@ -33,10 +71,9 @@
   reevaluation only and cannot mint an action token or invoke the broker.
 - Added correlated lifecycle audit, runtime metrics, two raw-request SOC
   demonstrations, and a deterministic 46-scenario adversarial corpus. The
-  current checkout passed 57/57 focused tests, both demonstration acceptance
+  published boundary passed 57/57 focused tests, both demonstration acceptance
   checks reported PASS, the corpus reported 46/46, and the complete repository
-  suite passed 288/288 locally. Candidate commit, publication, and CI remain
-  pending.
+  suite passed 288/288 locally and in exact-commit CI.
 - Reconciled the living engineering, safety, test, traceability, and architecture
   documentation; added the current Phase 3 DOT/PNG/SVG architecture view; and
   generated an inspected paired 7-page Phase 3 candidate DOCX/PDF status
@@ -52,7 +89,7 @@
   request/token/verifier/approval replay and atomicity, dependency-failure
   closure, and executed-path/post-effect audit correlation. Dedicated negative
   regressions cover these classes; this is not exhaustive assurance.
-- Phase 3 remains synthetic and local. Its private-capability controls are not
+- Phase 3 remains synthetic and CE-1. Its private-capability controls are not
   OS/process security; ledgers are not durable/distributed; fixture HMAC keys
   are not enterprise provenance; and same-project verifiers are not external
   independence. No live action, operational efficacy, production safety, or

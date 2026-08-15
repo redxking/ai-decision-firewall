@@ -3,7 +3,8 @@
 **Status:** Working design control; no new campaign evidence  
 **Date:** 2026-08-15  
 **Scope:** Synthetic Phase 1 model construction, Phase 2 artifact consumption,
-and Phase 3 `0.3.0-alpha.1` local synthetic demonstrations/corpus
+published Phase 3 `0.3.0-alpha.1` synthetic demonstrations/corpus, and the
+Phase 3.1 synthetic-only model-evaluation mechanism
 
 ## Decision
 
@@ -25,9 +26,10 @@ across runs. Its required semantic decisions/effects and lifecycle invariants
 are reproducible. The corpus freezes time, scenario IDs, expectations, and
 deterministic synthetic runtime key material so its bounded summary is stable;
 the output deliberately omits reusable authority/signatures and keys. The
-current local semantic observations are 57/57 focused tests, two demonstration
+published semantic observations are 57/57 focused tests, two demonstration
 acceptance checks PASS, 46/46 corpus scenarios, and 288/288 full repository
-tests; the exact commit and CI remain pending.
+tests for exact Commit `423685d105be813056617db738297eba83d3d9d0`; exact-commit
+CI and Dependency Graph checks passed.
 
 These are application-level output and determinism controls, not OS/process
 confinement, external custody, production key handling, a published evidence
@@ -58,5 +60,6 @@ at their committed Phase 2.5 bytes. Ordinary local execution is designed not to
 alter them. Phase 3 runtime fixtures do not replace or validate that model or
 dataset. This document does not establish portable byte-identical retraining,
 independently attest artifact custody, approve a replacement model, update any
-frozen plan, create `P2-CE-005` evidence, or elevate local Phase 3 observations
-beyond CE-1 implementation conformance.
+frozen plan, create `P2-CE-005` evidence, elevate Phase 3 observations beyond
+simulation-only CE-1 implementation conformance, or authorize the Phase 3.1
+candidate to use historical data or promote a model.

@@ -3,15 +3,16 @@
 ## Status
 
 This analysis began as the design-to-implementation gap assessment and now
-records the local `0.3.0-alpha.1` candidate's closure state as of 2026-08-15. “Observed” means
-the behavior was exercised locally against synthetic fixtures. It is CE-1
-implementation-conformance evidence, not an exact-commit CI result, published
-evidence package, live-system validation, or external assurance.
+records the published `0.3.0-alpha.1` baseline's closure state as of 2026-08-15.
+“Observed” means the behavior was exercised against synthetic fixtures and
+bound to exact Commit `423685d105be813056617db738297eba83d3d9d0`; exact-commit
+CI and Dependency Graph checks passed. It is CE-1 implementation-conformance
+evidence, not live-system validation or external assurance.
 
 Phase 2.5 is separately published on `main` at exact Commit
 `854b15c56397a81de6326b719d3d7d1dc847608f`, with exact-commit CI and Dependency
 Graph success. That publication did not run `P2-CE-005`; it remains CE-0
-`NOT_EVALUATED`. Phase 3 is additive local work after that commit.
+`NOT_EVALUATED`. Phase 3 is additive and separately published.
 
 ## Closure assessment
 
@@ -66,7 +67,7 @@ control classes:
    token, attempt, target, state digests, effect counts, and verification
    semantics so a returned result cannot contradict its validated audit slice.
 
-These closures are local CE-1 implementation evidence; they do not establish
+These closures are simulation-only CE-1 implementation evidence; they do not establish
 exhaustive correctness.
 
 ## Trust-source rule
@@ -98,13 +99,13 @@ trust/authority remain non-authoritative even when schema valid.
 - Do not call local synthetic results production safety, operational efficacy,
   independent assurance, or a bounded failure rate.
 
-## Candidate release gates still open
+## Published baseline and next gates
 
-1. Preserve the settled executable/test bytes that produced 57/57 focused,
-   288/288 full-suite, and 46/46 corpus results; rerun if those bytes change.
-2. Reconcile the final integrity/package artifacts and commit one exact
-   candidate.
-3. Publish only under explicit authorization and require exact-commit CI.
+1. Preserve exact Commit `423685d` and its 57/57 focused, then-current 288/288
+   full-suite, and 46/46 corpus result as the immutable Phase 3 boundary.
+2. Keep Phase 3.1 model evaluation synthetic-only until its distinct data,
+   performance-threshold, and promotion authorities exist.
+3. Require a separate exact commit and exact-commit CI for any later increment.
 
 ## Post-MVP technical debt
 

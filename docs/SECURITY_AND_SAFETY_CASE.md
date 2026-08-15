@@ -4,12 +4,12 @@
 > 7–11 preserve Phase 2. Exact Phase 2.5 Commit
 > `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
 > exact-commit CI/Dependency Graph checks passed. `P2-CE-005` was not executed
-> and remains CE-0 `NOT_EVALUATED`. Claims 12–18 summarize the uncommitted local
-> Phase 3 `0.3.0-alpha.1` simulation-only candidate. Its current local results
-> are 57/57 focused tests, 288/288 full repository tests, two demo acceptance
-> checks PASS, and 46/46 corpus scenarios; the exact commit and CI remain
-> pending. These are
-> CE-1/local observations only; no
+> and remains CE-0 `NOT_EVALUATED`. Claims 12–18 summarize the published Phase 3
+> `0.3.0-alpha.1` simulation-only baseline at exact Commit
+> `423685d105be813056617db738297eba83d3d9d0`. Exact-commit CI and Dependency
+> Graph checks passed; the release boundary includes 57/57 focused tests, the
+> then-current 288/288 repository suite, two demo acceptance checks PASS, and
+> 46/46 corpus scenarios. These are simulation-only CE-1 observations; no
 > Gate B package, historical dataset, live feed, production/test-tenant
 > connector, operational action, production safety, or external assurance is
 > approved.
@@ -55,7 +55,7 @@ The campaign module also instruments construction of `AuthorizationGate`, `Actio
 
 **Claim 11 — Selected Gate B failures have exact causal identities and bounded payload-access observations.** The published Phase 2.5 scaffolding registers 25 selected closed identities: 24 pre-payload mutations and one post-qualification threshold identity. The oracle accepts only exact closed tuples for classified failures, and unclassified Gate B errors remain unscorable. For the 24 selected pre-payload mutations, the bounded observer recorded zero `cases` or `adjudications` roles under its enumerated Python file APIs. This is CE-1 test instrumentation only, not a complete failure taxonomy, OS-level nonaccess/non-egress proof, sandbox, reference monitor, or `P2-CE-005` campaign evidence.
 
-## Phase 3 local candidate claims
+## Published Phase 3 simulation-only claims
 
 **Claim 12 — Request claims cannot create authority.** The v0.3.0 raw request is
 untrusted and cannot carry the invocation credential. Agent identity/status/

@@ -66,10 +66,17 @@ v0.3.0 requests at runtime for two policy-inventory targets:
 
 | Fixture | Synthetic scope | Current observation boundary |
 |---|---|---|
-| `DOMAIN_CONTROLLER_01` | Tier-0 authentication dependency, stale/conflicting evidence, insufficient Tier-0 agent authority, high consequence | Local raw-request demo returns `ESCALATE`; no authorization/effect |
-| `WORKSTATION_042` | Low-criticality endpoint, fresh corroborated evidence, exact workstation-containment authority | Local raw-request demo returns `ALLOW`; one in-memory isolation; same-project readback `VERIFIED` |
-| Phase 3 adversarial corpus | 46 declarative canonical, evidence, identity, consequence, authorization, bypass, broker/verifier, metamorphic, and combined cases | 46/46 local project-controlled matches; exact candidate commit/CI pending |
-| Phase 3 focused controls | Contract, credential identity, evidence, policy/consequence, decision, authorization, broker, approval, verifier/fault, audit/metrics, and runner boundaries | 57/57 focused and 288/288 full repository tests passed locally; exact commit and CI pending |
+| `DOMAIN_CONTROLLER_01` | Tier-0 authentication dependency, stale/conflicting evidence, insufficient Tier-0 agent authority, high consequence | Published raw-request demo returns `ESCALATE`; no authorization/effect |
+| `WORKSTATION_042` | Low-criticality endpoint, fresh corroborated evidence, exact workstation-containment authority | Published raw-request demo returns `ALLOW`; one in-memory isolation; same-project readback `VERIFIED` |
+| Phase 3 adversarial corpus | 46 declarative canonical, evidence, identity, consequence, authorization, bypass, broker/verifier, metamorphic, and combined cases | 46/46 project-controlled matches at exact Commit `423685d`; exact-commit CI passed |
+| Phase 3 focused controls | Contract, credential identity, evidence, policy/consequence, decision, authorization, broker, approval, verifier/fault, audit/metrics, and runner boundaries | 57/57 focused and then-current 288/288 repository tests at exact Commit `423685d` |
+
+Phase 3.1 reuses the 1,200 committed v0.1 synthetic case/label records only to
+exercise a temporal training/calibration/evaluation mechanism. The logical
+trainer receives training labels only; the project-controlled evaluator holds
+all fixture labels to calculate final aggregate metrics. This same-process
+separation is not independent custody, and the results are not representative
+of operational performance.
 
 Each synthetic evidence item has a canonical content digest and a runtime HMAC
 attestation binding source identity/type, provenance, observation time,

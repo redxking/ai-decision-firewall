@@ -30,7 +30,7 @@ DEFAULT_SOURCE = ROOT / "docs" / "ENGINEERING_STATUS_AND_FORWARD_PLAN.md"
 DEFAULT_OUTPUT = (
     ROOT
     / "docs"
-    / "AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx"
+    / "AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.docx"
 )
 
 BLUE = "2E74B5"
@@ -361,7 +361,7 @@ def _configure_styles(document):
 
 
 def _configure_page(document):
-    document.settings.odd_and_even_pages_header_footer = True
+    document.settings.odd_and_even_pages_header_footer = False
     section = document.sections[0]
     section.different_first_page_header_footer = False
     section.page_width = Inches(8.5)
@@ -386,15 +386,13 @@ def _configure_page(document):
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         _set_spacing(p, before=0, after=0, line=1.0)
         label = p.add_run(
-            "Phase 3 simulation-only candidate - not operationally approved | Page "
+            "Published Phase 3 | Phase 3.1 synthetic candidate | Page "
         )
         _set_run_font(label, size=8, color=MUTED)
         _add_field(p, "PAGE")
 
     configure_header(section.header)
-    configure_header(section.even_page_header)
     configure_footer(section.footer)
-    configure_footer(section.even_page_footer)
 
 
 def _add_page_boundary(document):
@@ -424,7 +422,7 @@ def _add_masthead(document):
     subtitle = document.add_paragraph()
     _set_spacing(subtitle, before=0, after=14, line=1.0)
     run = subtitle.add_run(
-        "AI Decision Firewall - Phase 3 simulation-only operational MVP candidate"
+        "AI Decision Firewall - published Phase 3 and Phase 3.1 model-evaluation candidate"
     )
     _set_run_font(run, size=14, color=MUTED)
 
@@ -435,8 +433,8 @@ def _add_masthead(document):
             "0.2.0-alpha.6 | commit 854b15c | CI and Dependency Graph succeeded",
         ),
         (
-            "Phase 3 candidate",
-            "0.3.0-alpha.1 | 288/288 local regression | exact commit and CI pending",
+            "Published Phase 3",
+            "0.3.0-alpha.1 | commit 423685d | exact-commit CI succeeded",
         ),
         ("Review date", "2026-08-15"),
         (
@@ -445,7 +443,7 @@ def _add_masthead(document):
         ),
         (
             "Evidence boundary",
-            "Phase 3 local CE-1 only; P2-CE-005 remains CE-0 NOT_EVALUATED",
+            "Phase 3 simulation-only CE-1; Phase 3.1 local candidate; P2-CE-005 remains CE-0",
         ),
     ]
     table = document.add_table(rows=len(rows), cols=2)
@@ -701,7 +699,7 @@ def _audit(document):
     assert section.bottom_margin == Inches(1)
     assert document.styles["Normal"].font.name == "Calibri"
     assert document.styles["Normal"].font.size == Pt(11)
-    assert len(document.inline_shapes) == 1
+    assert len(document.inline_shapes) == 2
     for shape in document.inline_shapes:
         assert shape.width <= MAX_FIGURE_WIDTH
         assert shape.height <= MAX_FIGURE_HEIGHT
@@ -720,7 +718,7 @@ def build(source, output):
         "AI Decision Firewall Engineering Status and Forward Plan"
     )
     document.core_properties.subject = (
-        "Phase 3 simulation-only operational MVP candidate status"
+        "Published Phase 3 baseline and Phase 3.1 model-evaluation candidate status"
     )
     document.core_properties.author = "AI Decision Firewall project"
     document.core_properties.keywords = (

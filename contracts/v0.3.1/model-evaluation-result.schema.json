@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/redxking/ai-decision-firewall/contracts/v0.3.1/model-evaluation-result.schema.json",
+  "title": "Phase 3.1 Synthetic Model Evaluation Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "result_type",
+    "plan",
+    "plan_sha256",
+    "input_bindings",
+    "partitions",
+    "models",
+    "comparison",
+    "promotion",
+    "safety_boundary",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.3.1"},
+    "result_type": {"const": "SYNTHETIC_MODEL_EVALUATION_MECHANISM"},
+    "plan": {"type": "object"},
+    "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "input_bindings": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "sha256", "records"],
+        "properties": {
+          "role": {"type": "string"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "records": {"type": "integer", "minimum": 1}
+        }
+      }
+    },
+    "partitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["training", "calibration", "evaluation"],
+      "properties": {
+        "training": {"$ref": "#/$defs/partition"},
+        "calibration": {"$ref": "#/$defs/partition"},
+        "evaluation": {"$ref": "#/$defs/partition"}
+      }
+    },
+    "models": {
+      "type": "object",
+      "minProperties": 2,
+      "maxProperties": 2,
+      "additionalProperties": {"$ref": "#/$defs/modelResult"}
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["challenger_minus_baseline", "interpretation"],
+      "properties": {
+        "challenger_minus_baseline": {
+          "type": "object",
+          "additionalProperties": {"type": "number"}
+        },
+        "interpretation": {"const": "Mechanism observation only; no superiority or promotion claim."}
+      }
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decision", "reason_codes"],
+      "properties": {
+        "decision": {"const": "NOT_AUTHORIZED"},
+        "reason_codes": {
+          "const": [
+            "SYNTHETIC_DATA_ONLY",
+            "OWNER_THRESHOLDS_NOT_APPROVED",
+            "HISTORICAL_VALIDATION_NOT_PERFORMED"
+          ]
+        }
+      }
+    },
+    "safety_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "historical_payload_accessed",
+        "live_data_accessed",
+        "action_credentials_present",
+        "broker_constructed",
+        "target_constructed",
+        "operational_effects"
+      ],
+      "properties": {
+        "historical_payload_accessed": {"const": false},
+        "live_data_accessed": {"const": false},
+        "action_credentials_present": {"const": false},
+        "broker_constructed": {"const": false},
+        "target_constructed": {"const": false},
+        "operational_effects": {"const": 0}
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 4,
+      "items": {"type": "string", "minLength": 10}
+    }
+  },
+  "$defs": {
+    "partition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "positives", "negatives", "start", "end", "case_id_digest"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 1},
+        "positives": {"type": "integer", "minimum": 0},
+        "negatives": {"type": "integer", "minimum": 0},
+        "start": {"type": "string", "format": "date-time"},
+        "end": {"type": "string", "format": "date-time"},
+        "case_id_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "modelResult": {
+      "type": "object",
+      "required": ["role", "model_family", "metrics", "strata"],
+      "properties": {
+        "role": {"enum": ["BASELINE", "CHALLENGER"]},
+        "model_family": {"type": "string"},
+        "training_metadata": {"type": "object"},
+        "calibrator": {"type": "object"},
+        "metrics": {"type": "object"},
+        "strata": {"type": "object"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

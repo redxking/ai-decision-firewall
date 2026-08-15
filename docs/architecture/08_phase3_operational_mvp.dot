@@ -9,7 +9,7 @@ digraph Phase3OperationalMVP {
     fontname="Arial",
     fontsize=17,
     labelloc="t",
-    label="AI Decision Firewall - Phase 3 Operational MVP Architecture\nPhase 2.5 @ 854b15c: published on main; exact-commit CI green\nPhase 3: local demo/corpus candidate; exact commit and CI pending\nP2-CE-005: CE-0 NOT_EVALUATED; separate from and unrelated to Phase 3"
+    label="AI Decision Firewall - Phase 3 Operational MVP Architecture\nPhase 2.5 @ 854b15c: published; exact-commit CI green\nPhase 3 @ 423685d: published simulation-only CE-1; exact-commit CI green\nP2-CE-005: CE-0 NOT_EVALUATED; separate from and unrelated to Phase 3"
   ];
   node [
     shape=box,

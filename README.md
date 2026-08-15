@@ -2,7 +2,8 @@
 
 - **Published Phase 2.5 baseline:** exact Commit [`854b15c56397a81de6326b719d3d7d1dc847608f`](https://github.com/redxking/ai-decision-firewall/commit/854b15c56397a81de6326b719d3d7d1dc847608f) is on `main`; exact-commit CI and Dependency Graph checks passed. The package preserves the 222/222 Phase 2.5 technical result, separate 9/9 public-site result, and 231/231 then-current repository aggregate at that boundary.
 - **Phase 2 evidence boundary:** published `P2-CE-001` through `P2-CE-004` retain their version-bound claims. `P2-CE-005` was not executed or published and remains CE-0 `NOT_EVALUATED`; the Phase 2.5 commit and green CI do not create that campaign result.
-- **Local Phase 3 candidate:** the additive simulation-only `0.3.0-alpha.1` operational MVP now implements raw v0.3.0 requests, opaque-credential identity resolution, signed target-bound evidence, machine-enforced deterministic policy and consequence floors, four-way decisions, exact-scope single-use authorization, a mandatory in-memory broker, functionally separate same-project target readback, bounded human approval, lifecycle audit, metrics, two demonstrations, and a deterministic 46-scenario corpus. The current checkout passed 57/57 focused tests and the complete 288/288 repository suite; both demonstration acceptance checks reported PASS; and the corpus reported 46/46. It is not yet a committed or published Phase 3 baseline; the exact commit and CI are pending. Local results are CE-1 implementation-conformance observations only.
+- **Published Phase 3 baseline:** exact Commit [`423685d105be813056617db738297eba83d3d9d0`](https://github.com/redxking/ai-decision-firewall/commit/423685d105be813056617db738297eba83d3d9d0) is on `main`; exact-commit [CI](https://github.com/redxking/ai-decision-firewall/actions/runs/31908090324) and [Dependency Graph](https://github.com/redxking/ai-decision-firewall/actions/runs/31908091856) checks passed. Its simulation-only boundary includes 57/57 focused Phase 3 tests, both demonstration checks PASS, a 46/46 deterministic corpus, and the then-current 288/288 repository aggregate. These are CE-1 implementation-conformance observations, not operational validation.
+- **Phase 3.1 working candidate:** the current `0.3.1-alpha.1` checkout adds a closed synthetic-only temporal model-evaluation mechanism, one logistic baseline, one Platt calibration challenger, discrimination/calibration/abstention/subgroup metrics, aggregate-only results, and an unconditional `NOT_AUTHORIZED` promotion state. Its focused module passed 11/11 and the current repository suite passed 299/299 locally. No historical/live adapter, action credential, broker, target, operational effect, owner threshold, model promotion, or performance claim is present.
 - **Validated baseline:** v0.1.0 synthetic proof of concept
 - **Decision domain:** privileged-identity containment
 - **Operational status:** synthetic only. Phase 2 remains read-only; Phase 3 can change only in-memory synthetic target state. No organizational historical data, approved Gate B package, live feed, production/test-tenant connector, or operational credential is included.
@@ -199,7 +200,7 @@ The worked [`starter evidence record`](contracts/v0.2.0/examples/phase2-starter-
 
 The committed `P2-CE-001` and `P2-CE-002` replay bundles predate alpha.5 and do not contain either current reference-assurance artifact. Their original version-bound narrow claims remain validated as recorded; they were not retroactively upgraded. A newly generated alpha.6 replay is incomplete unless it produces and binds both `reference_feature_assurance.jsonl` and `source_to_decision_assurance.jsonl` and the harness completes every final revalidation.
 
-## Phase 3: simulation-only operational MVP candidate
+## Phase 3: published simulation-only operational MVP
 
 Phase 3 adds an external raw-request-to-synthetic-effect path without adding a
 live connector. The caller supplies an opaque invocation credential outside the
@@ -217,7 +218,7 @@ policy digest, decision context, and target-state precondition. The mandatory
 broker consumes it once and can change only the in-memory simulation. A separate
 read-only observer—not the broker return value—drives final verification.
 
-The two local demonstrations show:
+The two published-boundary demonstrations show:
 
 - a Tier-0 domain-controller isolation request with AI confidence `0.96`, stale
   and conflicting evidence, cascading consequence, and insufficient authority
@@ -227,15 +228,14 @@ The two local demonstrations show:
   executes one simulated isolation, and is observed through the functionally
   separate same-project readback path as `VERIFIED`.
 
-The current local candidate passed 57/57 focused Phase 3 tests, both
-demonstration acceptance checks reported PASS, and the deterministic
-adversarial corpus reports 46/46. The settled-candidate full repository suite
-passed 288/288 locally. Candidate review found and closed
+Published exact Commit `423685d` passed 57/57 focused Phase 3 tests, both
+demonstration acceptance checks, the 46/46 deterministic adversarial corpus,
+and the then-current 288/288 repository suite locally and in exact-commit CI.
+Prepublication review found and closed
 release-blocking defects across consequence/evidence binding, opaque identity
 and key-domain separation, exact-type/deep-immutable security objects, machine
 policy floors, replay and receipt atomicity, dependency-failure closure, and
-executed-path/post-effect audit semantics. The exact Phase 3 commit and
-exact-commit CI remain pending.
+executed-path/post-effect audit semantics.
 
 These controls are application-level Python boundaries, not OS/process
 security. The authorization ledger is in memory and is not durable or
@@ -247,6 +247,16 @@ externally independent.
 
 Start with [`docs/phase3/README.md`](docs/phase3/README.md) for reproduction,
 architecture, test status, traceability, and explicit nonclaims.
+
+Phase 3.1 now adds a separate synthetic-only evaluation path for the advisory
+model. It recombines the 1,200 committed synthetic cases as source pools,
+creates disjoint temporal training/calibration/evaluation partitions, compares
+an interpretable logistic baseline with a Platt calibration challenger, and
+reports aggregate discrimination, calibration, Wilson-interval, selective-risk
+and subgroup diagnostics. The observed synthetic calibration deltas demonstrate
+the mechanism only. Model promotion remains `NOT_AUTHORIZED`; no historical
+payload may be opened without a separately authenticated Gate B package. See
+[`docs/phase31/README.md`](docs/phase31/README.md).
 
 ## Architecture
 
@@ -542,11 +552,11 @@ python docs/build_engineering_doc.py
 
 Verify a package only against the manifest committed with those exact bytes. The
 `MANIFEST.sha256` in published Commit `854b15c` covers that Phase 2.5 package.
-The current candidate manifest was regenerated and locally verified across all
-269 other tracked Phase 3 candidate files; this does not publish the candidate
-or alter any Phase 2 evidence boundary. The tracked data, model, and baseline
-outputs remain at their published bytes. Reverify the manifest after checking
-out the matching commit and before use:
+The manifest in published Phase 3 exact Commit `423685d` covers that exact
+tree. The Phase 3.1 working tree requires a newly regenerated and verified
+manifest before it can be committed or considered for publication. The tracked
+data, model, and baseline outputs remain at their published bytes. Reverify a
+manifest only after checking out its matching commit:
 
 ```bash
 shasum -a 256 -c MANIFEST.sha256
@@ -575,8 +585,10 @@ shasum -a 256 -c MANIFEST.sha256
 │   ├── phase2/                     # Replay architecture, feature/source-to-decision assurance, safety, V&V, traceability
 │   ├── phase3/                     # Operational-MVP architecture, safety case, T&E, gap analysis, and traceability
 │   ├── ENGINEERING_STATUS_AND_FORWARD_PLAN.md # Current living status and forward plan
-│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx # Current Phase 3 candidate render; inspected
-│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf  # Paired Phase 3 candidate render; 7 pages inspected
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx # Published Phase 3 archived render; inspected
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf  # Paired published Phase 3 archive; 7 pages inspected
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.docx # Current Phase 3.1 candidate render; 9 pages inspected
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.pdf  # Paired Phase 3.1 candidate render; 9 pages inspected
 │   ├── AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx # Archived Phase 2.5 package render
 │   ├── AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf  # Archived Phase 2.5 paired render; 15 pages
 │   ├── build_engineering_status.py # Rebuilds the current status DOCX/PDF package
@@ -644,9 +656,9 @@ separate `P2-CE-005` two-commit campaign protocol was not entered. Any future
 execution still requires an explicit governed designation of Commit A, a clean
 detached no-retry run, and a distinct validated evidence-only Commit B.
 
-The immediate engineering path is to freeze, commit, publish, and run CI for
-the Phase 3 simulation-only candidate while retaining its CE-1/local-observation
-boundary. The next data-bearing step remains external: accountable owners must
+The immediate engineering path is to freeze and verify the separate Phase 3.1
+synthetic model-evaluation mechanism while retaining its no-promotion boundary.
+The next data-bearing step remains external: accountable owners must
 assemble and authenticate the restricted Gate B authority, custody, privacy,
 mapping, adjudication, and pilot package before a small de-identified historical
 corpus can be processed. No Gate B approval, historical run, live feed, or
@@ -671,10 +683,12 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`DELIVERY_NOTES.md`](DELIVERY_NOTES.md) — v0.1 scope, results, and handoff
 - [`docs/AI_Decision_Firewall_POC_Engineering_Baseline_v0.1.pdf`](docs/AI_Decision_Firewall_POC_Engineering_Baseline_v0.1.pdf) — engineering baseline
 - [`docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md`](docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md) — current living status and forward plan
-- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx) — inspected Phase 3 simulation-only candidate status artifact
-- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf) — paired 7-page Phase 3 candidate status artifact; all rendered pages inspected
-- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx) — inspected Phase 2.5 package-bound status artifact; it predates the local Phase 3 candidate
-- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf) — paired 15-page Phase 2.5 status artifact; it predates the local Phase 3 candidate
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx) — inspected artifact for the now-published Phase 3 simulation-only baseline
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf) — paired 7-page Phase 3 artifact; all rendered pages inspected at that boundary
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.docx) — current Phase 3.1 status package built from the reviewed Markdown and diagrams
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.pdf) — paired Phase 3.1 status render; all 9 pages inspected
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx) — inspected historical Phase 2.5 package-bound status artifact
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf) — paired 15-page historical Phase 2.5 artifact
 - [`docs/build_engineering_status.py`](docs/build_engineering_status.py) — reproducible builder for the current Phase 3 status DOCX/PDF package
 - [`docs/CONCEPT_OF_OPERATIONS.md`](docs/CONCEPT_OF_OPERATIONS.md) — actors, modes, decisions, and off-nominal behavior
 - [`docs/REQUIREMENTS_TRACEABILITY_MATRIX.csv`](docs/REQUIREMENTS_TRACEABILITY_MATRIX.csv) — requirement-to-design-and-test traceability
@@ -682,11 +696,15 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`docs/SYNTHETIC_DATA_CARD.md`](docs/SYNTHETIC_DATA_CARD.md) — dataset design and appropriate use
 - [`docs/TEST_AND_EVALUATION_PLAN.md`](docs/TEST_AND_EVALUATION_PLAN.md) — acceptance criteria and required next-phase tests
 - [`docs/phase2/README.md`](docs/phase2/README.md) — Phase 2 scope and documentation map
-- [`docs/phase3/README.md`](docs/phase3/README.md) — Phase 3 local-candidate scope, reproduction, evidence status, and documentation map
+- [`docs/phase3/README.md`](docs/phase3/README.md) — published Phase 3 scope, reproduction, evidence status, and documentation map
 - [`docs/phase3/ARCHITECTURE.md`](docs/phase3/ARCHITECTURE.md) — Phase 3 request-to-effect architecture and trust boundaries
 - [`docs/phase3/SECURITY_AND_SAFETY_CASE.md`](docs/phase3/SECURITY_AND_SAFETY_CASE.md) — Phase 3 safety argument, supporting observations, residual risks, and nonclaims
 - [`docs/phase3/TEST_AND_EVALUATION_PLAN.md`](docs/phase3/TEST_AND_EVALUATION_PLAN.md) — planned acceptance requirements separated from local observations
 - [`docs/phase3/REQUIREMENTS_TRACEABILITY.csv`](docs/phase3/REQUIREMENTS_TRACEABILITY.csv) — Phase 3 requirement-to-code/test traceability and evidence boundaries
+- [`docs/phase31/README.md`](docs/phase31/README.md) — Phase 3.1 synthetic-only model-evaluation scope, reproduction, result boundary, and next authority gate
+- [`docs/phase31/MODEL_EVALUATION_PLAN.md`](docs/phase31/MODEL_EVALUATION_PLAN.md) — temporal split, metrics, candidate strategy, and owner-threshold requirements
+- [`docs/phase31/DATA_GOVERNANCE_GATE.md`](docs/phase31/DATA_GOVERNANCE_GATE.md) — approvals and frozen controls required before historical payload access
+- [`docs/phase31/REQUIREMENTS_TRACEABILITY.csv`](docs/phase31/REQUIREMENTS_TRACEABILITY.csv) — Phase 3.1 requirement-to-code/test traceability
 - [`docs/phase2/CLAIM_EVIDENCE_STANDARD.md`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) — claim classes, proof requirements, statistical rules, and adversarial evaluations
 - [`docs/phase2/FEATURE_ASSURANCE.md`](docs/phase2/FEATURE_ASSURANCE.md) — typed/source-authorized signals, exact inventory binding, reference projection, controlled campaign evidence, and nonclaims
 - [`docs/phase2/SOURCE_TO_DECISION_ASSURANCE.md`](docs/phase2/SOURCE_TO_DECISION_ASSURANCE.md) — Phase 2.5 stage scope, numeric rule, artifact ordering, failure semantics, CE-0 campaign plan, and nonclaims
@@ -731,9 +749,10 @@ python docs/build_engineering_status.py
 
 `requirements-docs.txt` supplies the Python document and plotting dependencies,
 including `python-docx` and `matplotlib`. LibreOffice/`soffice` is additionally
-required to produce the paired PDF. The builder now creates the inspected
-7-page Phase 3 candidate pair; the separately named 15-page Phase 2.5 pair
-remains an immutable package-bound archive.
+required to produce the paired PDF. The builder creates the current status pair
+from the Markdown source and linked architecture figures; the separately named
+15-page Phase 2.5 pair remains an immutable package-bound archive. A rebuilt
+pair must be rendered and inspected before its integrity manifest is frozen.
 
 ## Licensing
 

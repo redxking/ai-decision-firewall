@@ -1,14 +1,15 @@
 # Concept of Operations — Privileged Identity Decision Firewall
 
 > **Version boundary.** This document preserves the v0.1 and Phase 2 concepts
-> while adding the local Phase 3 simulation-only operational-MVP concept. Exact
+> while adding the published Phase 3 simulation-only operational-MVP concept. Exact
 > Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` is published on
 > `main`, and its exact-commit CI and Dependency Graph checks passed.
-> `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`. Phase 3 is an
-> uncommitted local `0.3.0-alpha.1` candidate with local synthetic CE-1
-> observations only (57/57 focused tests, two demo acceptance checks PASS, and
-> 46/46 corpus scenarios); the full repository suite passed 288/288 locally. The
-> exact commit and CI are pending. No
+> `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`. Phase 3
+> `0.3.0-alpha.1` is published at exact Commit
+> `423685d105be813056617db738297eba83d3d9d0`; exact-commit CI and Dependency
+> Graph checks passed. Its simulation-only CE-1 boundary includes 57/57 focused
+> tests, two demo acceptance checks PASS, 46/46 corpus scenarios, and the
+> then-current 288/288 repository suite. No
 > Gate B package, historical-data approval, live feed, production/test-tenant
 > integration, operational credential, or live-action authority exists.
 
@@ -47,7 +48,8 @@ itself cause reevaluation.
 | Offline `historical_replay` semantics | Implemented and tested with synthetic fixtures only | Read-only counterfactual decisions; zero historical cases, authorization tokens, broker calls, or effects |
 | Gate B historical-pilot preflight | Machine contract and synthetic negative-control evidence implemented | No authenticated organizational package is approved; no historical payload is authorized or stored |
 | `shadow_read_only` semantics | Implemented as a code-owned read-only mode | No live feed or deployed service exists; the name describes execution semantics only |
-| Phase 3 simulation-only operational MVP | Working local `0.3.0-alpha.1` candidate; 57/57 focused tests, 288/288 full repository tests, demo acceptance PASS, corpus 46/46; exact commit/CI pending | Raw synthetic requests; opaque synthetic invocation credentials; in-memory `NETWORK_ISOLATE`; exact-scope token; separate same-project readback; no live connector or operational credential |
+| Phase 3 simulation-only operational MVP | Published `0.3.0-alpha.1` at exact Commit `423685d`; 57/57 focused tests, then-current 288/288 repository tests, demo acceptance PASS, corpus 46/46; exact-commit CI/Dependency Graph passed | Raw synthetic requests; opaque synthetic invocation credentials; in-memory `NETWORK_ISOLATE`; exact-scope token; separate same-project readback; no live connector or operational credential |
+| Phase 3.1 synthetic model evaluation | Working `0.3.1-alpha.1` candidate; synthetic temporal baseline/challenger mechanism only | Digest-bound repository fixtures; no historical/live adapter, action path, owner threshold, promotion authority, or operational claim |
 | Controlled test-tenant mode | Planned | Requires separately approved non-production architecture, process isolation, managed credentials, durable idempotency, vendor-independent readback, rollback, stop conditions, and change control |
 | Limited pilot mode | Planned | Would require a bounded approved population, human authorization, operational evidence, and an authorizing-official decision |
 

@@ -39,8 +39,8 @@ The words *historical replay* and *shadow mode* describe execution semantics, no
 Exact Phase 2.5 Commit `854b15c` is a published code/package baseline with green
 exact-commit workflows; it is not a tag or `P2-CE-005` evidence package. The
 separate campaign protocol was not entered and no successor campaign executed.
-Phase 3 `0.3.0-alpha.1` local simulation work is documented separately under
-[`../phase3/README.md`](../phase3/README.md). Its local CE-1 observations and
+Published Phase 3 `0.3.0-alpha.1` is documented separately under
+[`../phase3/README.md`](../phase3/README.md). Its simulation-only CE-1 observations and
 action-capable in-memory simulation do not alter Phase 2's structural read-only
 boundary or create `P2-CE-005` evidence.
 

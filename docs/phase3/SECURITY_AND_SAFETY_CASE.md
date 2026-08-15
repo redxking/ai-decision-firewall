@@ -2,12 +2,13 @@
 
 ## Claim boundary
 
-The local `0.3.0-alpha.1` Phase 3 candidate demonstrates that the implemented
+Published Phase 3 `0.3.0-alpha.1` at exact Commit
+`423685d105be813056617db738297eba83d3d9d0` demonstrates that the implemented
 Python control path can enforce selected identity, evidence, policy, decision,
 authorization, broker, audit, and synthetic-target invariants under 57 focused
 tests, two demonstration acceptance checks, and a 46-scenario adversarial
-corpus. The claim level is CE-1 implementation conformance/local observation
-only. The candidate has not been frozen, published, or run in exact-commit CI.
+corpus. The claim level is simulation-only CE-1 implementation conformance.
+Exact-commit CI and Dependency Graph checks passed.
 
 This safety case does not establish production security, operational efficacy,
 live-containment safety, exhaustive attack coverage, a failure-rate bound,
@@ -120,13 +121,12 @@ perform rollback.
 - No executed-path audit record whose identifiers, state digests, effect count,
   or verification meaning contradicts the returned result.
 
-## Evidence supporting the local claim
+## Evidence supporting the published claim
 
-As of 2026-08-15, **57/57 focused Phase 3 tests** passed locally, both
+For exact Commit `423685d105be813056617db738297eba83d3d9d0`, **57/57 focused Phase 3 tests** passed, both
 raw-request demonstration acceptance checks reported **PASS**, and the
 deterministic corpus reported **46/46** scenario passes. The full repository
-suite passed **288/288** locally. The exact candidate commit and exact-commit CI
-remain pending. See the
+suite passed **288/288** locally and in exact-commit CI. See the
 [Phase 3 T&E plan](TEST_AND_EVALUATION_PLAN.md) and
 [traceability matrix](REQUIREMENTS_TRACEABILITY.csv).
 

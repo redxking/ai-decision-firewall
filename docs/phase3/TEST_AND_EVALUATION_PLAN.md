@@ -2,13 +2,13 @@
 
 ## Status and purpose
 
-This document now separates the original acceptance design from the local
-`0.3.0-alpha.1` candidate observations as of 2026-08-15. The requirements and
+This document separates the original acceptance design from the published
+`0.3.0-alpha.1` observations as of 2026-08-15. The requirements and
 detailed matrix
-remain the test oracle. “Observed passing” means a project-controlled local run
-over synthetic inputs; it is CE-1 implementation conformance only. The Phase 3
-candidate has not yet been frozen, committed, published, or observed in
-exact-commit CI. Existing Phase 1 and Phase 2/2.5 claims retain the boundaries
+remain the test oracle. “Observed passing” means a project-controlled run over
+synthetic inputs; it is CE-1 implementation conformance only. Phase 3 exact
+Commit `423685d105be813056617db738297eba83d3d9d0` is published on `main`, and
+exact-commit CI and Dependency Graph checks passed. Existing Phase 1 and Phase 2/2.5 claims retain the boundaries
 described in the [current repository test plan](../TEST_AND_EVALUATION_PLAN.md)
 and [Security and Safety Case](../SECURITY_AND_SAFETY_CASE.md).
 
@@ -21,15 +21,15 @@ Test count is not a success criterion. Acceptance depends on demonstrated
 mission behavior, closed safety boundaries, meaningful negative paths, and a
 reproducible end-to-end result.
 
-## Locally observed candidate state
+## Published Phase 3 state
 
-| Scope | Local observation | Evidence boundary |
+| Scope | Published observation | Evidence boundary |
 |---|---|---|
-| Focused Phase 3 controls | 57/57 contract, decision, authorization, adversarial, end-to-end, corpus-runner, and release-blocker tests passed locally | CE-1 local implementation conformance; not exact-commit CI |
+| Focused Phase 3 controls | 57/57 contract, decision, authorization, adversarial, end-to-end, corpus-runner, and release-blocker tests passed | CE-1 implementation conformance; exact-commit CI passed |
 | Required demonstrations | Both raw-request demos passed: Tier-0 domain controller `ESCALATE` with no effect; authorized workstation `ALLOW` with one simulated effect and `VERIFIED` readback | Synthetic simulation only |
-| Systematic adversarial corpus | 46/46 declared scenarios passed locally | Project-controlled deterministic cases; not exhaustive/statistical assurance |
-| Full repository regression | 288/288 passed locally after the final release-blocker fixes | CE-1 checkout-local regression; not exact-commit CI |
-| Candidate commit and CI | Pending | No exact Phase 3 commit-bound CI claim |
+| Systematic adversarial corpus | 46/46 declared scenarios passed | Project-controlled deterministic cases; not exhaustive/statistical assurance |
+| Full repository regression | 288/288 passed after the final release-blocker fixes | Then-current exact-commit regression boundary |
+| Commit and CI | Exact Commit `423685d`; CI and Dependency Graph passed | Published Phase 3 implementation boundary |
 | Operational validation | Not evaluated | No live action, efficacy, safety, or external-independence claim |
 
 Adversarial review found and closed release-blocking defects across consequence,
@@ -37,8 +37,9 @@ evidence binding, credential/trust-material handling, exact-type construction,
 machine-policy invariants, replay/receipt atomicity, dependency-failure closure,
 and post-effect audit semantics. The 57-test focused result includes the
 dedicated release-blocker regressions. The complete settled-candidate repository
-suite subsequently passed 288/288 locally. Any later executable or test change
-invalidates that count and requires a rerun.
+suite subsequently passed 288/288 locally and in exact-commit CI. Later
+executable or test changes do not alter that version-bound result and require a
+new count for the changed tree.
 
 Reproduce the focused suite and corpus:
 
@@ -419,9 +420,8 @@ escalation, not an automated rollback mechanism.
 
 ## Acceptance gates
 
-The local candidate satisfies the implemented mission-path gates below at the
-pre-freeze observation boundary. Release acceptance still requires the settled
-exact-candidate rerun, commit, and CI:
+The published baseline satisfies the implemented mission-path gates below at
+exact Commit `423685d`:
 
 1. all existing non-obsolete Phase 1 and Phase 2/2.5 tests pass unchanged;
 2. all Phase 3 release-blocking tests pass on the exact candidate commit;
@@ -445,12 +445,12 @@ Current gate disposition:
 
 | Gate | State |
 |---|---|
-| Focused Phase 3 implementation tests | 57/57 observed passing locally; not exact-commit CI |
-| Two end-to-end raw-request demonstrations | Acceptance checks observed PASS locally |
-| 46-case adversarial corpus | 46/46 observed passing locally |
-| Existing Phase 1/2 and public-site regressions | Complete repository suite observed 288/288 passing locally |
-| Exact Phase 3 candidate commit | Pending |
-| Exact-commit CI and Dependency Graph | Pending |
+| Focused Phase 3 implementation tests | 57/57 passed for exact Commit `423685d` |
+| Two end-to-end raw-request demonstrations | Acceptance checks PASS at the published boundary |
+| 46-case adversarial corpus | 46/46 passed at the published boundary |
+| Existing Phase 1/2 and public-site regressions | Then-current repository suite passed 288/288 |
+| Exact Phase 3 commit | `423685d105be813056617db738297eba83d3d9d0` published on `main` |
+| Exact-commit CI and Dependency Graph | Passed |
 | Operational or externally independent validation | Not evaluated and outside this MVP |
 
 ## Evidence and reporting boundary

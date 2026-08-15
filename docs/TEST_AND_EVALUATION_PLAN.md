@@ -6,11 +6,11 @@
 > includes 222/222 Phase 2.5 technical tests, separate 9/9 public-site tests,
 > and the then-current 231/231 aggregate. The site remains outside Phase 2.5
 > evidence. `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`.
-> Phase 3 is an uncommitted local `0.3.0-alpha.1` simulation-only candidate. The
-> current checkout passed 57/57 focused tests; both demo acceptance checks
-> reported PASS; the corpus reported 46/46; and the full repository suite passed
-> 288/288 locally. The exact candidate commit and CI remain pending. These are
-> CE-1/local observations.
+> Phase 3 `0.3.0-alpha.1` is published at exact Commit
+> `423685d105be813056617db738297eba83d3d9d0`; exact-commit CI and Dependency
+> Graph checks passed. Its boundary includes 57/57 focused tests, both demo
+> acceptance checks PASS, a 46/46 corpus, and the then-current 288/288 repository
+> suite. These are simulation-only CE-1 observations, not operational validation.
 
 ## Test objective
 
@@ -82,9 +82,9 @@ No successor `P2-CE-005` campaign has been executed. Source reconciliation is co
 
 The fixed plan specifies ten clean/mutant pairs per run and two deterministic same-process runs: 40 planned observations, zero retries, and zero exclusions. The expected stage outcomes are design constants, not observed results. Publication and green CI for Phase 2.5 Commit `854b15c` did not designate or execute a governed `P2-CE-005` Commit A. CE-2 wording remains prohibited unless one exact clean Commit A freezes the implementation, plan, schemas, generator, validator, and intended confinement controls; a detached checkout of that commit executes the campaign; and a separate evidence-only Commit B is validated. A defect in the actor, task, expected outcome, scorer, generator, or validator invalidates the package rather than creating evidence.
 
-## Phase 3 local candidate verification
+## Published Phase 3 verification
 
-The local Phase 3 modules cover strict raw contracts and machine policy safety
+The published Phase 3 modules cover strict raw contracts and machine policy safety
 floors, opaque-credential identity/authority resolution, target-bound evidence
 attestation, evidence quality, target-claim spoofing, consequence, all four
 decisions, exact/deep-immutable constraints, single-use authorization,
@@ -93,9 +93,9 @@ bypass, approval receipt atomicity, fail-closed faults, functionally separate
 same-project target readback, executed-path/post-effect lifecycle audit,
 metrics, simulation-only construction, demos, and the deterministic corpus.
 
-Observed locally as of 2026-08-15:
+Verified for exact Commit `423685d105be813056617db738297eba83d3d9d0`:
 
-- 57/57 focused Phase 3 tests passed locally;
+- 57/57 focused Phase 3 tests passed;
 - the high-risk domain-controller raw request returned `ESCALATE`, created a
   bound approval requirement, issued no token, invoked no broker, and produced
   no effect;
@@ -103,7 +103,7 @@ Observed locally as of 2026-08-15:
   performed one in-memory isolation, and functionally separate same-project
   readback returned `VERIFIED`;
 - the deterministic adversarial corpus reported 46/46 passing scenarios; and
-- the exact settled-candidate repository suite passed 288/288 locally.
+- the then-current repository suite passed 288/288 locally and in exact-commit CI.
 
 Adversarial review found and closed release-blocking defects across consequence
 and evidence binding, credential/key-domain handling, exact-type immutability,
