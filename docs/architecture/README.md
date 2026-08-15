@@ -2,36 +2,41 @@
 
 ## Scope
 
-The numbered architecture diagrams are the current Phase 2 visual package candidates. They distinguish the prior published `0.2.0-alpha.5` evidence baseline from predecessor untagged `0.2.0-alpha.6` design-freeze Commit `08ce203c` and show the read-only execution boundary explicitly. The diagram sources and renders belong to this package candidate, passed the frozen-renderer chart check, and are covered by its generated-and-verified integrity manifest. Package publication and exact-package GitHub CI remain external gates. Phase 2 has no route to a live connector, action credential, authorization token, broker, operational target, or external effect.
+Diagrams 01–04 are the frozen Phase 2.5 package views included in exact Commit `854b15c`, which is published on `main`; exact-commit CI and Dependency Graph checks passed. Their internal labels preserve the evidence state at the time each Phase 2 view was frozen. Phase 2 has no route to a live connector, action credential, authorization token, broker, operational target, or external effect.
 
-Historical repository CI and Dependency Graph success remain bound to predecessor design-freeze Commit `08ce203c`. This package candidate's Phase 2.5 technical suite passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231. The site module is outside the architecture and Phase 2.5 evidence claims. GitHub CI must still pass after the exact package commit is published. Presence in a diagram is not a tag, release, campaign, or evidence claim. `P2-CE-005` remains CE-0 `NOT_EVALUATED`: no campaign result, result ledger, evidence record, or evidence-only Commit B exists. This package commit must pass its remaining gates before it can become final exact Commit A; CE-2 wording remains prohibited until the exact-commit campaign and two-commit evidence protocol complete.
+Diagram 08 is the current Phase 3 `0.3.0-alpha.1` operational-MVP architecture view. It shows the additive, simulation-only action path and its hard identity, evidence, policy, decision, authorization, broker, target, readback, audit, and metrics boundaries. The current checkout passed 57/57 focused tests and 288/288 full repository tests; both demo acceptance checks reported PASS; and the corpus reported 46/46. Its exact commit, push, and exact-commit CI are pending. The in-memory target and private mutation capability are application-level controls, not operating-system, process, or security isolation. The observer/verifier performs a functionally separate same-project readback and does not trust the broker return value; it is not an externally independent verifier. Human approval authorizes a signed reevaluation receipt for the bound request only; it never directly authorizes execution or itself causes reevaluation.
 
-Figure 1 depicts an application path designed to stop before governed payload access when the selected Gate B controls fail. It is not evidence that the operating system, mount namespace, network, or another same-user process cannot access those bytes.
+The Phase 2.5 technical suite at `854b15c` passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231 before publication. The site module is outside the architecture and Phase 2.5 evidence claims. Presence in a diagram is not a tag, release, campaign, or evidence claim. `P2-CE-005` remains CE-0 `NOT_EVALUATED`: no campaign result, result ledger, evidence record, or evidence-only Commit B exists. It is unrelated to the Phase 3 MVP and must not be used as Phase 3 evidence.
 
-The three metric charts remain historical Phase 1 `v0.1.0` synthetic-simulation results. Their sources consume the committed Phase 1 baseline outputs; the chart renders passed the check in the frozen renderer and are covered by this package candidate's generated-and-verified manifest. Their scope remains Phase 1; they must not be interpreted as Phase 2 replay, historical, live, efficacy, or production-readiness evidence.
+Figure 1 (`01_system_context.*`) depicts an application path designed to stop before governed payload access when the selected Gate B controls fail. It is not evidence that the operating system, mount namespace, network, or another same-user process cannot access those bytes.
+
+The three metric charts remain historical Phase 1 `v0.1.0` synthetic-simulation results. Their sources consume the committed Phase 1 baseline outputs; the chart renders passed the check in the frozen renderer and are covered by published Phase 2.5 Commit `854b15c` and its generated-and-verified manifest. Their scope remains Phase 1; they must not be interpreted as Phase 2 replay, historical, live, efficacy, or production-readiness evidence.
 
 ## Visual inventory
 
 | Files | Meaning | Evidence boundary |
 |---|---|---|
-| `01_system_context.*` | Current Phase 2 context and forward boundary | Alpha.5 prior evidence baseline; predecessor alpha.6 design freeze plus this package-candidate visual refresh |
+| `01_system_context.*` | Current Phase 2 context and forward boundary | Alpha.5 prior evidence baseline; predecessor alpha.6 design freeze plus the published Phase 2.5 package visual refresh |
 | `02_logical_architecture.*` | Read-only control, decision, assurance, and evaluation layers | No operational action path |
 | `03_decision_state_machine.*` | Completion and fail-closed sequencing | A file's presence alone does not establish a completed run |
 | `04_trust_boundaries.*` | Authority, input, application, evaluation, and excluded target zones | Same-process reference logic is not independent custody |
 | `05_disposition_counts.*` | Historical Phase 1 v0.1 synthetic disposition totals | 400 generated synthetic cases; seed `20260814`; not Phase 2.5 evidence |
 | `06_probability_distribution.*` | Historical Phase 1 v0.1 synthetic model-score distribution | Uncalibrated model mechanics only; not operational probability |
 | `07_scenario_outcomes.*` | Historical Phase 1 v0.1 dispositions by generated scenario | Synthetic generator family; not historical or operational outcomes |
+| [`08_phase3_operational_mvp.dot`](08_phase3_operational_mvp.dot), [`PNG`](08_phase3_operational_mvp.png), [`SVG`](08_phase3_operational_mvp.svg) | Current Phase 3 credential-to-decision-to-synthetic-effect architecture, including no-action branches and functionally separate same-project readback | Local simulation candidate only; no live connectors; exact Phase 3 commit and CI pending |
 
 ## Reproducible rendering
 
-The DOT sources are authoritative for diagrams 01–04. The checked-in renders were produced with Graphviz `dot` 15.1.1:
+The DOT sources are authoritative for diagrams 01–04 and 08. The checked-in renders were produced with Graphviz `dot` 15.1.1:
 
 ```bash
-for source in docs/architecture/0[1-4]_*.dot; do
+for source in docs/architecture/0[1-4]_*.dot docs/architecture/08_phase3_operational_mvp.dot; do
   dot -Tpng -Gdpi=180 "$source" -o "${source%.dot}.png"
   dot -Tsvg "$source" -o "${source%.dot}.svg"
 done
 ```
+
+For a Phase 3-only refresh, render `08_phase3_operational_mvp.dot` with the same two commands and inspect both outputs. The DOT source, PNG, and SVG must represent the same candidate status and assurance boundaries. Use the SVG for print; the current 1085 × 1307 point canvas scales to A3 portrait without clipping.
 
 Charts 05–07 are generated by [`generate_metric_charts.py`](generate_metric_charts.py):
 

@@ -4,7 +4,14 @@
 >
 > This file is not an authorization, approval record, custody record, signature, or completed protocol. Do not place real names, signatures, endpoints, source-system identifiers, approval-system identifiers, historical digests, record samples, or historical data in the public repository. Complete and retain an operational copy only in the approved restricted evidence system.
 >
-> Repository status at template review: `0.2.0-alpha.5` is the prior published evidence baseline; exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` design-freeze baseline, whose historical CI and Dependency Graph results remain bound to that commit. This package candidate's Phase 2.5 technical suite passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 and pilot evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders; package publication and GitHub CI on the exact published package commit remain external gates. Neither the design freeze nor this package candidate may be selected as an approved pilot baseline. No tag or release/evidence package exists. `P2-CE-005` is CE-0 `NOT_EVALUATED` and supplies no pilot evidence or authority.
+> Repository status at template review: exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
+> exact-commit CI/Dependency Graph checks passed. Its package boundary includes
+> 222/222 technical tests and separate 9/9 site tests; site tests are outside
+> Phase 2.5/pilot evidence. Publication does not make the commit an approved
+> pilot baseline. No Gate B package or tag/evidence package exists.
+> `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`; it supplies no
+> pilot evidence or authority.
 
 ## Document control
 
@@ -190,7 +197,7 @@ For historical, de-identified origin, the runtime may read only configuration, m
 
 Restricted authorization and control artifacts must reside under ignored `local/gate_b/`; historical output must use an ignored run-specific `outputs/replay/<run>/` directory with owner-only access. Gate B control JSON is limited to one MiB and 128 nesting levels, each mapping/protocol artifact to two MiB, and each bound model/policy file to 64 MiB. After authorized qualification, but before normalization or engine invocation, accepted-case window and observed quarantine-rate/category gates must pass.
 
-After read-only decision and exact eight-stage audit validation, execute every reference-assurance check required by the frozen release before adjudication decoding or result finalization. A replay against the prior alpha.5 baseline requires the Phase 2.4 feature-assurance receipt. A future final alpha.6 package would require both feature and source-to-decision assurance; neither receipt may be published when the latter check fails. Predecessor Commit `08ce203c` and this package candidate are not such a released package. Any receipt mismatch, incomplete case set, malformed binding, or late artifact mutation stops the run. A metrics or manifest file left by a failed return is incomplete diagnostic material, not completion evidence.
+After read-only decision and exact eight-stage audit validation, execute every reference-assurance check required by the frozen release before adjudication decoding or result finalization. A replay against the prior alpha.5 baseline requires the Phase 2.4 feature-assurance receipt. A replay against published Phase 2.5 Commit `854b15c` requires both feature and source-to-decision assurance; neither receipt may be published when the latter check fails. Publication does not itself approve this template or a historical pilot. Any receipt mismatch, incomplete case set, malformed binding, or late artifact mutation stops the run. A metrics or manifest file left by a failed return is incomplete diagnostic material, not completion evidence.
 
 ## Evidence and claim plan
 
@@ -211,4 +218,4 @@ The authorization snapshot and approval/reference fields may be sensitive and mu
 
 ## Final preflight declaration
 
-This template remains `NOT APPROVED`. A restricted operational copy may be marked ready only after every placeholder is replaced, every control is evidenced, an exact clean released commit and its required assurance profile are frozen, the complete package is hashed, all five roles and the independent reviewer approve it in authenticated external systems, semantic cross-checks pass, and the runtime rejects all non-`APPROVED` states before historical payload access. Approval to begin processing does not predetermine a successful run: completion additionally requires every release-specific reference check, final binding check, and a successful harness return. Neither the predecessor alpha.6 design freeze, this package candidate, nor the `P2-CE-005` plan satisfies those conditions.
+This template remains `NOT APPROVED`. A restricted operational copy may be marked ready only after every placeholder is replaced, every control is evidenced, an exact clean released commit and its required assurance profile are frozen, the complete package is hashed, all five roles and the independent reviewer approve it in authenticated external systems, semantic cross-checks pass, and the runtime rejects all non-`APPROVED` states before historical payload access. Approval to begin processing does not predetermine a successful run: completion additionally requires every release-specific reference check, final binding check, and a successful harness return. Published Phase 2.5 Commit `854b15c`, its green CI, the local Phase 3 candidate, and the `P2-CE-005` plan do not satisfy those external approval conditions.

@@ -1,22 +1,80 @@
 # Changelog
 
-## 0.2.0-alpha.6 — package candidate; not tagged or published as evidence
+## Unreleased — `0.3.0-alpha.1` Phase 3 simulation-only operational MVP candidate
 
-Predecessor design-freeze Commit `08ce203c0965e8d43b7653454d4ea8315996021f` was published on 2026-08-15; GitHub CI and Dependency Graph both succeeded for that exact commit. The prior published evidence baseline remains `0.2.0-alpha.5` at `f7f6b5c`. This package candidate was rebased onto the already-published public-site baseline at `github/main@c3400e0`; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site and its tests are not Phase 2.5 or `P2-CE-005` evidence. The candidate adds bounded campaign/local-run guards, selected Gate B CE-1 scaffolding, documentation, visuals, and status artifacts; its campaign module passed 21/21; its chart check passed in the frozen renderer; and it includes a generated-and-verified integrity manifest plus paired final-source DOCX/PDF renders whose 15 pages were inspected without blank, clipped, or run-in-heading defects. Alpha.6 is not tagged and has no release or evidence package. Package commit and publication and GitHub CI on that exact published commit remain external release gates. The tracked data, model, and `outputs/baseline/` bytes remain at their committed baselines.
+- Added a strict closed v0.3.0 raw decision-request contract and validated
+  external policy contract. Duplicate members, non-finite numbers, unsupported
+  versions, invalid time, unsafe bounds, and unknown/missing fields fail closed.
+- Added opaque invocation credentials, firewall-owned signed-principal/authority
+  resolution, and trust-material domain separation; policy-owned source, action,
+  and target registries; runtime HMAC source attestations with content,
+  semantics, time, provenance, and subject-target binding; evidence freshness,
+  corroboration, relevance, conflict, missing-source, and poisoning assessment;
+  and deterministic consequence evaluation.
+- Added exact `ALLOW`, `DENY`, `ESCALATE`, and `ALLOW_CONSTRAINED` outcomes with
+  stable reason codes, policy/context digests, deep-immutable records, canonical
+  constraints, and a functionally separate deterministic decision verifier.
+  Code-owned policy invariants preserve unique closed rule precedence,
+  conservative evidence/zero-conflict thresholds, severe-consequence approval
+  floors, and Tier-0 treatment for every domain controller. AI recommendation
+  and confidence remain non-authoritative.
+- Added short-lived HMAC authorizations binding issuer, request, decision,
+  agent, action, target, canonical parameters, time, policy, decision context,
+  target precondition, and nonce. The in-memory ledger enforces single use,
+  including sequential/concurrent replay, prior-instance replay, and failed
+  simulated attempts.
+- Added a mandatory simulation broker, a private-capability in-memory target,
+  state-precondition enforcement, and separate read-only target observation
+  with `VERIFIED`, `FAILED`, `PARTIAL`, `UNEXPECTED_EFFECT`, and
+  `ROLLBACK_REQUIRED` classifications. No live or generic target adapter exists.
+- Added exact-scope, expiring, single-use human approval through a separately
+  resolved opaque human credential. Receipt creation and audit registration are
+  atomic and retryable on precommit failure; the signed receipt permits
+  reevaluation only and cannot mint an action token or invoke the broker.
+- Added correlated lifecycle audit, runtime metrics, two raw-request SOC
+  demonstrations, and a deterministic 46-scenario adversarial corpus. The
+  current checkout passed 57/57 focused tests, both demonstration acceptance
+  checks reported PASS, the corpus reported 46/46, and the complete repository
+  suite passed 288/288 locally. Candidate commit, publication, and CI remain
+  pending.
+- Reconciled the living engineering, safety, test, traceability, and architecture
+  documentation; added the current Phase 3 DOT/PNG/SVG architecture view; and
+  generated an inspected paired 7-page Phase 3 candidate DOCX/PDF status
+  package. The separately named Phase 2.5 and v0.1 packages remain immutable
+  historical artifacts.
+- Regenerated and locally verified the candidate integrity manifest across all
+  269 other tracked files. This binds the local package bytes but does not
+  constitute publication, exact-commit CI, or Phase 2/Phase 3 evaluation
+  evidence.
+- Candidate review found and closed release blockers across cascading
+  consequence, evidence subject-target binding, identity/key-domain handling,
+  polymorphic and late-mutable security values, machine-policy safety floors,
+  request/token/verifier/approval replay and atomicity, dependency-failure
+  closure, and executed-path/post-effect audit correlation. Dedicated negative
+  regressions cover these classes; this is not exhaustive assurance.
+- Phase 3 remains synthetic and local. Its private-capability controls are not
+  OS/process security; ledgers are not durable/distributed; fixture HMAC keys
+  are not enterprise provenance; and same-project verifiers are not external
+  independence. No live action, operational efficacy, production safety, or
+  external assurance is claimed.
+
+## 0.2.0-alpha.6 — published code/package baseline; no P2-CE-005 result
+
+Predecessor design-freeze Commit `08ce203c0965e8d43b7653454d4ea8315996021f` was published on 2026-08-15 and its GitHub CI/Dependency Graph passed. The complete Phase 2.5 package was subsequently published on `main` at exact Commit `854b15c56397a81de6326b719d3d7d1dc847608f`; exact-commit CI and Dependency Graph also passed. Its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the then-current repository aggregate passed 231/231. The site and its tests are not Phase 2.5 or `P2-CE-005` evidence. The package adds bounded campaign/local-run guards, selected Gate B CE-1 scaffolding, documentation, visuals, and status artifacts; its campaign module passed 21/21; its chart check passed in the frozen renderer; and it includes a generated-and-verified integrity manifest plus paired final-source DOCX/PDF renders whose 15 pages were inspected. No tag or release/evidence package was created. The tracked data, model, and `outputs/baseline/` bytes remain at their committed baselines. `P2-CE-005` was not executed or published and remains CE-0 `NOT_EVALUATED`.
 
 - Added a separately implemented, standard-library-only source-to-decision reference path that recomputes the ordered `EVIDENCE`, `MODEL`, `POLICY`, `VERIFIER`, and read-only `FINAL_SURFACE` calculation surfaces from frozen normalized-case, model, and policy bytes.
 - Standardized provenance, integrity, freshness, and source-trust aggregation on ordered `math.fsum(values) / event_count`, and model-logit accumulation on ordered `math.fsum` before the intercept and clamped sigmoid, in both production and reference paths.
 - Added the closed, metadata-only `source_to_decision_assurance.jsonl` receipt and its schema. Successful rows bind the normalized case, exact model and policy bytes, read-only mode, five expected/observed stage digest pairs, and the ordered path digest; they contain no raw case or decision values.
 - Positioned Phase 2.5 after read-only decision validation, deterministic projection, complete eight-stage audit validation, and Phase 2.4 feature recomputation, but before qualification/rejection publication, adjudication decoding, comparison, metrics, and completed-run finalization. A source-to-decision mismatch leaves prior decision/audit files as incomplete diagnostic material and publishes neither reference-assurance artifact.
 - Extended exact-digest construction and late-mutation checks across normalized cases, normalization diagnostics, raw and deterministic decisions, audit, both reference receipts, adjudication comparison, replay metrics, and qualification/rejection artifacts when enabled. The complete set is revalidated before manifest construction, after construction, and after the manifest write; presence of an intermediate artifact or manifest file after an exception does not establish a completed run.
-- Added Phase 2.5 positive, stage-mutation, duplicate/non-finite input, numeric-summation, case-set, artifact-mutation, and harness-ordering tests. The predecessor design-freeze implementation passed **193/193 tests in a review-local run**, and CI succeeded for exact Commit `08ce203c` on 2026-08-15. This package candidate subsequently passed the Phase 2.5 technical suite **222/222**. The separately inherited public-site module passed 9/9, producing a combined repository aggregate of 231/231 without expanding the Phase 2.5 evidence boundary. These are narrow CE-1 implementation-conformance observations within their stated boundaries only; they are not `P2-CE-005` campaign evidence, a tagged release, or an alpha.6 evidence package.
-- Added a post-design-freeze campaign CLI destination preflight that rejects repository-root/outside/`.git` paths, existing symlink traversal, output/record overlap, nonempty output reuse, and existing record targets before ordinary CLI generation/check operations. Three focused CLI regressions passed 3/3. Check mode additionally rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. Added a separate negative sensitivity regression for reference-scope construction instrumentation; the campaign module passed 21/21 in an isolated clean clone, and all five candidate campaign-delta tests are included in the 222/222 Phase 2.5 technical suite. GitHub CI must still pass on the exact published package commit. These are operator-error and bounded Python-instrumentation controls, not an OS sandbox, TOCTOU/race guarantee, direct `generate_artifacts` confinement, or campaign evidence.
+- Added Phase 2.5 positive, stage-mutation, duplicate/non-finite input, numeric-summation, case-set, artifact-mutation, and harness-ordering tests. The predecessor design-freeze implementation passed **193/193 tests in a review-local run**, and CI succeeded for exact Commit `08ce203c` on 2026-08-15. The complete package subsequently passed the Phase 2.5 technical suite **222/222**. The separately inherited public-site module passed 9/9, producing a then-current repository aggregate of 231/231 without expanding the Phase 2.5 evidence boundary. Exact package Commit `854b15c` was published and its CI passed. These are narrow CE-1 implementation-conformance observations within their stated boundaries only; they are not `P2-CE-005` campaign evidence, a tagged release, or an alpha.6 evidence package.
+- Added a post-design-freeze campaign CLI destination preflight that rejects repository-root/outside/`.git` paths, existing symlink traversal, output/record overlap, nonempty output reuse, and existing record targets before ordinary CLI generation/check operations. Three focused CLI regressions passed 3/3. Check mode additionally rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. Added a separate negative sensitivity regression for reference-scope construction instrumentation; the campaign module passed 21/21 in an isolated clean clone, and all five campaign-delta tests are included in the 222/222 Phase 2.5 technical suite. Exact package Commit `854b15c` was published and its CI passed. These are operator-error and bounded Python-instrumentation controls, not an OS sandbox, TOCTOU/race guarantee, direct `generate_artifacts` confinement, or campaign evidence.
 - Instrumented every campaign reference attempt for construction of `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider`. The sensitivity regression injects all three, observes nonzero counters, forces an expected-row mismatch, and confirms closed-schema rejection. This is not a general allocation monitor, target-side proof, or an observed `P2-CE-005` result.
 - Added a `run_poc.py` write interlock. Ordinary repository writes are limited to `data/local/**` and `outputs/local/**`; explicit external paths remain permitted; and the freeze flag expands scope only to `data/**` and `outputs/baseline/**`. Other repository paths, case-variant repository aliases, symlink redirects, data/output overlap, and existing symlink, nonregular, or multiply linked generated leaves—including `run_manifest.json`—are rejected before generation. The local run manifest SHA-256-binds its seven non-self-referential outputs. Fourteen focused tests passed. This is an operator interlock, not OS/mount containment, adversarial TOCTOU/race or comprehensive hard-link protection, or direct-writer confinement.
 - Added CE-1 Gate B causal/observation scaffolding: a validator-owned closed registry of 25 selected `(stage, control_id, reason_code)` identities, exact-match scoring that rejects unclassified failures, and bounded observation over six enumerated Python file APIs. Tests cover 24 selected pre-payload mutations with zero observed `cases` or `adjudications` roles through those APIs and one postqualification threshold identity. This is not a complete failure taxonomy, reference monitor, sandbox, OS-level nonaccess proof, or successor campaign result; no successor campaign has executed.
 - Added the fixed `P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC` plan and closed campaign contract: ten clean/mutant pairs per run, two planned deterministic same-process repetitions, 40 planned attempt observations, zero retries/exclusions, and two expected blocks at each recomputation stage per run. Each run generates ten directly instrumented production baselines shared by the clean/mutant twins—ten calls to each of the engine, evidence, model, policy, and verifier components per run, 20 calls to each component across both runs—while the reference path is called once for each of 20 attempts per run, 40 total.
 - Separated the campaign's planned directly instrumented boundary counters from derived decision-output accounting. Authorization-gate, broker, target-effect, and scoped artifact-write calls are direct observations if the campaign runs; authorization tokens, action results, and operational effects are derived from serialized decisions. Their required zero values remain predeclared expectations, not observations, while `P2-CE-005` is CE-0.
-- `P2-CE-005` remains CE-0 `NOT_EVALUATED`. The plan, expected outcomes, predecessor design-freeze commit and CI result, 222/222 Phase 2.5 technical suite, separate 9/9 public-site module, 231/231 repository aggregate, manifest, and inspected renders are not campaign observations. CE-2 wording is prohibited until this package commit is published, passes exact-commit GitHub CI, is established as final clean Commit A, that exact detached commit executes the campaign, and a separate evidence-only Commit B is published and validated.
+- `P2-CE-005` remains CE-0 `NOT_EVALUATED`. The plan, expected outcomes, predecessor design-freeze commit and CI result, 222/222 Phase 2.5 technical suite, separate 9/9 public-site module, 231/231 then-current repository aggregate, manifest, inspected renders, publication of exact Commit `854b15c`, and its green CI are not campaign observations. That commit was not executed or published as `P2-CE-005` evidence. CE-2 wording remains prohibited unless a governed Commit A is designated under the frozen protocol, its clean detached campaign runs without repair/retry, and a separate evidence-only Commit B is published and validated.
 - Preserved the read-only boundary: no live execution mode, authorization token, broker, target, action credential, or operational effect was added. This increment makes no historical/live performance, source-truth, outcome-correctness, policy-fitness, efficacy, calibration, privacy/authority, OS-isolation, organizational-independence, production-readiness, statistical-failure-bound, alignment, misalignment, sandbagging, or sabotage-robustness claim.
 
 ## 0.2.0-alpha.5 — 2026-08-15

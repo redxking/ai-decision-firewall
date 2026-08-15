@@ -1,11 +1,11 @@
 # AI Decision Firewall
 
-- **Prior published evidence baseline:** v0.2.0-alpha.5 (`f7f6b5c`), Phase 2.4, including the version-bound `P2-CE-004` package
-- **Predecessor design-freeze baseline:** v0.2.0-alpha.6 Phase 2.5 at `08ce203c0965e8d43b7653454d4ea8315996021f`; the historical 193/193 local run, CI, and Dependency Graph results remain bound to that exact commit
-- **This package candidate:** campaign and local-run write guards, selected Gate B CE-1 scaffolding, documentation, visuals, and status artifacts are reconciled; the tracked data, model, and `outputs/baseline/` bytes remain at their committed baselines; the Phase 2.5 technical suite passed 222/222; the separate public-site module inherited from published `github/main@c3400e0` passed 9/9; and the combined repository aggregate passed 231/231. The public site and its tests are not Phase 2.5 or `P2-CE-005` evidence. The campaign module passed 21/21, the chart check passed in the frozen renderer, and the candidate includes a generated-and-verified integrity manifest and paired final-source DOCX/PDF renders whose 15 pages were inspected without blank, clipped, or run-in-heading defects. Alpha.6 is not tagged and has no release or evidence package. Package commit and publication and GitHub CI on that exact published commit remain external release gates. `P2-CE-005` is CE-0 `NOT_EVALUATED`.
+- **Published Phase 2.5 baseline:** exact Commit [`854b15c56397a81de6326b719d3d7d1dc847608f`](https://github.com/redxking/ai-decision-firewall/commit/854b15c56397a81de6326b719d3d7d1dc847608f) is on `main`; exact-commit CI and Dependency Graph checks passed. The package preserves the 222/222 Phase 2.5 technical result, separate 9/9 public-site result, and 231/231 then-current repository aggregate at that boundary.
+- **Phase 2 evidence boundary:** published `P2-CE-001` through `P2-CE-004` retain their version-bound claims. `P2-CE-005` was not executed or published and remains CE-0 `NOT_EVALUATED`; the Phase 2.5 commit and green CI do not create that campaign result.
+- **Local Phase 3 candidate:** the additive simulation-only `0.3.0-alpha.1` operational MVP now implements raw v0.3.0 requests, opaque-credential identity resolution, signed target-bound evidence, machine-enforced deterministic policy and consequence floors, four-way decisions, exact-scope single-use authorization, a mandatory in-memory broker, functionally separate same-project target readback, bounded human approval, lifecycle audit, metrics, two demonstrations, and a deterministic 46-scenario corpus. The current checkout passed 57/57 focused tests and the complete 288/288 repository suite; both demonstration acceptance checks reported PASS; and the corpus reported 46/46. It is not yet a committed or published Phase 3 baseline; the exact commit and CI are pending. Local results are CE-1 implementation-conformance observations only.
 - **Validated baseline:** v0.1.0 synthetic proof of concept
 - **Decision domain:** privileged-identity containment
-- **Operational status:** offline synthetic replay, record qualification, and historical-pilot preflight; no organizational historical data, approved Gate B package, live feed, or operational connector is included
+- **Operational status:** synthetic only. Phase 2 remains read-only; Phase 3 can change only in-memory synthetic target state. No organizational historical data, approved Gate B package, live feed, production/test-tenant connector, or operational credential is included.
 - **Safety boundary:** not approved for production integration, operational decision-making, or live containment
 
 AI systems can rank alerts and recommend actions, but consequential operations require a stronger control boundary: the system must determine whether the available evidence is trustworthy and sufficient, whether an action is within delegated authority, and whether the intended effect actually occurred.
@@ -110,13 +110,13 @@ Phase 2.5 extends the separately implemented reference path across the determini
 
 The reference implementation is separate in code but remains same-process, same-project, project-controlled assurance—not an external oracle, organizationally independent evaluation, or separate custody boundary. The planned `P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC` campaign is **CE-0 `NOT_EVALUATED`**. Its fixed 40-attempt design uses ten directly instrumented production baselines per run, each shared by its clean/mutant twin, and 20 reference-path calls per run. Across both planned runs that is 20 baseline executions and 20 calls to each production component—engine, evidence, model, policy, and verifier—plus 40 reference calls, not 40 independent production executions. These are budgets and expected outcomes, not observed results; CE-2 wording is prohibited until the two-commit freeze, exact-commit execution, evidence-only publication, and fresh frozen-evaluator validation are complete.
 
-This package candidate adds campaign CLI destination preflight for ordinary operator mistakes: repository-root/outside/`.git` paths, existing symlink traversal, output/record overlap, nonempty output reuse, and record overwrite are rejected. Check mode additionally rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. Its three focused CLI regressions passed 3/3, a separate check-leaf safety regression and constructor-instrumentation sensitivity regression passed, and the campaign test module passed 21/21 in an isolated clean clone. These five candidate campaign-delta tests are included in the 222/222 Phase 2.5 technical suite; the separate 9/9 public-site module contributes only to the 231/231 repository aggregate and is outside this assurance claim. GitHub CI must still pass on the exact published package commit. This is not OS or mount containment, adversarial TOCTOU/race resistance, direct `generate_artifacts` confinement, a governed exact-Commit-A evidence execution, or eligible evidence.
+Published Phase 2.5 Commit `854b15c` adds campaign CLI destination preflight for ordinary operator mistakes: repository-root/outside/`.git` paths, existing symlink traversal, output/record overlap, nonempty output reuse, and record overwrite are rejected. Check mode additionally rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. Its three focused CLI regressions passed 3/3, a separate check-leaf safety regression and constructor-instrumentation sensitivity regression passed, and the campaign test module passed 21/21. These five campaign-delta tests are included in the 222/222 Phase 2.5 technical suite; the separate 9/9 public-site module contributes only to the then-current 231/231 aggregate and is outside this assurance claim. Exact-commit CI passed. This is not OS or mount containment, adversarial TOCTOU/race resistance, direct `generate_artifacts` confinement, a governed exact-Commit-A evidence execution, or eligible evidence.
 
 Every reference attempt now instruments construction of `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider` in addition to the existing invocation/effect counters. The sensitivity regression injects all three constructions, observes nonzero counts, forces an expected-row mismatch, and confirms that the closed campaign schema rejects the row. This supports only the named Python construction boundary; it is not a general object-allocation monitor, OS-level containment proof, or observed campaign result.
 
-This package candidate also narrows routine `run_poc.py` writes to `data/local/**` and `outputs/local/**` inside the repository, while permitting explicitly selected external destinations. `--allow-tracked-artifact-overwrite` expands the repository scope only to `data/**` and `outputs/baseline/**` for an explicitly reviewed freeze workflow; other repository paths, symlink redirects, and data/output overlap remain rejected. Preflight enumerates every generated leaf, including `run_manifest.json`, rejects an existing symlink, nonregular file, or multiply linked leaf, and the local run manifest SHA-256-binds its seven non-self-referential outputs. Fourteen focused tests passed, including the case-variant repository-alias regression on the case-insensitive development volume. This is a local operator interlock, not an OS or mount boundary, adversarial TOCTOU/race or comprehensive hard-link guarantee, or confinement of direct library writers.
+Published Phase 2.5 Commit `854b15c` also narrows routine `run_poc.py` writes to `data/local/**` and `outputs/local/**` inside the repository, while permitting explicitly selected external destinations. `--allow-tracked-artifact-overwrite` expands the repository scope only to `data/**` and `outputs/baseline/**` for an explicitly reviewed freeze workflow; other repository paths, symlink redirects, and data/output overlap remain rejected. Preflight enumerates every generated leaf, including `run_manifest.json`, rejects an existing symlink, nonregular file, or multiply linked leaf, and the local run manifest SHA-256-binds its seven non-self-referential outputs. Fourteen focused tests passed, including the case-variant repository-alias regression on the case-insensitive development volume. This is a local operator interlock, not an OS or mount boundary, adversarial TOCTOU/race or comprehensive hard-link guarantee, or confinement of direct library writers.
 
-The release candidate also adds CE-1-only Gate B scaffolding: validator-owned closed `(stage, control_id, reason_code)` identities, an exact-match oracle that rejects unclassified failures, and a bounded observer for `builtins.open`, `io.open`, `os.open`, `Path.open`, `Path.read_bytes`, and `Path.read_text`. The registry currently contains 25 selected identities; tests cover 24 selected pre-payload mutations with zero observed `cases` or `adjudications` roles through those enumerated APIs, plus one postqualification threshold identity. This is not a complete Gate B failure taxonomy, reference monitor, sandbox, syscall monitor, OS-level nonaccess proof, or successor campaign result. No successor Gate B campaign has executed.
+Published Phase 2.5 Commit `854b15c` also adds CE-1-only Gate B scaffolding: validator-owned closed `(stage, control_id, reason_code)` identities, an exact-match oracle that rejects unclassified failures, and a bounded observer for `builtins.open`, `io.open`, `os.open`, `Path.open`, `Path.read_bytes`, and `Path.read_text`. The registry contains 25 selected identities; tests cover 24 selected pre-payload mutations with zero observed `cases` or `adjudications` roles through those enumerated APIs, plus one postqualification threshold identity. This is not a complete Gate B failure taxonomy, reference monitor, sandbox, syscall monitor, OS-level nonaccess proof, or successor campaign result. No successor Gate B campaign has executed.
 
 The included Phase 2 fixture contains **zero historical cases**. It exercises the framework; it does not establish historical replay performance, analyst agreement, operational calibration, or readiness for live shadow deployment. See [`docs/phase2/`](docs/phase2/) for the architecture, data contract, requirements, safety case, and validation plan.
 
@@ -135,12 +135,12 @@ The committed starter fixture provides a small deterministic integration check:
 | Action or post-action audit records | 0 |
 | Presented audit chain | Valid, 24 records; eight exact ordered stages per case |
 | Predecessor Phase 2.5 design-freeze suite | **193/193 passed in the review-local run; CI and Dependency Graph succeeded for exact Commit `08ce203c` on 2026-08-15** |
-| Phase 2.5 technical suite | **222/222 passed in a local isolated run; this is the technical scope for the package candidate** |
+| Phase 2.5 technical suite | **222/222 passed for published exact Commit `854b15c`; exact-commit CI and Dependency Graph also passed** |
 | Separate public-site module | **9/9 passed after rebasing onto published `github/main@c3400e0`; outside Phase 2.5 and `P2-CE-005` evidence** |
-| Combined repository aggregate | **231/231 passed locally; package publication and exact-commit GitHub CI remain pending** |
-| Alpha.6 release/evidence package | **Not tagged or published as evidence; local manifest/render/test gates complete; package publication and exact-package GitHub CI remain pending** |
+| Phase 2.5 repository aggregate | **231/231 at published exact Commit `854b15c`; exact-commit GitHub CI passed** |
+| Alpha.6 release/evidence package | **Code/package commit published; no tag and no `P2-CE-005` evidence package** |
 
-The predecessor Phase 2.5 design-freeze implementation is bound to Commit `08ce203c0965e8d43b7653454d4ea8315996021f`; its historical 193-test local run and successful commit-bound CI support narrow CE-1 implementation-conformance wording only. This package candidate's 222/222 Phase 2.5 technical run supports the same narrow prepublication claim for the candidate boundary. The separate public-site module passed 9/9, bringing the combined repository aggregate to 231/231, but neither the site nor its tests extend the Phase 2.5 claim. The generated-and-verified integrity manifest, frozen-renderer chart check, paired final-source DOCX/PDF rebuild, and 15-page inspection complete the local package gates. None creates a `P2-CE-005` campaign result, a tagged alpha.6 release, an evidence package, or safeguard-effectiveness evidence. Package publication and GitHub CI on the exact published package commit remain required before it can become a final campaign baseline.
+The predecessor Phase 2.5 design-freeze implementation is bound to Commit `08ce203c0965e8d43b7653454d4ea8315996021f`; its historical 193-test local run and successful commit-bound CI support narrow CE-1 implementation-conformance wording only. Published exact Commit `854b15c` passed the 222/222 Phase 2.5 technical suite and exact-commit CI/Dependency Graph. The separate public-site module passed 9/9, bringing the then-current aggregate to 231/231, but neither the site nor its tests extend the Phase 2.5 claim. The generated-and-verified integrity manifest, frozen-renderer chart check, paired final-source DOCX/PDF rebuild, and 15-page inspection complete the package gates. None creates a `P2-CE-005` campaign result, a tagged alpha.6 release, an evidence package, or safeguard-effectiveness evidence; the separate campaign protocol was not entered.
 
 The fixture's three adjudications are test expectations, not historical ground truth. Agreement or classification measures calculated from these three synthetic records are wiring checks and must not be represented as efficacy evidence.
 
@@ -198,6 +198,55 @@ The planned Phase 2.5 campaign has no observed-result table. Its plan specifies 
 The worked [`starter evidence record`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json), [`qualification evidence record`](contracts/v0.2.0/examples/phase2-qualification-evidence-record.json), [`Gate B campaign evidence record`](contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json), and [`feature-assurance campaign evidence record`](contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json) state the exact narrow claims these results support, identify the systems and artifacts, and carry forward limitations and prohibited inferences. The broader [`claim-evidence standard`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) defines what additional validity, adversarial, statistical, and independent-review evidence is required before stronger language is permitted. The current POC uses a logistic model and deterministic controls; it does not contain an autonomous generative-language-model agent.
 
 The committed `P2-CE-001` and `P2-CE-002` replay bundles predate alpha.5 and do not contain either current reference-assurance artifact. Their original version-bound narrow claims remain validated as recorded; they were not retroactively upgraded. A newly generated alpha.6 replay is incomplete unless it produces and binds both `reference_feature_assurance.jsonl` and `source_to_decision_assurance.jsonl` and the harness completes every final revalidation.
+
+## Phase 3: simulation-only operational MVP candidate
+
+Phase 3 adds an external raw-request-to-synthetic-effect path without adding a
+live connector. The caller supplies an opaque invocation credential outside the
+request JSON; a firewall-owned resolver maps it to a signed
+`ResolvedPrincipal`. The firewall validates runtime HMAC attestations over
+synthetic evidence, including the evidence subject target; loads trusted
+source/action/target facts from a closed policy; enforces code-owned evidence,
+consequence, rule-order, and Tier-0 safety floors; and returns `ALLOW`, `DENY`,
+`ESCALATE`, or `ALLOW_CONSTRAINED` with structured reasons.
+
+An allowed decision must pass a functionally separate deterministic verifier
+before a short-lived authorization is issued. The token binds the exact request,
+decision, agent, action, target, canonical permitted parameters, expiration,
+policy digest, decision context, and target-state precondition. The mandatory
+broker consumes it once and can change only the in-memory simulation. A separate
+read-only observer—not the broker return value—drives final verification.
+
+The two local demonstrations show:
+
+- a Tier-0 domain-controller isolation request with AI confidence `0.96`, stale
+  and conflicting evidence, cascading consequence, and insufficient authority
+  returns `ESCALATE`, creates a bound approval requirement, and produces no
+  authorization or target effect; and
+- a properly authorized low-criticality workstation request returns `ALLOW`,
+  executes one simulated isolation, and is observed through the functionally
+  separate same-project readback path as `VERIFIED`.
+
+The current local candidate passed 57/57 focused Phase 3 tests, both
+demonstration acceptance checks reported PASS, and the deterministic
+adversarial corpus reports 46/46. The settled-candidate full repository suite
+passed 288/288 locally. Candidate review found and closed
+release-blocking defects across consequence/evidence binding, opaque identity
+and key-domain separation, exact-type/deep-immutable security objects, machine
+policy floors, replay and receipt atomicity, dependency-failure closure, and
+executed-path/post-effect audit semantics. The exact Phase 3 commit and
+exact-commit CI remain pending.
+
+These controls are application-level Python boundaries, not OS/process
+security. The authorization ledger is in memory and is not durable or
+distributed. Runtime HMAC fixture keys do not create enterprise provenance.
+Human approval resolves a separate opaque human credential and permits only an
+exact-scope signed reevaluation receipt; it cannot execute or itself cause
+reevaluation. Both verifiers are same-project/functionally separate, not
+externally independent.
+
+Start with [`docs/phase3/README.md`](docs/phase3/README.md) for reproduction,
+architecture, test status, traceability, and explicit nonclaims.
 
 ## Architecture
 
@@ -389,6 +438,23 @@ Run the safety and pipeline tests:
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
+Run the Phase 3 simulation-only demonstrations and 46-case adversarial corpus
+into fresh temporary directories:
+
+```bash
+demo_dir="$(mktemp -d /tmp/adf-phase3-demo.XXXXXX)"
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 run_phase3.py \
+  --output-dir "$demo_dir"
+
+corpus_dir="$(mktemp -d /tmp/adf-phase3-corpus.XXXXXX)"
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 run_phase3_corpus.py \
+  --output-dir "$corpus_dir"
+```
+
+Both commands use only synthetic state and refuse to clobber a nonempty output
+directory. Their local JSON/JSONL artifacts are diagnostics, not a release or
+evidence package.
+
 Validate the Phase 2 configuration, governed manifest, file integrity, and canonical cases without invoking the engine:
 
 ```bash
@@ -474,7 +540,13 @@ python -m pip install -r requirements-docs.txt
 python docs/build_engineering_doc.py
 ```
 
-Verify only the exact committed package against its matching integrity manifest. This package candidate's generated-and-verified `MANIFEST.sha256` covers the final candidate bytes and supersedes the predecessor design-freeze manifest for package verification; the tracked data, model, and baseline outputs remain at their committed bytes. Reverify the manifest after checkout and before use:
+Verify a package only against the manifest committed with those exact bytes. The
+`MANIFEST.sha256` in published Commit `854b15c` covers that Phase 2.5 package.
+The current candidate manifest was regenerated and locally verified across all
+269 other tracked Phase 3 candidate files; this does not publish the candidate
+or alter any Phase 2 evidence boundary. The tracked data, model, and baseline
+outputs remain at their published bytes. Reverify the manifest after checking
+out the matching commit and before use:
 
 ```bash
 shasum -a 256 -c MANIFEST.sha256
@@ -490,18 +562,23 @@ shasum -a 256 -c MANIFEST.sha256
 │   ├── phase2_qualification.json   # Cases-only synthetic qualification campaign
 │   ├── gate_b_ce2_campaign_plan.json # Fixed P2-CE-003 expected outcomes and budget
 │   ├── feature_assurance_ce2_campaign_plan.json # Fixed P2-CE-004 expected outcomes and budget
-│   └── source_to_decision_ce2_campaign_plan.json # CE-0 P2-CE-005 plan; not an observed result
+│   ├── source_to_decision_ce2_campaign_plan.json # CE-0 P2-CE-005 plan; not an observed result
+│   └── phase3_policy.json            # Closed synthetic source/action/target/consequence policy
 ├── contracts/v0.2.0/               # Replay, Gate B, campaign, and claim-evidence contracts
+├── contracts/v0.3.0/               # Strict Phase 3 request and policy contracts
 ├── data/
 │   ├── phase2_starter/             # Three-case synthetic replay fixture; no historical data
 │   └── phase2_qualification/       # Seven-record mixed-quality synthetic fixture and expectations
 ├── docs/
 │   ├── adr/                        # Architecture decision records
-│   ├── architecture/               # Source and rendered diagrams for this package candidate
+│   ├── architecture/               # Source and rendered current/historical diagrams
 │   ├── phase2/                     # Replay architecture, feature/source-to-decision assurance, safety, V&V, traceability
-│   ├── ENGINEERING_STATUS_AND_FORWARD_PLAN.md # Current package-candidate status source
-│   ├── AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx # Final-source candidate render; inspected
-│   ├── AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf  # Paired final-source candidate render; 15 pages inspected
+│   ├── phase3/                     # Operational-MVP architecture, safety case, T&E, gap analysis, and traceability
+│   ├── ENGINEERING_STATUS_AND_FORWARD_PLAN.md # Current living status and forward plan
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx # Current Phase 3 candidate render; inspected
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf  # Paired Phase 3 candidate render; 7 pages inspected
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx # Archived Phase 2.5 package render
+│   ├── AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf  # Archived Phase 2.5 paired render; 15 pages
 │   ├── build_engineering_status.py # Rebuilds the current status DOCX/PDF package
 │   ├── CONCEPT_OF_OPERATIONS.md
 │   ├── REQUIREMENTS_TRACEABILITY_MATRIX.csv
@@ -516,10 +593,13 @@ shasum -a 256 -c MANIFEST.sha256
 ├── outputs/baseline/               # Restored committed Phase 1 decisions, metrics, audit, and report
 ├── scripts/                        # Confined fixture generation/checks and claim-evidence validation
 ├── src/adf_poc/
-│   └── replay/                     # Contracts, Gate B, qualification, path-free harness, secure output, metrics
+│   ├── replay/                     # Contracts, Gate B, qualification, path-free harness, secure output, metrics
+│   └── phase3/                     # Raw request, evidence, decision, authorization, simulation, readback, audit, corpus
 ├── tests/                          # Safety and end-to-end tests
 ├── run_poc.py                      # End-to-end synthetic baseline entry point
 ├── run_phase2.py                   # Offline replay/shadow starter entry point
+├── run_phase3.py                   # Two simulation-only raw-request demonstrations
+├── run_phase3_corpus.py            # Deterministic 46-scenario adversarial corpus
 ├── pyproject.toml
 └── requirements.txt
 ```
@@ -539,14 +619,15 @@ The current baseline has not established:
 - analyst agreement, workflow fit, or mission/business consequences;
 - behavior under vendor API semantics, race conditions, eventual consistency, or production-scale load;
 - cryptographic provenance rooted in enterprise trust infrastructure;
-- production key management, token replay protection, or durable broker idempotency;
+- production key management, durable/distributed token replay protection, or durable broker idempotency; Phase 3 provides only process-local single-use consumption;
 - an externally anchored or independently signed audit trail (a process able to rewrite the log can recompute the v0.1 hash chain);
 - organizationally or externally independent source-to-decision assurance. Phase 2.5 separately recomputes the evidence, model, policy, verifier, and read-only final surfaces from the same normalized case, model, and policy bytes in the same process and project; agreement is calculation consistency, not source truth, outcome correctness, policy fitness, efficacy, or independent custody;
 - externally trusted audit timestamps, OS-level nonaccess/non-egress, or independent evidence custody;
-- independent target-state readback or executable rollback orchestration;
+- external or operational target-state readback or executable rollback orchestration; Phase 3 performs functionally separate observation only over the same in-memory simulator;
 - reconciliation of conflicting break-glass or asset-criticality values in the v0.1 direct-run interface (the Phase 2 canonical adapter instead rejects such disagreement before engine invocation);
 - suitability for safety-critical, operational-technology, or critical-infrastructure control environments;
 - agentic alignment, scheming, sabotage resistance, or monitor effectiveness; the evaluated path is deterministic and contains no autonomous generative agent.
+- OS/process isolation for the Phase 3 private-capability boundary, durable or distributed request/token ledgers, enterprise source attestation/key custody, production human-approval workflow, or external/organizationally independent verification.
 
 The typed contract does not prove that an authorized source assertion is truthful, authentic, complete, or semantically equivalent to a vendor record. Both reference implementations are separately implemented but not externally or organizationally independent, and their metadata hashes do not create independent custody. `P2-CE-004` supplies only the exact SELF-reviewed synthetic CE-2 result above. `P2-CE-005` remains CE-0 `NOT_EVALUATED`; its plan supplies no observed behavior. Neither provides historical/live evaluation, independent replication, external custody, exhaustive coverage, or a failure-rate estimate.
 
@@ -558,14 +639,29 @@ The policy engine and verifier also share configuration and may share design def
 
 The **Phase 2 starter, Phase 2.1 qualification increment, Phase 2.2 Gate B machine preflight, Phase 2.3 audit/campaign increment, Phase 2.4 typed-feature/reference-projection controls, and Phase 2.5 source-to-decision implementation are present**, with live actions remaining disabled. `P2-CE-005` is planned but not evaluated; no Phase 2.5 CE-2 result exists.
 
-The next internal gates are to publish this exact package commit and require GitHub CI to pass on it. Only then may that clean exact commit be established as `P2-CE-005` Commit A, executed without retries, and followed by a separate validated evidence-only Commit B. The next data-bearing step remains external: accountable owners must assemble and authenticate a restricted Gate B approval, custody, privacy, mapping, adjudication, and pilot package for a small de-identified historical corpus. Only then may an isolated offline pilot measure source availability, schema gaps, temporal fidelity, analyst disagreement, contextual assumptions, and calibration while keeping the complete intake denominator visible. No Gate B approval, historical run, live feed, or shadow-feed progression has occurred; `shadow_read_only` remains unconnected until a separately approved Phase 3 architecture and safety case exist.
+The exact Phase 2.5 package commit is now published and its CI is green, but the
+separate `P2-CE-005` two-commit campaign protocol was not entered. Any future
+execution still requires an explicit governed designation of Commit A, a clean
+detached no-retry run, and a distinct validated evidence-only Commit B.
+
+The immediate engineering path is to freeze, commit, publish, and run CI for
+the Phase 3 simulation-only candidate while retaining its CE-1/local-observation
+boundary. The next data-bearing step remains external: accountable owners must
+assemble and authenticate the restricted Gate B authority, custody, privacy,
+mapping, adjudication, and pilot package before a small de-identified historical
+corpus can be processed. No Gate B approval, historical run, live feed, or
+shadow-feed progression has occurred.
 
 Later phases, each requiring separate evidence and authorization, are:
 
-1. live read-only shadow evaluation in an approved environment;
-2. reversible actions against non-production test identities under change control;
-3. a limited operational pilot with human approval for all actions;
-4. action-class-specific autonomy only if statistically and operationally defensible gates are met and an authorizing official accepts the residual risk.
+1. authenticated offline historical replay, then live read-only shadow
+   evaluation in an approved environment;
+2. reversible actions against non-production test targets under change control,
+   managed keys, durable idempotency, independent vendor readback, and rollback;
+3. a limited operational pilot with human approval for all actions; and
+4. action-class-specific autonomy only if statistically and operationally
+   defensible gates are met and an authorizing official accepts the residual
+   risk.
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditions.
 
@@ -574,16 +670,23 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`docs/REPRODUCIBILITY_BOUNDARY.md`](docs/REPRODUCIBILITY_BOUNDARY.md) — frozen-artifact versus retraining claim boundary and required future builder controls
 - [`DELIVERY_NOTES.md`](DELIVERY_NOTES.md) — v0.1 scope, results, and handoff
 - [`docs/AI_Decision_Firewall_POC_Engineering_Baseline_v0.1.pdf`](docs/AI_Decision_Firewall_POC_Engineering_Baseline_v0.1.pdf) — engineering baseline
-- [`docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md`](docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md) — current alpha.6 release-candidate status source and forward plan
-- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx) — final-source candidate output from the paired builder; rendered pages inspected
-- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf) — paired final-source candidate output; all 15 pages inspected without blank, clipped, or run-in-heading defects
-- [`docs/build_engineering_status.py`](docs/build_engineering_status.py) — reproducible builder for the current status DOCX/PDF package
+- [`docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md`](docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md) — current living status and forward plan
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx) — inspected Phase 3 simulation-only candidate status artifact
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf) — paired 7-page Phase 3 candidate status artifact; all rendered pages inspected
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx) — inspected Phase 2.5 package-bound status artifact; it predates the local Phase 3 candidate
+- [`docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.pdf) — paired 15-page Phase 2.5 status artifact; it predates the local Phase 3 candidate
+- [`docs/build_engineering_status.py`](docs/build_engineering_status.py) — reproducible builder for the current Phase 3 status DOCX/PDF package
 - [`docs/CONCEPT_OF_OPERATIONS.md`](docs/CONCEPT_OF_OPERATIONS.md) — actors, modes, decisions, and off-nominal behavior
 - [`docs/REQUIREMENTS_TRACEABILITY_MATRIX.csv`](docs/REQUIREMENTS_TRACEABILITY_MATRIX.csv) — requirement-to-design-and-test traceability
 - [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md) — advisory model purpose, performance, and limits
 - [`docs/SYNTHETIC_DATA_CARD.md`](docs/SYNTHETIC_DATA_CARD.md) — dataset design and appropriate use
 - [`docs/TEST_AND_EVALUATION_PLAN.md`](docs/TEST_AND_EVALUATION_PLAN.md) — acceptance criteria and required next-phase tests
 - [`docs/phase2/README.md`](docs/phase2/README.md) — Phase 2 scope and documentation map
+- [`docs/phase3/README.md`](docs/phase3/README.md) — Phase 3 local-candidate scope, reproduction, evidence status, and documentation map
+- [`docs/phase3/ARCHITECTURE.md`](docs/phase3/ARCHITECTURE.md) — Phase 3 request-to-effect architecture and trust boundaries
+- [`docs/phase3/SECURITY_AND_SAFETY_CASE.md`](docs/phase3/SECURITY_AND_SAFETY_CASE.md) — Phase 3 safety argument, supporting observations, residual risks, and nonclaims
+- [`docs/phase3/TEST_AND_EVALUATION_PLAN.md`](docs/phase3/TEST_AND_EVALUATION_PLAN.md) — planned acceptance requirements separated from local observations
+- [`docs/phase3/REQUIREMENTS_TRACEABILITY.csv`](docs/phase3/REQUIREMENTS_TRACEABILITY.csv) — Phase 3 requirement-to-code/test traceability and evidence boundaries
 - [`docs/phase2/CLAIM_EVIDENCE_STANDARD.md`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) — claim classes, proof requirements, statistical rules, and adversarial evaluations
 - [`docs/phase2/FEATURE_ASSURANCE.md`](docs/phase2/FEATURE_ASSURANCE.md) — typed/source-authorized signals, exact inventory binding, reference projection, controlled campaign evidence, and nonclaims
 - [`docs/phase2/SOURCE_TO_DECISION_ASSURANCE.md`](docs/phase2/SOURCE_TO_DECISION_ASSURANCE.md) — Phase 2.5 stage scope, numeric rule, artifact ordering, failure semantics, CE-0 campaign plan, and nonclaims
@@ -626,7 +729,11 @@ python -m pip install -r requirements-docs.txt
 python docs/build_engineering_status.py
 ```
 
-`requirements-docs.txt` supplies the Python document and plotting dependencies, including `python-docx` and `matplotlib`. LibreOffice/`soffice` is additionally required to produce the paired PDF. For this package candidate, the paired outputs were rebuilt from final source and all 15 rendered pages were inspected without blank, clipped, or run-in-heading defects.
+`requirements-docs.txt` supplies the Python document and plotting dependencies,
+including `python-docx` and `matplotlib`. LibreOffice/`soffice` is additionally
+required to produce the paired PDF. The builder now creates the inspected
+7-page Phase 3 candidate pair; the separately named 15-page Phase 2.5 pair
+remains an immutable package-bound archive.
 
 ## Licensing
 

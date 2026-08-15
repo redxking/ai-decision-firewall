@@ -1,61 +1,147 @@
-# Engineering Roadmap
+# Engineering roadmap
 
-> **Current boundary.** `0.2.0-alpha.5` at `f7f6b5c` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline; its historical 193-test local suite, CI, and Dependency Graph results remain bound to that commit. This package candidate adds bounded local-write interlocks, selected Gate B causal-test scaffolding, documentation, visuals, and packaging; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. The tracked data, campaign-bound model, and baseline outputs remain at committed bytes. Package publication and GitHub CI on the exact published package commit remain external gates, so the candidate is not a tag, release, or evidence package. The forward phases below are plans, not approvals, deployments, or evidence claims.
+## Current boundary — 2026-08-15
+
+- Exact Phase 2.5 Commit
+  `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main`; its
+  exact-commit CI and Dependency Graph checks passed.
+- `P2-CE-001` through `P2-CE-004` retain their version-bound evidence claims.
+  `P2-CE-005` was not executed or published and remains CE-0
+  `NOT_EVALUATED`.
+- Phase 3 is a working local `0.3.0-alpha.1` simulation-only operational-MVP
+  candidate. The focused suite passed 57/57; both raw-request demonstration
+  acceptance checks reported PASS; and the 46-case adversarial corpus passed
+  46/46 locally. The full repository suite passed 288/288 locally. The exact
+  Phase 3 commit, publication, and exact-commit CI remain pending.
+- No historical organizational data, approved Gate B package, live feed,
+  test-tenant/production connector, operational credential, or live action is
+  authorized or present.
 
 ## Phase 0 — Concept convergence
 
-Completed. The broad problem of autonomous SOC agents was narrowed to a measurable decision boundary: privileged-identity containment. The product thesis is that the durable value lies in evidence and authority control rather than in a proprietary language model.
+Completed. The program narrowed broad autonomous-SOC concerns to an
+evidence-and-authority decision boundary for privileged-identity containment.
 
 ## Phase 1 — Synthetic executable baseline (v0.1)
 
-Completed in this package. Deliverables include the scenario generator, learned risk model, evidence-quality engine, four-way policy, independent verifier, signed token gate, simulated action broker, post-action verification, hash-chained audit log, baseline metrics, diagrams, tests, and engineering documentation.
+Completed at its historical boundary. The package contains deterministic
+synthetic scenarios, an advisory logistic model, evidence-quality controls,
+bounded policy, a verifier, legacy scoped simulator tokens/actions, post-action
+checks, hash-linked audit, metrics, diagrams, and tests.
 
-**Exit condition:** Safety invariants executed repeatably for the frozen baseline artifacts in the recorded runtime. The seed deterministically regenerates the synthetic dataset; byte-identical cross-runtime model retraining and operational efficacy are not claimed.
+**Evidence boundary:** generator-consistent software/safety controls only; no
+operational efficacy, production safety, or portable retraining claim.
 
-## Phase 2 — Historical replay and data-contract discovery (v0.2)
+## Phase 2 — Read-only replay and assurance (v0.2)
 
-**Phase 2.5 implementation status:** The starter, bounded record-qualification increment, Gate B machine preflight, exact eight-stage audit conformance checks, executed `P2-CE-003` synthetic Gate B campaign, typed-feature/reference-projection implementation, executed `P2-CE-004` synthetic feature-assurance campaign, and source-to-decision reference implementation are present. The repository now includes a code-owned historical-replay and shadow-read-only execution boundary, canonical contracts, integrity-bound manifests, deterministic qualification and replay artifacts, a closed historical-pilot authorization contract, pre-payload authority and binding checks, restricted-path/output controls, exact type/source authorization for modeled signals, exact four-field asset-inventory binding, and separately implemented reference paths for the 20 feature values/traces and the deterministic evidence/model/policy/verifier/read-only-final calculation surfaces. Authorization, brokering, target construction, and effects remain suppressed in both read-only execution modes. There is no live execution mode.
+Implementation increments 2.0 through 2.5 are present. Phase 2 has strict
+read-only `historical_replay` and `shadow_read_only` semantics, record
+qualification, Gate B preflight, exact audit checks, typed/source-authorized
+features, reference feature projection, and same-project source-to-decision
+recomputation. Authorization, broker, target construction, and effects remain
+structurally absent in both modes.
 
-All committed Phase 2 fixtures contain zero historical cases. The 3/4 qualification split is a designed synthetic control result, not a historical acceptance rate or efficacy measure. The audit checks are CE-1 implementation-conformance evidence; they do not independently recompute source-to-decision correctness or establish trusted time, independent custody, or tamper resistance against full-chain replacement. `P2-CE-003` is a separate CE-2 controlled-behavior result: two complete repetitions of 16 fixed synthetic Gate B scenarios produced 32/32 matches to commit-frozen, project-controlled expectations, with 28 structural pre-payload blocks, two validate-only passes, and two post-qualification/pre-engine blocks. The repetitions are neither independent statistical trials nor exhaustive coverage, and the Commit A freeze is not external preregistration.
+Published synthetic CE-2 records `P2-CE-001` through `P2-CE-004` remain narrow,
+SELF, project-controlled results. Phase 2.5 Commit `854b15c` and its green CI
+support package/implementation status only. They do not create an observed
+`P2-CE-005` campaign result.
 
-Phase 2.4 implementation is supported by CE-1 conformance evidence. Its feature reference assurance runs after read-only decision serialization and the complete eight-stage audit check. Phase 2.5 then separately recomputes the ordered `EVIDENCE`, `MODEL`, `POLICY`, `VERIFIER`, and `FINAL_SURFACE` calculation surfaces from frozen normalized-case, model, policy, and decision bytes. Both implementations are same-process, same-project, and project-controlled. Agreement is calculation consistency, not source truth, outcome correctness, policy fitness, external custody, or organizational independence.
+### Separate Phase 2 workstreams still open
 
-The Phase 2.5 harness publishes neither reference artifact when source-to-decision recomputation fails. Qualification/rejection artifacts, adjudication decoding, comparisons, metrics, and completed-run finalization have not yet occurred, although normalized cases, diagnostics, raw/deterministic decisions, and audit may remain as incomplete diagnostic material. Later failures may leave additional intermediate artifacts or a manifest file written before final revalidation; successful harness return after every final binding check is the completion criterion, not file presence.
+1. **Optional `P2-CE-005` campaign:** if still programmatically useful,
+   explicitly designate a governed Commit A, run the clean detached frozen
+   campaign without repair/retry, and publish a separate validated evidence-only
+   Commit B. Do not relabel the already-published Phase 2.5 commit as evidence.
+2. **External Gate B pilot:** accountable owners must authenticate authority,
+   privacy/de-identification, custody, source mapping, sample selection,
+   adjudication, stop conditions, and complete-intake reporting before any
+   historical payload is accessed.
 
-`P2-CE-004` is a separate CE-2 controlled-behavior result bound to corrected implementation Commit `53e409d6ffa4af98ea892bc1a81302bf30870693`. Two complete repetitions of 16 fixed synthetic attempts produced 32/32 matches to commit-frozen, project-controlled expectations: 16 clean matches, eight qualification quarantines, and eight reference-projection blocks, with zero retries, exclusions, failures, or deviations and byte-identical ledgers. The review is `SELF`, automated, project-controlled, and not independent assurance.
+## Phase 3 — Simulation-only operational decision control (`0.3.0-alpha.1` candidate)
 
-`P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC` has a predecessor design-freeze baseline but no observed result. Its plan specifies ten clean/mutant pairs per run, two deterministic same-process runs, 40 planned attempt observations, zero retries/exclusions, and two expected blocks at each of `EVIDENCE`, `MODEL`, `POLICY`, `VERIFIER`, and `FINAL_SURFACE` per run. The twins share ten directly instrumented production baselines per run, yielding 20 baseline executions and 20 calls to each production component across both runs; the reference path is called for all 20 attempts per run, 40 total. Direct authorization-gate/broker/target-effect/scoped-write counters are kept separate from decision-derived token/result/effect fields. This package candidate incorporates the CLI confinement control and has completed its local package gates, but it is not final Commit A until it is published and exact-package GitHub CI passes. `P2-CE-005` remains CE-0 `NOT_EVALUATED` until that clean exact commit is established, a detached exact-commit run completes, and a separate evidence-only Commit B is published and validated. Planned outcomes, counts, and zeros must not be reported as observations.
+### Implemented locally
 
-Phase 2.5 makes no agentic-alignment claim: the evaluated path is deterministic and contains no autonomous generative agent. Neither implementation tests nor the planned campaign establish organizational approval, authentication, privacy effectiveness, custody validity, historical/live performance, OS-level isolation or non-egress, target-side proof, exhaustive coverage, a bounded failure rate, production readiness, independent replication, sabotage robustness, live-shadow safety, or efficacy. Anthropic and OpenAI research informs the test design only; it is not evidence for this system.
+- strict external v0.3.0 raw request and policy contracts;
+- opaque invocation credentials resolved to signed principals, plus trusted
+  source, action, target, policy, and time context;
+- runtime HMAC evidence attestation with content, semantic, time, provenance,
+  and subject-target binding;
+- deterministic authority/evidence/consequence evaluation and `ALLOW`, `DENY`,
+  `ESCALATE`, `ALLOW_CONSTRAINED` decisions;
+- functionally separate deterministic decision verification and code-owned
+  policy safety floors for evidence, consequence, rule precedence, and Tier-0
+  domain controllers;
+- exact-scope, signed, short-lived, single-use process-local authorization;
+- mandatory broker and private-capability in-memory target mutation;
+- functionally separate same-project read-only target observation and five-way
+  verification status;
+- separate opaque-human-credential approval that emits an exact-scope signed
+  reevaluation-only receipt;
+- correlated lifecycle audit, in-process metrics, two required demos, and a
+  deterministic 46-scenario adversarial corpus.
 
-This package candidate adds narrow application-level controls only. The campaign CLI destination guard passed 3/3 focused checks, a check-leaf safety regression and reference-scope constructor-sensitivity regression passed, and the campaign module passed 21/21 in an isolated clean clone. Check mode rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. The constructor sensor covers `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider` during each reference attempt and is not a general allocation monitor or target-side proof. The `run_poc` write interlock passed 14 focused checks, including case-variant repository-alias rejection on the case-insensitive development volume. A closed registry now identifies 25 selected Gate B failures—24 pre-payload mutations plus one post-qualification threshold identity—and a bounded observer recorded zero governed payload roles for the 24 selected pre-payload mutations under enumerated Python APIs; hard-link aliases to governed files are outside its boundary. These controls are included in the 222/222 Phase 2.5 technical suite; the separate 9/9 public-site module is outside this CE-1 scaffolding claim. These are not a complete failure taxonomy, OS security boundary, independent monitor, or successor campaign result.
+Adversarial review found and closed release-blocking defects across consequence
+and evidence binding, credential/key-domain handling, immutable exact-type
+security values, machine-policy safety floors, replay/receipt atomicity,
+dependency-failure closure, and executed-path/post-effect audit semantics. The
+candidate remains synthetic and CE-1/local only. Its application boundaries are
+not OS/process security; request/token ledgers are not durable/distributed;
+runtime HMAC fixture keys and self-custodied audit are not enterprise trust; and
+same-project verification is not external independence.
 
-**Next internal gate — `P2-CE-005`:** Publish the package commit and require exact-package GitHub CI to pass; then establish the complete Phase 2.5 implementation, plan, generator, schemas, validator, and confinement controls as final Commit A. Execute that exact clean commit with no retries, invalidate rather than repair any defective package, and publish only validated evidence in Commit B. This is the final synthetic-only gate before external Gate B work and still cannot establish historical efficacy or operational readiness.
+### Immediate release gates
 
-**Next data-bearing increment — externally approved package and small historical pilot:** Accountable owners must complete and authenticate the data-owner, mission, security, privacy/legal, records, de-identification, custody, retention, incident, sample-selection, adjudication, quarantine-threshold, and survivorship-bias evidence in a restricted system. Freeze the source mapping, model, policy, adapter, contracts, and stop conditions before outcomes are visible. Only after that package passes Gate B may an isolated offline pilot report the complete intake, accepted/quarantined distribution, mapping gaps, source delays, analyst disagreement, contextual assumptions, and conditional decision measures.
+1. Finish living traceability/diagram and package reconciliation; no known
+   request/decision/authorization/broker/readback release blocker remains.
+2. Preserve the executable/test bytes behind the 57/57 focused, 288/288 full,
+   demo PASS, and 46/46 corpus results; rerun them if those bytes change, and
+   complete documentation/link/contract and artifact-integrity checks.
+3. Commit one exact Phase 3 candidate and record its final results.
+4. Publish only under explicit authorization; require exact-commit CI and
+   Dependency Graph success.
 
-No live or shadow-feed progression has occurred. After `P2-CE-005`, the next internal assurance work is stronger evidence custody, evaluation-environment controls, and genuinely independent review rather than additional same-process agreement alone. The next data-bearing step remains external: obtain an authenticated, independently reviewed Gate B package before any historical payload is processed. A Phase 3 decision may be considered only after an approved historical pilot produces sufficient origin-stratified evidence for a defensible read-only experiment.
+**Exit condition:** published simulation-only code baseline with exact-commit
+green CI, accurate living documentation, and no unresolved defect invalidating
+the request/decision/authorization/broker/readback separation. This exit does
+not authorize live data or action.
 
-**Decision point:** Determine whether identity containment remains the best entry use case and whether available evidence supports reliable abstention and escalation.
+## Phase 3.1 — Approved read-only evidence realism
 
-## Phase 3 — Live shadow mode (v0.3)
+After the external Gate B package and an offline historical pilot, evaluate an
+approved live read-only shadow service with authenticated sources, independent
+custody, analyst adjudication, temporal holdout, calibration, abstention cost,
+source ablation, and workflow/consequence analysis.
 
-Connect read-only feeds in a lab or approved tenant. Produce recommendations without action. Compare the system with analysts, track decision latency and evidence requests, and conduct counterfactual review.
+**Exit condition:** data-handling controls hold; schema/source mapping is stable;
+traceability and analyst agreement are measured; false-containment risk and
+abstention behavior have defensible origin-stratified bounds. No action
+credential is present.
 
-**Exit condition:** No data-handling violations; stable schemas; acceptable traceability; measured analyst agreement; statistically bounded false-containment risk.
+## Phase 4 — Controlled non-production actions
 
-## Phase 4 — Controlled test-tenant actions (v0.4)
+Design a new approved test-tenant architecture with service/process isolation,
+managed source/token keys, durable distributed idempotency, vendor-specific
+least-privilege broker adapters, independent target-side readback, rollback and
+reconciliation, rate/circuit limits, kill switch, externally anchored audit,
+change control, and human approval.
 
-Enable signed reversible actions against non-production accounts under change control. Add enterprise identity-provider adapters, secrets management, mutual TLS, token replay protection, rate limits, and kill switches.
+**Exit condition:** authorized action classes demonstrate idempotency,
+precondition handling, independent verification, rollback/recovery, and stop
+conditions under failure injection in a non-production environment.
 
-**Exit condition:** Action idempotency, rollback, post-action verification, and stop conditions validated under failure injection.
+## Phase 5 — Limited operational pilot
 
-## Phase 5 — Limited operational pilot (v0.5)
+Restrict use to a small approved population and require human approval for every
+action. Measure operational false-positive/negative outcomes, workflow effects,
+mission consequences, recovery behavior, and control reliability under formal
+incident and change authority.
 
-Restrict to a small approved identity population. Require human approval for all actions initially. Gradually evaluate selected low-impact actions only after evidence-based release gates are met.
-
-**Exit condition:** Authorizing official accepts the residual risk and approved action classes have sufficient adjudicated volume to establish defensible lower confidence bounds.
+**Exit condition:** the authorizing official accepts residual risk and the
+approved action classes meet predeclared statistical and operational gates.
 
 ## Phase 6 — Productization
 
-Add multi-tenant policy packs, vendor-neutral integrations, model-comparison harnesses, continuous calibration, secure update and supply-chain controls, compliance mappings, operator workflows, and sector-specific mission consequence models.
+Only after the preceding evidence gates: add multi-tenant policy packs,
+vendor-neutral integrations, secure update/supply-chain controls, HA, continuous
+calibration, compliance mappings, operator workflows, and sector-specific
+mission-consequence models.

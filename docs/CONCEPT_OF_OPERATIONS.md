@@ -1,6 +1,16 @@
 # Concept of Operations — Privileged Identity Decision Firewall
 
-> **Version boundary.** This document preserves the v0.1 synthetic-simulation concept of operations and identifies the current transition path. `0.2.0-alpha.5` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` design-freeze baseline, with historical CI and Dependency Graph success bound to that commit. This package candidate's Phase 2.5 technical suite passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and GitHub CI on the exact published package commit remain external gates. Tracked data, model, and baseline outputs remain at their committed bytes. No tag or release/evidence package exists, and `P2-CE-005` is CE-0 `NOT_EVALUATED`. No Gate B package, historical-data approval, live feed, test-tenant integration, or operational-action authority exists.
+> **Version boundary.** This document preserves the v0.1 and Phase 2 concepts
+> while adding the local Phase 3 simulation-only operational-MVP concept. Exact
+> Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` is published on
+> `main`, and its exact-commit CI and Dependency Graph checks passed.
+> `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`. Phase 3 is an
+> uncommitted local `0.3.0-alpha.1` candidate with local synthetic CE-1
+> observations only (57/57 focused tests, two demo acceptance checks PASS, and
+> 46/46 corpus scenarios); the full repository suite passed 288/288 locally. The
+> exact commit and CI are pending. No
+> Gate B package, historical-data approval, live feed, production/test-tenant
+> integration, operational credential, or live-action authority exists.
 
 ## Mission objective
 
@@ -8,7 +18,26 @@ Reduce the time and analyst effort required to decide whether suspicious privile
 
 ## Operational actors
 
-The evidence producer supplies identity, endpoint, network, asset, threat-intelligence, change-management, and workforce-context events. The decision firewall normalizes and evaluates evidence, obtains a risk estimate from a replaceable model, applies deterministic policy, and independently verifies action eligibility. In the v0.1 `synthetic_simulation` compatibility path only, the authorization gate can issue a short-lived scoped token for an approved reversible action and the action broker can execute against the in-memory POC simulator. In both Phase 2 read-only modes, the authorization gate, broker, and target are not constructed; proposed actions remain counterfactual. The human decision authority receives escalation recommendations. The evaluator compares completed read-only decisions with separately stored adjudications only after the decision and audit close.
+The evidence producer supplies identity, endpoint, network, asset,
+threat-intelligence, change-management, and workforce-context events. The
+decision firewall evaluates evidence and trusted context, applies deterministic
+policy, and independently verifies action eligibility. In the v0.1
+`synthetic_simulation` compatibility path, the broker can execute legacy
+reversible actions against its in-memory identity simulator. In both Phase 2
+read-only modes, the authorization gate, broker, and target are not constructed;
+proposed actions remain counterfactual.
+
+In Phase 3, an external synthetic agent submits a raw v0.3.0 proposed-action
+request plus an opaque invocation credential outside the request JSON. A
+firewall-owned resolver maps that credential to a signed `ResolvedPrincipal`;
+runtime registries supply authoritative source/action/target facts. A
+functionally separate decision verifier precedes exact-scope authorization;
+the mandatory broker can change only an in-memory target; and a functionally
+separate same-project read-only observer determines the final effect
+classification. A human decision authority must use a separately resolved
+opaque credential and may approve an exact escalation scope for a signed
+reevaluation-only receipt. Approval cannot execute, mint an authorization, or
+itself cause reevaluation.
 
 ## Operational modes
 
@@ -18,12 +47,15 @@ The evidence producer supplies identity, endpoint, network, asset, threat-intell
 | Offline `historical_replay` semantics | Implemented and tested with synthetic fixtures only | Read-only counterfactual decisions; zero historical cases, authorization tokens, broker calls, or effects |
 | Gate B historical-pilot preflight | Machine contract and synthetic negative-control evidence implemented | No authenticated organizational package is approved; no historical payload is authorized or stored |
 | `shadow_read_only` semantics | Implemented as a code-owned read-only mode | No live feed or deployed service exists; the name describes execution semantics only |
-| Controlled test-tenant mode | Planned | Would require a separately approved non-production architecture, credentials, rollback, independent readback, stop conditions, and change control |
+| Phase 3 simulation-only operational MVP | Working local `0.3.0-alpha.1` candidate; 57/57 focused tests, 288/288 full repository tests, demo acceptance PASS, corpus 46/46; exact commit/CI pending | Raw synthetic requests; opaque synthetic invocation credentials; in-memory `NETWORK_ISOLATE`; exact-scope token; separate same-project readback; no live connector or operational credential |
+| Controlled test-tenant mode | Planned | Requires separately approved non-production architecture, process isolation, managed credentials, durable idempotency, vendor-independent readback, rollback, stop conditions, and change control |
 | Limited pilot mode | Planned | Would require a bounded approved population, human authorization, operational evidence, and an authorizing-official decision |
 
 The current repository contains only synthetic fixtures. “Historical replay” and “shadow read only” do not imply that historical or live data has been processed.
 
 ## Decision outcomes
+
+Phase 1/2 preserve the historical outcome vocabulary below:
 
 `NO_ACTION` closes the case because evidence is decision-grade, risk is below the closure threshold, and no severe indicator exists.
 
@@ -32,6 +64,15 @@ The current repository contains only synthetic fixtures. “Historical replay”
 `CONTAIN_REVERSIBLE` applies to allow-listed, reversible, low-impact simulator actions in the v0.1 synthetic path when risk, evidence quality, corroboration, asset criticality, and independent verification all satisfy policy. Phase 2 may retain this disposition and its proposed actions only as counterfactual output.
 
 `ESCALATE_HUMAN` recommends transfer to an identified human role because risk is high but the asset, identity, or proposed action exceeds the encoded boundary. The POC does not create an operational escalation ticket or transfer authority through an external workflow.
+
+The separate Phase 3 external boundary uses:
+
+- `ALLOW` — execute the exact requested parameters in the synthetic target;
+- `ALLOW_CONSTRAINED` — replace the request with canonical policy-bounded
+  parameters and authorize only that scope;
+- `DENY` — terminal prohibition or fail-closed invalid/untrusted condition; and
+- `ESCALATE` — no authorization or effect; create an exact expiring human-review
+  requirement when higher authority can reevaluate the request.
 
 ## V0.1 synthetic-simulation sequence
 
@@ -60,8 +101,53 @@ This sequence applies only to the in-memory v0.1 simulator. It is not the Phase 
 8. Publish the release-required metadata-only assurance receipts only after all required reference checks match. Any mismatch fails the run before evaluator output and completed-run finalization.
 9. Materialize and decode evaluator-only adjudications, produce comparisons and metrics, revalidate every binding, and return success only after final artifact checks. File presence alone does not establish a completed run.
 
+## Phase 3 simulation-only sequence
+
+1. Receive raw v0.3.0 JSON plus an opaque invocation credential; strictly
+   validate syntax, schema, time, bounds, and request identity.
+2. Resolve the credential to a signed principal and resolve agent
+   status/authority and target/action/source facts from firewall-owned validated
+   registries rather than request assertions.
+3. Validate HMAC-attested synthetic evidence, including its subject target, and
+   assess freshness, relevance, corroboration, conflicts, missing sources,
+   integrity, and poisoned text.
+4. Assess action consequence using trusted criticality, dependencies,
+   reversibility, cascade, blast radius, downtime, and mission/safety/
+   availability impact.
+5. Apply deterministic policy with code-owned rule, evidence, consequence, and
+   Tier-0 safety floors and return a structured four-way decision. AI
+   recommendation and confidence remain advisory.
+6. Recheck the decision through a functionally separate deterministic verifier.
+7. For `ALLOW` or `ALLOW_CONSTRAINED`, issue one short-lived exact-scope token,
+   consume it at the mandatory broker, and attempt only `NETWORK_ISOLATE` on the
+   in-memory target. For `DENY` or `ESCALATE`, explicitly suppress execution.
+8. Observe post-state through the functionally separate same-project read-only
+   target interface and classify the transition without trusting the broker
+   return value.
+9. Record a correlated hash-linked lifecycle whose executed path binds the
+   request, decision, authorization, attempt, target state, effect, and
+   verification semantics. If an audit prewrite fails after effect, close with
+   one honest `POST_EFFECT_ACCOUNTING_FAILURE`, return `ROLLBACK_REQUIRED`, and
+   reconcile metrics exactly once; recovery remains a human/operational action.
+
+The two local demos exercise Tier-0 escalation/no effect and workstation
+allow/verified synthetic isolation. This sequence is not a deployment or live
+SOC procedure. The private capability is an application-level control, the
+token ledger is process local, evidence keys are synthetic runtime HMAC keys,
+and the verifiers are same-project rather than externally independent.
+
 ## Off-nominal behavior
 
 Prompt-injection strings, missing provenance, failed integrity, conflicting sensors, multiple missing expected sources, break-glass identities, and critical assets force abstention or human escalation. In v0.1, an action-command failure does not produce a false success; post-action verification fails and the audit record preserves the failed outcome for operator recovery. Automated escalation after execution failure is not implemented.
 
 In Phase 2, any authority, binding, type/source, qualification, audit, reference-assurance, adjudication, or late-artifact failure stops the protected sequence. Earlier files may remain as incomplete diagnostic material and must not be reported as completed replay evidence. See [`phase2/README.md`](phase2/README.md) and [`phase2/SHADOW_MODE_SAFETY.md`](phase2/SHADOW_MODE_SAFETY.md) for the current implementation boundary.
+
+In Phase 3, malformed/untrusted input, principal mismatch, compromised identity,
+evidence attestation/content/subject failure, insufficient or conflicting
+evidence, unsafe consequence, verifier failure, token mismatch/expiry/replay,
+target precondition drift, and internal pre-execution faults fail closed without
+an unauthorized effect. A failed simulated attempt still consumes its token.
+Post-attempt observation failure cannot undo the attempt and must never become
+`VERIFIED`; partial or protected unexpected effects select the applicable
+failure or rollback-required state. See [`phase3/README.md`](phase3/README.md)
+and [`phase3/SECURITY_AND_SAFETY_CASE.md`](phase3/SECURITY_AND_SAFETY_CASE.md).

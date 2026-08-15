@@ -30,7 +30,7 @@ DEFAULT_SOURCE = ROOT / "docs" / "ENGINEERING_STATUS_AND_FORWARD_PLAN.md"
 DEFAULT_OUTPUT = (
     ROOT
     / "docs"
-    / "AI_Decision_Firewall_Engineering_Status_v0.2.0-alpha.6-candidate.docx"
+    / "AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx"
 )
 
 BLUE = "2E74B5"
@@ -49,7 +49,9 @@ MAX_FIGURE_WIDTH = Inches(6.5)
 MAX_FIGURE_HEIGHT = Inches(7.2)
 
 
-def _set_run_font(run, *, name="Calibri", size=None, color=None, bold=None, italic=None):
+def _set_run_font(
+    run, *, name="Calibri", size=None, color=None, bold=None, italic=None
+):
     run.font.name = name
     run._element.get_or_add_rPr().rFonts.set(qn("w:ascii"), name)
     run._element.get_or_add_rPr().rFonts.set(qn("w:hAnsi"), name)
@@ -383,7 +385,9 @@ def _configure_page(document):
         p = footer.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         _set_spacing(p, before=0, after=0, line=1.0)
-        label = p.add_run("Post-freeze candidate - not a released evidence package | Page ")
+        label = p.add_run(
+            "Phase 3 simulation-only candidate - not operationally approved | Page "
+        )
         _set_run_font(label, size=8, color=MUTED)
         _add_field(p, "PAGE")
 
@@ -420,23 +424,29 @@ def _add_masthead(document):
     subtitle = document.add_paragraph()
     _set_spacing(subtitle, before=0, after=14, line=1.0)
     run = subtitle.add_run(
-        "AI Decision Firewall - Phase 2.5 predecessor design freeze and package candidate"
+        "AI Decision Firewall - Phase 3 simulation-only operational MVP candidate"
     )
     _set_run_font(run, size=14, color=MUTED)
 
     rows = [
-        ("Evidence baseline", "0.2.0-alpha.5 | commit f7f6b5c | Phase 2.4"),
+        ("Prior evidence baseline", "0.2.0-alpha.5 | commit f7f6b5c | Phase 2.4"),
         (
-            "Predecessor design freeze",
-            "0.2.0-alpha.6 | commit 08ce203c | CI and Dependency Graph succeeded",
+            "Published predecessor",
+            "0.2.0-alpha.6 | commit 854b15c | CI and Dependency Graph succeeded",
         ),
         (
-            "Package state",
-            "Post-freeze code, documentation, visual, and status-package candidate",
+            "Phase 3 candidate",
+            "0.3.0-alpha.1 | 288/288 local regression | exact commit and CI pending",
         ),
         ("Review date", "2026-08-15"),
-        ("Authority", "Offline, read-only engineering candidate; no operational authority"),
-        ("Evidence boundary", "P2-CE-005 remains CE-0 NOT_EVALUATED"),
+        (
+            "Authority",
+            "In-memory synthetic simulation only; no live connector or operational authority",
+        ),
+        (
+            "Evidence boundary",
+            "Phase 3 local CE-1 only; P2-CE-005 remains CE-0 NOT_EVALUATED",
+        ),
     ]
     table = document.add_table(rows=len(rows), cols=2)
     table.style = "Table Grid"
@@ -542,6 +552,7 @@ def _render_markdown(document, source):
     lines = source.read_text(encoding="utf-8").splitlines()
     paragraph_buffer = []
     page_boundary_pending = False
+    in_code_block = False
 
     def flush_paragraph():
         if not paragraph_buffer:
@@ -556,6 +567,23 @@ def _render_markdown(document, source):
     while index < len(lines):
         raw = lines[index]
         stripped = raw.strip()
+        if stripped.startswith("```"):
+            flush_paragraph()
+            in_code_block = not in_code_block
+            if not in_code_block:
+                spacer = document.add_paragraph()
+                _set_spacing(spacer, before=0, after=3, line=1.0)
+            index += 1
+            continue
+        if in_code_block:
+            p = document.add_paragraph()
+            p.paragraph_format.left_indent = Inches(0.15)
+            p.paragraph_format.right_indent = Inches(0.15)
+            _set_spacing(p, before=0, after=0, line=1.0)
+            run = p.add_run(raw if raw else " ")
+            _set_run_font(run, name="Consolas", size=7.5, color=INK)
+            index += 1
+            continue
         if not stripped:
             flush_paragraph()
             index += 1
@@ -565,9 +593,8 @@ def _render_markdown(document, source):
             next_index = index + 1
             while next_index < len(lines) and not lines[next_index].strip():
                 next_index += 1
-            if (
-                next_index >= len(lines)
-                or not lines[next_index].strip().startswith(("## ", "### "))
+            if next_index >= len(lines) or not lines[next_index].strip().startswith(
+                ("## ", "### ")
             ):
                 raise ValueError("PAGE BREAK must be followed by a Markdown heading")
             page_boundary_pending = True
@@ -596,10 +623,9 @@ def _render_markdown(document, source):
             next_index = index + 1
             while next_index < len(lines) and not lines[next_index].strip():
                 next_index += 1
-            next_is_table = (
-                next_index < len(lines)
-                and lines[next_index].strip().startswith("|")
-            )
+            next_is_table = next_index < len(lines) and lines[
+                next_index
+            ].strip().startswith("|")
             # LibreOffice needs a kept heading before ordinary prose to avoid
             # a run-in heading at a forced boundary, but keeping a heading with
             # a large table can collapse it into the table header. Select the
@@ -661,6 +687,8 @@ def _render_markdown(document, source):
         paragraph_buffer.append(stripped)
         index += 1
     flush_paragraph()
+    if in_code_block:
+        raise ValueError("unclosed Markdown code fence")
 
 
 def _audit(document):
@@ -673,7 +701,7 @@ def _audit(document):
     assert section.bottom_margin == Inches(1)
     assert document.styles["Normal"].font.name == "Calibri"
     assert document.styles["Normal"].font.size == Pt(11)
-    assert len(document.inline_shapes) == 4
+    assert len(document.inline_shapes) == 1
     for shape in document.inline_shapes:
         assert shape.width <= MAX_FIGURE_WIDTH
         assert shape.height <= MAX_FIGURE_HEIGHT
@@ -688,12 +716,16 @@ def build(source, output):
     document = Document()
     _configure_page(document)
     _configure_styles(document)
-    document.core_properties.title = "AI Decision Firewall Engineering Status and Forward Plan"
+    document.core_properties.title = (
+        "AI Decision Firewall Engineering Status and Forward Plan"
+    )
     document.core_properties.subject = (
-        "Phase 2.5 predecessor design freeze and package-candidate status"
+        "Phase 3 simulation-only operational MVP candidate status"
     )
     document.core_properties.author = "AI Decision Firewall project"
-    document.core_properties.keywords = "decision assurance, replay safety, source-to-decision"
+    document.core_properties.keywords = (
+        "decision assurance, simulation safety, authorization, audit"
+    )
     document.core_properties.created = datetime(2026, 8, 15, tzinfo=UTC)
     document.core_properties.modified = datetime.now(UTC)
     _add_masthead(document)

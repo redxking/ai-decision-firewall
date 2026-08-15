@@ -1,6 +1,13 @@
 # Phase 2 Data Contracts
 
-> **Release boundary.** `0.2.0-alpha.5` / Phase 2.4 is the prior published evidence baseline. The Phase 2.5 receipt and campaign-plan contracts were present at predecessor untagged `0.2.0-alpha.6` design-freeze Commit `08ce203c`, with historical commit-bound CI and Dependency Graph success. This package candidate adds bounded controls and packaging outside that predecessor commit; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site module is outside these contract and Phase 2.5 evidence claims. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and GitHub CI on the exact published package commit remain external gates; no tag or release/evidence package exists. Contract presence, a design freeze, or green implementation tests do not establish a completed replay or an observed `P2-CE-005` result.
+> **Release boundary.** Exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
+> exact-commit CI/Dependency Graph checks passed. Its package boundary includes
+> the 222/222 technical suite, separate 9/9 site tests, the then-current 231/231
+> aggregate, generated/verified manifest, and inspected renders. Site tests are
+> outside these contract/evidence claims. No tag or `P2-CE-005` evidence package
+> exists. Contract presence, package publication, or green implementation tests
+> do not establish a completed replay or an observed `P2-CE-005` result.
 
 ## Contract objective and status
 

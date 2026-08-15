@@ -1,0 +1,355 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/redxking/ai-decision-firewall/contracts/v0.3.0/phase3-policy.schema.json",
+  "title": "AI Decision Firewall Phase 3 Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "version",
+    "evidence",
+    "consequence",
+    "decision_rules",
+    "action_catalog",
+    "target_inventory",
+    "authorization",
+    "approval"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.3.0" },
+    "policy_id": { "$ref": "#/$defs/identifier" },
+    "version": { "const": "0.3.0" },
+    "evidence": { "$ref": "#/$defs/evidencePolicy" },
+    "consequence": { "$ref": "#/$defs/consequencePolicy" },
+    "decision_rules": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/decisionRule" }
+    },
+    "action_catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["NETWORK_ISOLATE"],
+      "properties": {
+        "NETWORK_ISOLATE": { "$ref": "#/$defs/actionPolicy" }
+      }
+    },
+    "target_inventory": {
+      "type": "object",
+      "minProperties": 2,
+      "maxProperties": 128,
+      "required": ["DOMAIN_CONTROLLER_01", "WORKSTATION_042"],
+      "propertyNames": { "$ref": "#/$defs/identifier" },
+      "additionalProperties": { "$ref": "#/$defs/targetRecord" }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ttl_seconds", "single_use"],
+      "properties": {
+        "ttl_seconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+        "single_use": { "const": true }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ttl_seconds"],
+      "properties": {
+        "ttl_seconds": { "type": "integer", "minimum": 60, "maximum": 86400 }
+      }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "sourcePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_type", "reliability", "trust_level"],
+      "properties": {
+        "source_type": { "$ref": "#/$defs/identifier" },
+        "reliability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "trust_level": { "enum": ["HIGH", "MEDIUM", "LOW", "UNTRUSTED"] }
+      }
+    },
+    "evidencePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hypothesis_claim",
+        "maximum_age_seconds",
+        "minimum_reliability",
+        "minimum_relevance",
+        "minimum_overall_strength_for_allow",
+        "minimum_corroborating_sources",
+        "maximum_conflicts_for_allow",
+        "trust_weights",
+        "required_source_types_by_action",
+        "trusted_sources"
+      ],
+      "properties": {
+        "hypothesis_claim": { "$ref": "#/$defs/identifier" },
+        "maximum_age_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 604800
+        },
+        "minimum_reliability": { "type": "number", "minimum": 0, "maximum": 1 },
+        "minimum_relevance": { "type": "number", "minimum": 0, "maximum": 1 },
+        "minimum_overall_strength_for_allow": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "minimum_corroborating_sources": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "maximum_conflicts_for_allow": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 16
+        },
+        "trust_weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["HIGH", "MEDIUM", "LOW", "UNTRUSTED"],
+          "properties": {
+            "HIGH": { "type": "number", "minimum": 0, "maximum": 1 },
+            "MEDIUM": { "type": "number", "minimum": 0, "maximum": 1 },
+            "LOW": { "type": "number", "minimum": 0, "maximum": 1 },
+            "UNTRUSTED": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "required_source_types_by_action": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["NETWORK_ISOLATE"],
+          "properties": {
+            "NETWORK_ISOLATE": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/identifier" }
+            }
+          }
+        },
+        "trusted_sources": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 64,
+          "propertyNames": { "$ref": "#/$defs/identifier" },
+          "additionalProperties": { "$ref": "#/$defs/sourcePolicy" }
+        }
+      }
+    },
+    "consequencePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "factor_weights",
+        "criticality_weights",
+        "blast_radius_weights",
+        "impact_weights",
+        "downtime_reference_minutes",
+        "dependency_reference_count",
+        "irreversible_penalty",
+        "high_threshold",
+        "critical_threshold",
+        "approval_levels",
+        "approval_isolation_consequences",
+        "approval_mission_impacts",
+        "approval_safety_impacts",
+        "approval_availability_impacts",
+        "approval_blast_radii",
+        "approval_downtime_minutes",
+        "cascading_requires_approval"
+      ],
+      "properties": {
+        "factor_weights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "criticality", "blast_radius", "downtime", "mission_impact",
+            "safety_impact", "availability_impact", "dependency",
+            "isolation_consequence"
+          ],
+          "properties": {
+            "criticality": { "$ref": "#/$defs/unitNumber" },
+            "blast_radius": { "$ref": "#/$defs/unitNumber" },
+            "downtime": { "$ref": "#/$defs/unitNumber" },
+            "mission_impact": { "$ref": "#/$defs/unitNumber" },
+            "safety_impact": { "$ref": "#/$defs/unitNumber" },
+            "availability_impact": { "$ref": "#/$defs/unitNumber" },
+            "dependency": { "$ref": "#/$defs/unitNumber" },
+            "isolation_consequence": { "$ref": "#/$defs/unitNumber" }
+          }
+        },
+        "criticality_weights": {
+          "type": "object", "additionalProperties": false,
+          "required": ["LOW", "MEDIUM", "HIGH", "TIER_0"],
+          "properties": {
+            "LOW": { "$ref": "#/$defs/unitNumber" },
+            "MEDIUM": { "$ref": "#/$defs/unitNumber" },
+            "HIGH": { "$ref": "#/$defs/unitNumber" },
+            "TIER_0": { "$ref": "#/$defs/unitNumber" }
+          }
+        },
+        "blast_radius_weights": {
+          "type": "object", "additionalProperties": false,
+          "required": ["LOCAL", "SERVICE", "ENTERPRISE"],
+          "properties": {
+            "LOCAL": { "$ref": "#/$defs/unitNumber" },
+            "SERVICE": { "$ref": "#/$defs/unitNumber" },
+            "ENTERPRISE": { "$ref": "#/$defs/unitNumber" }
+          }
+        },
+        "impact_weights": {
+          "type": "object", "additionalProperties": false,
+          "required": ["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "properties": {
+            "NONE": { "$ref": "#/$defs/unitNumber" },
+            "LOW": { "$ref": "#/$defs/unitNumber" },
+            "MEDIUM": { "$ref": "#/$defs/unitNumber" },
+            "HIGH": { "$ref": "#/$defs/unitNumber" },
+            "CRITICAL": { "$ref": "#/$defs/unitNumber" }
+          }
+        },
+        "downtime_reference_minutes": { "type": "integer", "minimum": 1, "maximum": 10080 },
+        "dependency_reference_count": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "irreversible_penalty": { "$ref": "#/$defs/unitNumber" },
+        "high_threshold": { "$ref": "#/$defs/unitNumber" },
+        "critical_threshold": { "$ref": "#/$defs/unitNumber" },
+        "approval_levels": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
+        },
+        "approval_isolation_consequences": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
+        },
+        "approval_mission_impacts": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
+        },
+        "approval_safety_impacts": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["NONE", "LOW", "MEDIUM", "HIGH"] }
+        },
+        "approval_availability_impacts": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] }
+        },
+        "approval_blast_radii": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "enum": ["LOCAL", "SERVICE", "ENTERPRISE"] }
+        },
+        "approval_downtime_minutes": {
+          "type": "integer", "minimum": 1, "maximum": 10080
+        },
+        "cascading_requires_approval": { "type": "boolean" }
+      }
+    },
+    "decisionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "condition", "outcome"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "condition": {
+          "enum": [
+            "IDENTITY_FATAL", "EVIDENCE_FATAL", "TARGET_TYPE_PROHIBITED",
+            "TARGET_TIER_0", "CONSEQUENCE_REQUIRES_APPROVAL",
+            "AUTHORITY_INSUFFICIENT", "EVIDENCE_NOT_AUTOMATION_GRADE",
+            "PARAMETER_CONSTRAINTS_PRESENT", "DEFAULT"
+          ]
+        },
+        "outcome": { "enum": ["ALLOW", "DENY", "ESCALATE", "ALLOW_CONSTRAINED"] }
+      }
+    },
+    "unitNumber": { "type": "number", "minimum": 0, "maximum": 1 },
+    "actionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reversible",
+        "allowed_target_types",
+        "required_authority",
+        "tier_0_required_authority",
+        "maximum_duration_seconds",
+        "preserve_management_required",
+        "human_approval_criticalities"
+      ],
+      "properties": {
+        "reversible": { "const": true },
+        "allowed_target_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["DOMAIN_CONTROLLER", "WORKSTATION"] }
+        },
+        "required_authority": { "$ref": "#/$defs/identifier" },
+        "tier_0_required_authority": { "$ref": "#/$defs/identifier" },
+        "maximum_duration_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400
+        },
+        "preserve_management_required": { "type": "boolean" },
+        "human_approval_criticalities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["LOW", "MEDIUM", "HIGH", "TIER_0"] }
+        }
+      }
+    },
+    "targetRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "criticality",
+        "classification",
+        "dependencies",
+        "isolation_consequence",
+        "estimated_downtime_minutes",
+        "blast_radius",
+        "mission_impact",
+        "safety_impact",
+        "availability_impact",
+        "human_approval_required"
+      ],
+      "properties": {
+        "type": { "enum": ["DOMAIN_CONTROLLER", "WORKSTATION"] },
+        "criticality": { "enum": ["LOW", "MEDIUM", "HIGH", "TIER_0"] },
+        "classification": {
+          "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "isolation_consequence": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "estimated_downtime_minutes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10080
+        },
+        "blast_radius": { "enum": ["LOCAL", "SERVICE", "ENTERPRISE"] },
+        "mission_impact": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "safety_impact": { "enum": ["NONE", "LOW", "MEDIUM", "HIGH"] },
+        "availability_impact": { "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "human_approval_required": { "type": "boolean" }
+      }
+    }
+  }
+}

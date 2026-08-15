@@ -1,6 +1,14 @@
 # Phase 2 Architecture
 
-> **Release boundary.** `0.2.0-alpha.5` / Phase 2.4 at `f7f6b5c` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline, with historical CI and Dependency Graph success bound to that commit. This package candidate adds bounded local-write controls and selected Gate B causal-test scaffolding; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site module is outside the architecture and Phase 2.5 evidence claims. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. The tracked data, campaign-bound model, and baseline outputs remain at committed bytes. Package publication and GitHub CI on the exact published package commit remain external gates. No tag or release/evidence package exists; `P2-CE-005` remains CE-0 `NOT_EVALUATED`.
+> **Release boundary.** Exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
+> exact-commit CI/Dependency Graph checks passed. Its package boundary includes
+> the 222/222 technical suite, separate 9/9 site tests, the then-current 231/231
+> aggregate, generated/verified manifest, and inspected renders. Site tests are
+> outside architecture/evidence claims. No tag or evidence package exists;
+> `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`. Phase 3
+> `0.3.0-alpha.1` is a separate local simulation-only package; its CE-1 results
+> do not change Phase 2 read-only construction or constitute Phase 2 evidence.
 
 ## Purpose and boundary
 
@@ -8,7 +16,7 @@ The Phase 2 architecture adds a governed replay path around the v0.1 evidence, m
 
 The current repository uses local synthetic fixtures only. `historical_case_count` is `0`, there is no approved Gate B package or live-feed adapter, and there are no production credentials or connectors. Phase 2.4 adds exact modeled-signal typing/source authorization, exact four-field inventory binding, and a separately implemented in-process reference projection of serialized feature values and traces. Phase 2.5 extends separate recomputation through the deterministic evidence, model, policy, verifier, and read-only final-decision surfaces. Neither increment authorizes a historical pilot or advances the architecture to live or shadow-feed deployment.
 
-This package candidate's Gate B registry and observer are selected CE-1 test scaffolding only. They cover 25 named identities, including 24 selected pre-payload mutations for which zero governed payload roles were observed under the enumerated Python APIs and one post-qualification threshold identity. They do not define a complete Gate B failure taxonomy or prove OS-level nonaccess/non-egress. The `run_poc` and campaign CLI path controls are similarly bounded operator-error guards, not general filesystem confinement.
+The published Phase 2.5 Gate B registry and observer are selected CE-1 test scaffolding only. They cover 25 named identities, including 24 selected pre-payload mutations for which zero governed payload roles were observed under the enumerated Python APIs and one post-qualification threshold identity. They do not define a complete Gate B failure taxonomy or prove OS-level nonaccess/non-egress. The `run_poc` and campaign CLI path controls are similarly bounded operator-error guards, not general filesystem confinement.
 
 ## Logical flow
 

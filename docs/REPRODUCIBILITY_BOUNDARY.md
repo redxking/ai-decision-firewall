@@ -2,7 +2,8 @@
 
 **Status:** Working design control; no new campaign evidence  
 **Date:** 2026-08-15  
-**Scope:** Synthetic Phase 1 model construction and Phase 2 artifact consumption
+**Scope:** Synthetic Phase 1 model construction, Phase 2 artifact consumption,
+and Phase 3 `0.3.0-alpha.1` local synthetic demonstrations/corpus
 
 ## Decision
 
@@ -15,6 +16,22 @@ The repository distinguishes three different claims that were previously easy to
 The ordinary `python run_poc.py` path permits repository writes only beneath `data/local/**` and `outputs/local/**`; explicitly supplied paths outside the repository remain possible. `--allow-tracked-artifact-overwrite` expands the repository allowance only to `data/**` and `outputs/baseline/**` for an approved freeze workflow. Other repository locations, case-variant repository aliases, symlink redirects, and overlapping data/output trees are rejected. Preflight enumerates every generated data and output leaf, including `run_manifest.json`, and rejects existing symlinks, nonregular files, or multiply linked leaves. The local run manifest SHA-256-binds the other seven generated outputs. Fourteen focused safety tests pass for this bounded behavior.
 
 These checks are local operator interlocks, not an OS sandbox, mount boundary, TOCTOU/race guarantee, comprehensive hardlink defense, or confinement of direct calls to lower-level writer functions. The explicit flag is not evidence that approval occurred.
+
+The Phase 3 demo and corpus runners separately require an absent or empty output
+directory. They refuse to clobber a nonempty destination. The demo uses fresh
+runtime-only synthetic HMAC/signing keys and therefore does not claim
+byte-identical volatile identifiers, signatures, audit hashes, or timestamps
+across runs. Its required semantic decisions/effects and lifecycle invariants
+are reproducible. The corpus freezes time, scenario IDs, expectations, and
+deterministic synthetic runtime key material so its bounded summary is stable;
+the output deliberately omits reusable authority/signatures and keys. The
+current local semantic observations are 57/57 focused tests, two demonstration
+acceptance checks PASS, 46/46 corpus scenarios, and 288/288 full repository
+tests; the exact commit and CI remain pending.
+
+These are application-level output and determinism controls, not OS/process
+confinement, external custody, production key handling, a published evidence
+package, or an operational repeatability claim.
 
 ## Rationale
 
@@ -36,4 +53,10 @@ If portable byte-for-byte model rebuilding becomes a requirement, the project mu
 
 ## Current nonclaim
 
-The tracked synthetic data, campaign-bound model, and `outputs/baseline/**` are at their committed bytes. Ordinary local execution is designed not to alter them. This document does not establish portable byte-identical retraining, independently attest artifact custody, approve a replacement model, update any frozen plan, or create new CE-1/CE-2 evidence.
+The tracked synthetic data, campaign-bound model, and `outputs/baseline/**` are
+at their committed Phase 2.5 bytes. Ordinary local execution is designed not to
+alter them. Phase 3 runtime fixtures do not replace or validate that model or
+dataset. This document does not establish portable byte-identical retraining,
+independently attest artifact custody, approve a replacement model, update any
+frozen plan, create `P2-CE-005` evidence, or elevate local Phase 3 observations
+beyond CE-1 implementation conformance.

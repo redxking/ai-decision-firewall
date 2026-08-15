@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/redxking/ai-decision-firewall/contracts/v0.3.0/decision-request.schema.json",
+  "title": "AI Decision Firewall Phase 3 Decision Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "timestamp",
+    "agent",
+    "action",
+    "target",
+    "evidence",
+    "agent_recommendation",
+    "agent_confidence",
+    "context"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.3.0" },
+    "request_id": { "$ref": "#/$defs/identifier" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "agent": { "$ref": "#/$defs/agentClaims" },
+    "action": { "$ref": "#/$defs/action" },
+    "target": { "$ref": "#/$defs/targetClaims" },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "agent_recommendation": {
+      "enum": ["ISOLATE", "DO_NOT_ISOLATE", "ESCALATE"]
+    },
+    "agent_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "context": {
+      "type": "object",
+      "maxProperties": 32,
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "claimCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_:-]{0,63}$"
+    },
+    "agentClaims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "authenticated",
+        "roles",
+        "authority",
+        "security_status"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": { "$ref": "#/$defs/identifier" },
+        "authenticated": { "type": "boolean" },
+        "roles": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "authority": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "security_status": {
+          "enum": ["TRUSTED", "DEGRADED", "COMPROMISED", "UNKNOWN"]
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "target", "parameters"],
+      "properties": {
+        "type": { "const": "NETWORK_ISOLATE" },
+        "target": { "$ref": "#/$defs/identifier" },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["duration_seconds", "preserve_management"],
+          "properties": {
+            "duration_seconds": {
+              "type": "integer",
+              "minimum": 60,
+              "maximum": 86400
+            },
+            "preserve_management": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "targetClaims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "criticality",
+        "classification",
+        "dependencies"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": { "enum": ["DOMAIN_CONTROLLER", "WORKSTATION"] },
+        "criticality": { "enum": ["LOW", "MEDIUM", "HIGH", "TIER_0"] },
+        "classification": {
+          "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "subject_target_id",
+        "source_type",
+        "source_instance",
+        "provenance",
+        "integrity",
+        "observed_at",
+        "reliability",
+        "trust_level",
+        "supports",
+        "contradicts",
+        "relevance",
+        "payload",
+        "untrusted_text"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "subject_target_id": { "$ref": "#/$defs/identifier" },
+        "source_type": { "$ref": "#/$defs/identifier" },
+        "source_instance": { "$ref": "#/$defs/identifier" },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "verified", "signature"],
+          "properties": {
+            "id": { "$ref": "#/$defs/identifier" },
+            "verified": { "type": "boolean" },
+            "signature": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "content_sha256"],
+          "properties": {
+            "status": { "enum": ["VERIFIED", "UNVERIFIED", "FAILED"] },
+            "content_sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "observed_at": { "type": "string", "format": "date-time" },
+        "reliability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "trust_level": { "enum": ["HIGH", "MEDIUM", "LOW", "UNTRUSTED"] },
+        "supports": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/claimCode" }
+        },
+        "contradicts": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/claimCode" }
+        },
+        "relevance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "payload": {
+          "type": "object",
+          "maxProperties": 64,
+          "additionalProperties": true
+        },
+        "untrusted_text": {
+          "type": "string",
+          "maxLength": 16384
+        }
+      }
+    }
+  }
+}

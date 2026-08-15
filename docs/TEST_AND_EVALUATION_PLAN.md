@@ -1,6 +1,16 @@
 # Test and Evaluation Plan
 
-> **Version boundary.** The v0.1 baseline results below remain historical and unchanged. `0.2.0-alpha.5` is the prior published evidence baseline. Exact Commit `08ce203c0965e8d43b7653454d4ea8315996021f` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline; its historical 193-test local suite and exact-commit CI success remain bound to that commit. This package candidate adds bounded path controls, selected Gate B causal-test scaffolding, documentation, and packaging; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The public site and its tests are outside Phase 2.5 evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. The tracked data, campaign-bound model, and baseline outputs remain at committed bytes. Package publication and GitHub CI on the exact published package commit remain external gates. No tag or release/evidence package exists. `P2-CE-005` is CE-0 `NOT_EVALUATED`; its plan, tests, predecessor commit, and implementation-verification results are not campaign observations.
+> **Version boundary.** The v0.1 results remain historical. Exact Phase 2.5
+> Commit `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
+> exact-commit CI/Dependency Graph checks passed. Its recorded package boundary
+> includes 222/222 Phase 2.5 technical tests, separate 9/9 public-site tests,
+> and the then-current 231/231 aggregate. The site remains outside Phase 2.5
+> evidence. `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`.
+> Phase 3 is an uncommitted local `0.3.0-alpha.1` simulation-only candidate. The
+> current checkout passed 57/57 focused tests; both demo acceptance checks
+> reported PASS; the corpus reported 46/46; and the full repository suite passed
+> 288/288 locally. The exact candidate commit and CI remain pending. These are
+> CE-1/local observations.
 
 ## Test objective
 
@@ -37,7 +47,7 @@ These results apply to the delivered v0.1 synthetic-simulation baseline only. Th
 
 ## Published Phase 2.4 evidence state
 
-The prior alpha.5 checkout records 147 passing implementation tests. That count is version-bound and must not be reused for the alpha.6 predecessor design freeze or this package candidate. The published Phase 2 evidence records remain separate from the implementation suite:
+The prior alpha.5 checkout records 147 passing implementation tests. That count is version-bound and must not be reused for the alpha.6 predecessor design freeze, published Phase 2.5 package, or Phase 3 candidate. The published Phase 2 evidence records remain separate from the implementation suite:
 
 - `P2-CE-001`: three-case synthetic starter replay;
 - `P2-CE-002`: seven-record synthetic qualification campaign with three accepted and four quarantined records;
@@ -60,17 +70,49 @@ The verified design-freeze boundary includes:
 - repeated late-mutation checks over normalized cases, raw and deterministic decisions, audit, both assurance artifacts, metrics, and manifest construction; and
 - all unchanged Phase 1 and prior published Phase 2 regressions passing locally and in CI against the exact design-freeze commit.
 
-## This package-candidate verification
+## Published Phase 2.5 package verification
 
 The campaign CLI destination guard passed 3/3 focused checks, a separate construction-instrumentation sensitivity regression passed, and the complete campaign test module passed 21/21 in an isolated clean clone. Check mode additionally rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link evidence record before any artifact read or campaign rebuild; it requires singly linked regular leaves and size-checks them before reading. Every reference attempt instruments construction of `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider`; the sensitivity test injected all three, observed nonzero counts and mismatch, and proved closed-schema rejection. The `run_poc` guard passed 14 focused checks covering ordinary and explicit-freeze destination rules, case-variant repository aliases, path overlap and redirects, generated-leaf preflight including `run_manifest.json`, unsafe existing leaves, and seven-output local-manifest binding. These are bounded application-level operator-error and Python-instrumentation controls, not an OS sandbox, mount boundary, TOCTOU/race guarantee, comprehensive hardlink defense, direct-writer confinement, general allocation monitor, or target-side proof.
 
 The selected Gate B test scaffolding now registers 25 closed causal identities: 24 selected pre-payload mutations and one post-qualification threshold identity. Exact closed tuples are required for classified errors, while unclassified Gate B errors remain unscorable. For the 24 selected pre-payload mutations, a bounded observer recorded zero `cases` or `adjudications` roles under its enumerated Python file APIs. This does not establish a complete taxonomy, OS-level nonaccess/non-egress, a reference monitor, or campaign evidence.
 
-No successor campaign has been executed. Source reconciliation is complete, and this package candidate passed the Phase 2.5 technical suite 222/222: the predecessor 193 tests plus five campaign-delta tests, 14 `run_poc` tests, six Gate B oracle tests, and four payload-observer tests. The separate public-site module passed 9/9, producing a combined repository aggregate of 231/231; those site tests are not part of Phase 2.5 implementation or evidence. The chart check passed in the frozen renderer, the integrity manifest was generated and verified, and the paired final-source DOCX/PDF were rebuilt and all 15 rendered pages inspected without blank, clipped, or run-in-heading defects. Package commit and publication and GitHub CI on that exact published commit remain external gates. The predecessor 193-test and green-workflow results remain bound to `08ce203c`; no tagged alpha.6 release or evidence package exists.
+No successor `P2-CE-005` campaign has been executed. Source reconciliation is complete, and the published package passed the Phase 2.5 technical suite 222/222: the predecessor 193 tests plus five campaign-delta tests, 14 `run_poc` tests, six Gate B oracle tests, and four payload-observer tests. The separate public-site module passed 9/9, producing a then-current repository aggregate of 231/231; those site tests are not part of Phase 2.5 implementation or evidence. The chart check passed in the frozen renderer, the integrity manifest was generated and verified, and the paired final-source DOCX/PDF were rebuilt and all 15 rendered pages inspected. Exact package Commit `854b15c` was published, and GitHub CI/Dependency Graph passed for it. The predecessor 193-test result remains bound to `08ce203c`; no tag or `P2-CE-005` evidence package exists.
 
 ## Planned `P2-CE-005` evaluation
 
-The fixed plan specifies ten clean/mutant pairs per run and two deterministic same-process runs: 40 planned observations, zero retries, and zero exclusions. The expected stage outcomes are design constants, not observed results. Commit `08ce203c` is the predecessor design-freeze baseline; this package candidate incorporates the intended confinement controls and has completed its local package gates but is not final campaign Commit A until it is published and exact-package GitHub CI passes. CE-2 wording is prohibited until one exact clean Commit A freezes the implementation, plan, schemas, generator, validator, and intended confinement controls; a detached checkout of that commit executes the campaign; and a separate evidence-only Commit B is validated. A defect in the actor, task, expected outcome, scorer, generator, or validator invalidates the package rather than creating evidence.
+The fixed plan specifies ten clean/mutant pairs per run and two deterministic same-process runs: 40 planned observations, zero retries, and zero exclusions. The expected stage outcomes are design constants, not observed results. Publication and green CI for Phase 2.5 Commit `854b15c` did not designate or execute a governed `P2-CE-005` Commit A. CE-2 wording remains prohibited unless one exact clean Commit A freezes the implementation, plan, schemas, generator, validator, and intended confinement controls; a detached checkout of that commit executes the campaign; and a separate evidence-only Commit B is validated. A defect in the actor, task, expected outcome, scorer, generator, or validator invalidates the package rather than creating evidence.
+
+## Phase 3 local candidate verification
+
+The local Phase 3 modules cover strict raw contracts and machine policy safety
+floors, opaque-credential identity/authority resolution, target-bound evidence
+attestation, evidence quality, target-claim spoofing, consequence, all four
+decisions, exact/deep-immutable constraints, single-use authorization,
+wrong-scope/expiry/prior-instance/concurrent replay, broker and direct-target
+bypass, approval receipt atomicity, fail-closed faults, functionally separate
+same-project target readback, executed-path/post-effect lifecycle audit,
+metrics, simulation-only construction, demos, and the deterministic corpus.
+
+Observed locally as of 2026-08-15:
+
+- 57/57 focused Phase 3 tests passed locally;
+- the high-risk domain-controller raw request returned `ESCALATE`, created a
+  bound approval requirement, issued no token, invoked no broker, and produced
+  no effect;
+- the authorized workstation raw request returned `ALLOW`, consumed one token,
+  performed one in-memory isolation, and functionally separate same-project
+  readback returned `VERIFIED`;
+- the deterministic adversarial corpus reported 46/46 passing scenarios; and
+- the exact settled-candidate repository suite passed 288/288 locally.
+
+Adversarial review found and closed release-blocking defects across consequence
+and evidence binding, credential/key-domain handling, exact-type immutability,
+machine-policy floors, replay/receipt atomicity, dependency-failure closure,
+and executed-path/post-effect audit correlation. Neither the fixes nor local
+green results establish exhaustive security.
+
+The complete Phase 3 matrix, commands, and evidence boundary are in
+[`phase3/TEST_AND_EVALUATION_PLAN.md`](phase3/TEST_AND_EVALUATION_PLAN.md).
 
 ## Remaining test obligations
 
@@ -79,7 +121,7 @@ The repository now exercises schema-version mismatch, bounded parsing, delayed/o
 - authenticated, approved de-identified historical replay and temporal holdout evaluation;
 - vendor-specific adapters, source-ablation studies, mapping-loss analysis, and analyst inter-rater reliability;
 - historical calibration, uncertainty, abstention cost, survivorship-bias, and subgroup analysis;
-- action idempotency, concurrency, HMAC key rotation, durable token replay rejection, executable policy rollback, independent target readback, and secure logging failure;
+- durable/distributed idempotency and token replay rejection, managed HMAC key rotation/revocation, executable policy rollback, external/vendor target readback, and secure logging failure; Phase 3 covers only process-local concurrency and same-project simulated readback;
 - OS-enforced isolation, egress verification, external audit custody, dependency/evaluation-environment attack testing, and production-scale availability; and
 - controlled test-tenant and operational validation under separate authority.
 

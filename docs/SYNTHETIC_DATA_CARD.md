@@ -1,6 +1,13 @@
 # Synthetic Data Card
 
-> **Version boundary.** The dataset below remains the v0.1.0 generated training/test baseline. `0.2.0-alpha.5` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline, with historical CI and Dependency Graph success bound to that commit. This package candidate's Phase 2.5 technical suite passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 evidence and does not validate the dataset. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and GitHub CI on the exact published package commit remain external gates. Tracked data and baseline outputs remain at their committed bytes. No tag, release, or evidence package exists. Phase 2 fixtures and campaign inputs are separate synthetic controls; they do not create a new historical dataset or an observed `P2-CE-005` result.
+> **Version boundary.** The dataset below remains the v0.1.0 generated
+> training/test baseline. Exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main`, and its
+> exact-commit CI/Dependency Graph checks passed. Tracked data and baseline
+> outputs remain at their committed bytes. Phase 2 fixtures/campaigns and Phase
+> 3 runtime scenarios are separate synthetic controls; they do not create a new
+> historical dataset. `P2-CE-005` was not executed and remains CE-0
+> `NOT_EVALUATED`.
 
 ## Dataset identity
 
@@ -51,6 +58,33 @@ These versioned controls are distinct from the v0.1 train/test partitions:
 | Phase 2.5 source-to-decision campaign | Ten planned clean/mutant pairs per run and two planned runs | CE-0 `NOT_EVALUATED`; expected outcomes are not observations |
 
 All committed observed results declare `historical_case_count: 0`. Synthetic campaign inputs are designed controls and are not representative samples of an operational identity environment.
+
+## Phase 3 synthetic runtime fixtures
+
+Phase 3 does not use the v0.1 training/test partitions. It constructs raw
+v0.3.0 requests at runtime for two policy-inventory targets:
+
+| Fixture | Synthetic scope | Current observation boundary |
+|---|---|---|
+| `DOMAIN_CONTROLLER_01` | Tier-0 authentication dependency, stale/conflicting evidence, insufficient Tier-0 agent authority, high consequence | Local raw-request demo returns `ESCALATE`; no authorization/effect |
+| `WORKSTATION_042` | Low-criticality endpoint, fresh corroborated evidence, exact workstation-containment authority | Local raw-request demo returns `ALLOW`; one in-memory isolation; same-project readback `VERIFIED` |
+| Phase 3 adversarial corpus | 46 declarative canonical, evidence, identity, consequence, authorization, bypass, broker/verifier, metamorphic, and combined cases | 46/46 local project-controlled matches; exact candidate commit/CI pending |
+| Phase 3 focused controls | Contract, credential identity, evidence, policy/consequence, decision, authorization, broker, approval, verifier/fault, audit/metrics, and runner boundaries | 57/57 focused and 288/288 full repository tests passed locally; exact commit and CI pending |
+
+Each synthetic evidence item has a canonical content digest and a runtime HMAC
+attestation binding source identity/type, provenance, observation time,
+support/contradiction semantics, relevance, and subject target. Source keys are
+supplied at runtime and are not serialized into the demo/corpus output or
+policy. Deterministic corpus key material exists only to reproduce synthetic
+tests. This is not enterprise provenance, device identity, PKI/HSM custody,
+nonrepudiation, rotation/revocation evidence, or proof that a source assertion
+is true.
+
+The Phase 3 targets, evidence, principals, timing, policy, dependencies,
+consequences, and injected failures are engineering fixtures. They are not a
+representative SOC population and cannot support detection efficacy, action
+safety, efficacy, calibration, prevalence, workload, false-containment,
+recovery, or mission-impact estimates.
 
 ## Required dataset evolution
 

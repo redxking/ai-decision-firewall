@@ -1,0 +1,182 @@
+digraph Phase3OperationalMVP {
+  graph [
+    rankdir=TB,
+    bgcolor="white",
+    pad="0.24",
+    nodesep="0.32",
+    ranksep="0.40",
+    splines=polyline,
+    fontname="Arial",
+    fontsize=17,
+    labelloc="t",
+    label="AI Decision Firewall - Phase 3 Operational MVP Architecture\nPhase 2.5 @ 854b15c: published on main; exact-commit CI green\nPhase 3: local demo/corpus candidate; exact commit and CI pending\nP2-CE-005: CE-0 NOT_EVALUATED; separate from and unrelated to Phase 3"
+  ];
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#617286",
+    fillcolor="white",
+    fontname="Arial",
+    fontsize=10,
+    margin="0.13,0.09"
+  ];
+  edge [
+    color="#617286",
+    fontcolor="#40546A",
+    fontname="Arial",
+    fontsize=8.2,
+    arrowsize=0.70,
+    penwidth=1.08
+  ];
+
+  untrusted [
+    fillcolor="#FDEBEC",
+    color="#B85450",
+    fontcolor="#8B3A3A",
+    label="UNTRUSTED REASONING PLANE\nExternal AI / reasoning -> raw decision request\nRecommendation/confidence + claimed agent/action/target/parameters/evidence\nNever creates identity or authority; no credential, token, broker, or target access"
+  ];
+
+  trusted [
+    fillcolor="#EAF2FF",
+    color="#4F81BD",
+    fontcolor="#2C5A8A",
+    label="TRUSTED RUNTIME CONTEXT\nAuthenticated principal/roles/authority + target inventory/criticality\nEvidence-source keys/attestation + deterministic policy ID/version/digest\nResolved independently; request assertions cannot create trust"
+  ];
+
+  {rank=same; untrusted; trusted;}
+
+  intake [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#8064A2">
+      <TR><TD COLSPAN="2" BGCOLOR="#E8DFF1"><B>VALIDATION + TRUST-RESOLUTION BOUNDARY</B></TD></TR>
+      <TR>
+        <TD BGCOLOR="#F0EAF7"><B>Strict request intake</B><BR/>Closed JSON schema • duplicate/nonfinite rejection<BR/>Size/depth/time bounds • exact action-target binding</TD>
+        <TD BGCOLOR="#F0EAF7"><B>Trusted context resolution</B><BR/>Principal/authority • target/criticality • source trust<BR/>Policy safety invariants + version/digest binding</TD>
+      </TR>
+      <TR><TD COLSPAN="2" BGCOLOR="#FDEBEC"><FONT COLOR="#8B3A3A"><B>FAIL CLOSED:</B> malformed, unauthenticated, unresolved, or untrusted input -&gt; DENY record; no authorization, broker call, or effect</FONT></TD></TR>
+    </TABLE>
+  >];
+
+  untrusted -> intake [label="untrusted request bytes"];
+  trusted -> intake [label="trusted principal + policy context"];
+
+  firewall [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#5E8CC8">
+      <TR><TD COLSPAN="4" BGCOLOR="#DCEBFA"><B>DETERMINISTIC DECISION FIREWALL</B><BR/>Fail closed • recommendation/confidence remain informational and never confer authority</TD></TR>
+      <TR>
+        <TD BGCOLOR="#E8F1FF"><B>Evidence assurance</B><BR/>Provenance/attestation<BR/>Integrity + freshness<BR/>Corroboration/conflict</TD>
+        <TD BGCOLOR="#E8F1FF"><B>Identity + authority</B><BR/>Authenticated principal<BR/>Role/scope/target class<BR/>No confidence-derived authority</TD>
+        <TD BGCOLOR="#E8F1FF"><B>Policy + context</B><BR/>Version + digest<BR/>Request-reuse controls<BR/>Deterministic rules</TD>
+        <TD BGCOLOR="#E8F1FF"><B>Consequence</B><BR/>Criticality/dependencies<BR/>Blast radius/downtime<BR/>Mission/safety/reversibility</TD>
+      </TR>
+      <TR><TD PORT="decision" COLSPAN="4" BGCOLOR="#E7F5ED"><B>Structured decision record</B><BR/>Outcome • reasons • permitted action/parameters • policy binding • context hash</TD></TR>
+    </TABLE>
+  >];
+
+  intake -> firewall [label="validated request + trusted context"];
+
+  outcomes [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#7F95AA">
+      <TR><TD COLSPAN="4" BGCOLOR="#E7EBEF"><B>DECISION OUTCOMES</B> - DENY/ESCALATE terminate before authorization; only ALLOW edges continue</TD></TR>
+      <TR>
+        <TD PORT="deny" BGCOLOR="#FDEBEC"><FONT COLOR="#8B3A3A"><B>DENY - NO-ACTION PATH</B><BR/>No token • no broker<BR/>Target unchanged</FONT></TD>
+        <TD PORT="escalate" BGCOLOR="#FFF4DD"><FONT COLOR="#7A5310"><B>ESCALATE - NO-ACTION PATH</B><BR/>No token/broker; target unchanged<BR/>Bounded HUMAN_APPROVER<BR/>Exact scope/authority/expiry • single use<BR/>Receipt returns for firewall reevaluation only<BR/>Never direct execution</FONT></TD>
+        <TD PORT="allow" BGCOLOR="#E7F5ED"><FONT COLOR="#356A47"><B>ALLOW</B><BR/>Exact permitted action/parameters<BR/>may request authorization</FONT></TD>
+        <TD PORT="constrained" BGCOLOR="#E7F5ED"><FONT COLOR="#356A47"><B>ALLOW_CONSTRAINED</B><BR/>Only firewall-constrained scope<BR/>may request authorization</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  firewall:decision:s -> outcomes:n;
+
+  subgraph cluster_execution {
+    label="APPLICATION EXECUTION BOUNDARY\nsynthetic_simulation only - no live connectors, credentials, or operational targets\nPrivate mutation capability is application-level control, not OS/process/security isolation";
+    color="#679B78";
+    fontcolor="#356A47";
+    fillcolor="#F6FBF8";
+    style="rounded,filled";
+    fontname="Arial";
+    fontsize=10.5;
+    margin=13;
+
+    auth [
+      fillcolor="#E7F5ED",
+      color="#679B78",
+      label="SCOPED AUTHORIZATION\nSigned, single-use, process-instance token\nBinds request/decision/agent/action/target/parameters\nexpiry/policy/context/target-state precondition"
+    ];
+    broker [
+      fillcolor="#E7F5ED",
+      color="#679B78",
+      label="MANDATORY ACTION BROKER\nExact token + scope + state validation\nConsumes before attempt; rejection fails closed"
+    ];
+    target [
+      fillcolor="#E7F5ED",
+      color="#679B78",
+      label="IN-MEMORY SYNTHETIC TARGET\nSimulated NETWORK_ISOLATE state only\nNo public apply path • no network/live connector"
+    ];
+    observer [
+      fillcolor="#F0EAF7",
+      color="#8064A2",
+      label="READ-ONLY OBSERVER\nFunctionally separate target readback\nDoes not trust the broker return value"
+    ];
+    verifier [
+      fillcolor="#F0EAF7",
+      color="#8064A2",
+      label="POST-ACTION VERIFIER\nVERIFIED • FAILED • PARTIAL\nUNEXPECTED_EFFECT • ROLLBACK_REQUIRED\nSame-project implementation; not external independence"
+    ];
+
+    auth -> broker [label="mandatory token"];
+    broker -> target [label="private capability"];
+    target -> observer [label="independent readback"];
+    observer -> verifier [label="observed state"];
+  }
+
+  outcomes:allow:s -> auth:n [label="exact permitted scope"];
+  outcomes:constrained:s -> auth:n [label="constrained scope"];
+
+  accountability [shape=plain, label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="7" COLOR="#8064A2">
+      <TR><TD COLSPAN="5" BGCOLOR="#E8DFF1"><B>LIFECYCLE ACCOUNTABILITY</B> - every path/gate emits; records behavior but never creates authority</TD></TR>
+      <TR>
+        <TD PORT="intake" BGCOLOR="#F0EAF7"><B>Intake + fail closed</B><BR/>request/identity/schema<BR/>accepted or denied; no effect</TD>
+        <TD PORT="decision" BGCOLOR="#F0EAF7"><B>Decision + no action</B><BR/>policy/outcome/reasons<BR/>DENY/ESCALATE terminal state</TD>
+        <TD PORT="approval" BGCOLOR="#F0EAF7"><B>Approval lifecycle</B><BR/>requirement/receipt/reuse<BR/>reevaluation only</TD>
+        <TD PORT="execution" BGCOLOR="#F0EAF7"><B>Authorization + attempt</B><BR/>issue/reject/consume<BR/>broker/target success or failure</TD>
+        <TD PORT="verification" BGCOLOR="#F0EAF7"><B>Readback + final status</B><BR/>verified/failed/partial<BR/>unexpected/rollback required</TD>
+      </TR>
+      <TR>
+        <TD COLSPAN="3" BGCOLOR="#F7F3FA"><B>Tamper-evident audit chain</B><BR/>Closed lifecycle ordering • exact correlation/binding validation • no missing terminal paths</TD>
+        <TD COLSPAN="2" BGCOLOR="#F7F3FA"><B>Operational metrics</B><BR/>Outcomes/policy/conflicts/latency • approval/auth/broker/verification failures</TD>
+      </TR>
+    </TABLE>
+  >];
+
+  audit_intake [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\nintake / fail closed"];
+  audit_firewall [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\nevaluation / decision"];
+  audit_outcome [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\nDENY / ESCALATE / ALLOW"];
+  audit_approval [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\napproval / reevaluation"];
+  audit_auth [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\nauthorization / rejection"];
+  audit_broker [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\nbroker / attempt"];
+  audit_target [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\neffect / failure"];
+  audit_verifier [shape=box, style="rounded,filled", fillcolor="#F0EAF7", color="#8064A2", fontcolor="#5D4274", fontsize=8.5, label="EMIT\nreadback / final status"];
+
+  {rank=same; intake; audit_intake;}
+  {rank=same; firewall; audit_firewall;}
+  {rank=same; outcomes; audit_outcome;}
+  intake -> audit_intake [style=dotted, color="#8064A2", label="accepted or denied", constraint=false];
+  firewall -> audit_firewall [style=dotted, color="#8064A2", label="deterministic result", constraint=false];
+  outcomes:e -> audit_outcome:w [style=dotted, color="#8064A2", label="DENY/ESCALATE no action; ALLOW paths", constraint=false];
+  auth -> audit_auth [style=dotted, color="#8064A2", label="issue/reject/expiry", constraint=false];
+  broker -> audit_broker [style=dotted, color="#8064A2", label="reject or attempt", constraint=false];
+  target -> audit_target [style=dotted, color="#8064A2", label="effect or failure", constraint=false];
+  verifier -> audit_verifier [style=dotted, color="#8064A2", label="readback + terminal", constraint=false];
+
+  audit_intake -> audit_firewall [style=dotted, color="#8064A2", arrowhead=none];
+  audit_firewall -> audit_outcome [style=dotted, color="#8064A2", arrowhead=none];
+  audit_outcome -> audit_approval [style=dotted, color="#8064A2", arrowhead=none];
+  audit_approval -> audit_auth [style=dotted, color="#8064A2", arrowhead=none];
+  audit_auth -> audit_broker [style=dotted, color="#8064A2", arrowhead=none];
+  audit_broker -> audit_target [style=dotted, color="#8064A2", arrowhead=none];
+  audit_target -> audit_verifier [style=dotted, color="#8064A2", arrowhead=none];
+  audit_verifier -> accountability:n [style=dotted, color="#8064A2", label="closed lifecycle + metrics", weight=10];
+  verifier -> accountability:n [style=invis, weight=20];
+}

@@ -36,6 +36,16 @@ jobs:
       - name: Run the complete project test suite
         run: PYTHONPATH=src python -m unittest discover -s tests -v
 
+      - name: Run Phase 3 simulation-only SOC demonstrations
+        run: |
+          phase3_demo_root="$(mktemp -d)"
+          PYTHONPATH=src python run_phase3.py --output-dir "$phase3_demo_root/demo"
+
+      - name: Run Phase 3 deterministic adversarial corpus
+        run: |
+          phase3_corpus_root="$(mktemp -d)"
+          PYTHONPATH=src python run_phase3_corpus.py --output-dir "$phase3_corpus_root/corpus"
+
       - name: Validate Phase 2 starter inputs
         run: python run_phase2.py --validate-only
 

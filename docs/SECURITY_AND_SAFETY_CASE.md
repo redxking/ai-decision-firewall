@@ -1,10 +1,31 @@
 # Security and Safety Case
 
-> **Version boundary.** Claims 1–6 preserve the v0.1 synthetic-simulation safety argument. `0.2.0-alpha.5` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline, with historical CI and Dependency Graph success bound to that commit. This package candidate adds bounded path controls, selected Gate B causal-test scaffolding, documentation, and packaging; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. The tracked data, campaign-bound model, and baseline outputs remain at their committed bytes. Package publication and GitHub CI on the exact published package commit remain external gates. No tag, release/evidence package, Gate B package, historical dataset, live feed, production connector, or operational action is approved. `P2-CE-005` is CE-0 `NOT_EVALUATED`.
+> **Version boundary.** Claims 1–6 preserve the v0.1 safety argument; Claims
+> 7–11 preserve Phase 2. Exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
+> exact-commit CI/Dependency Graph checks passed. `P2-CE-005` was not executed
+> and remains CE-0 `NOT_EVALUATED`. Claims 12–18 summarize the uncommitted local
+> Phase 3 `0.3.0-alpha.1` simulation-only candidate. Its current local results
+> are 57/57 focused tests, 288/288 full repository tests, two demo acceptance
+> checks PASS, and 46/46 corpus scenarios; the exact commit and CI remain
+> pending. These are
+> CE-1/local observations only; no
+> Gate B package, historical dataset, live feed, production/test-tenant
+> connector, operational action, production safety, or external assurance is
+> approved.
 
 ## Top-level claim
 
-In the v0.1 synthetic-simulation path, the POC cannot perform a simulated reversible identity action unless deterministic policy and an independent verifier establish that the case, evidence, asset, and action satisfy the configured boundary. In both Phase 2 read-only modes, the stronger structural claim applies: the authorization gate, action broker, and target are not constructed, so decisions terminate as counterfactual recommendations with zero authorization or operational effect.
+In the v0.1 synthetic-simulation path, the POC cannot perform a simulated
+reversible identity action unless deterministic policy and a functionally
+separate verifier establish that the case, evidence, asset, and action satisfy
+the configured boundary. In both Phase 2 read-only modes, the stronger
+structural claim applies: the authorization gate, action broker, and target are
+not constructed. In the Phase 3 candidate, a synthetic target change requires
+trusted identity/evidence/policy/consequence context, an allowed and separately
+verified decision, an exact-scope single-use authorization, the mandatory
+in-memory broker, and a private target capability. Success requires separate
+read-only state observation rather than a broker report.
 
 ## Argument structure
 
@@ -26,13 +47,63 @@ In the v0.1 synthetic-simulation path, the POC cannot perform a simulated revers
 
 **Claim 8 — Modeled signals are typed and source authorized.** Published Phase 2.4 requires exact JSON types and code-owned source roles for modeled attributes, finite numbers throughout an accepted case, exact canonical inventory binding, and a separate reference projection of the 20 serialized feature values and traces. This is implementation conformance, not proof that an authorized source assertion is true or complete.
 
-**Claim 9 — Source-to-decision agreement is a calculation-consistency control at the design-freeze boundary.** Predecessor Commit `08ce203c` separately recomputes the ordered evidence, model, policy, verifier, and read-only final semantic surfaces from frozen bytes. Production and reference calculations use explicit ordered arithmetic, including `math.fsum` for evidence aggregates and model contributions. Its historical 193-test local run and successful commit-bound CI support narrow CE-1 implementation-conformance wording for that exact commit only. This package candidate's 222/222 Phase 2.5 technical result extends that narrow prepublication check to the candidate boundary; the separate 9/9 public-site result does not extend the safety claim. GitHub CI on the exact published package commit remains required. The path remains same-process, same-project, and project-controlled; it is not an independent oracle, external custody boundary, outcome-validity proof, or `P2-CE-005` result.
+**Claim 9 — Source-to-decision agreement is a calculation-consistency control at the Phase 2.5 boundary.** Predecessor Commit `08ce203c` separately recomputes the ordered evidence, model, policy, verifier, and read-only final semantic surfaces from frozen bytes. Production and reference calculations use explicit ordered arithmetic, including `math.fsum` for evidence aggregates and model contributions. Complete package Commit `854b15c` passed the 222/222 Phase 2.5 technical suite locally and its exact-commit CI/Dependency Graph checks passed after publication. The separate 9/9 public-site result does not extend the safety claim. The path remains same-process, same-project, and project-controlled; it is not an independent oracle, external custody boundary, outcome-validity proof, or `P2-CE-005` result.
 
 **Claim 10 — Local entry points have bounded operator-error path controls.** The campaign CLI rejects destination escape, symlink redirection, source overlap, existing output, and repository-control locations before campaign execution. Check mode requires singly linked regular artifact and optional record leaves, rejects symbolic-link, directory, and multiply linked artifact leaves before any artifact read or campaign rebuild, and applies size bounds before reading. The `run_poc` entry point limits ordinary repository writes to `data/local/**` and `outputs/local/**`; an explicit freeze flag expands only to `data/**` and `outputs/baseline/**`. It preflights every generated leaf, rejects unsafe existing leaves, and binds seven non-self-referential outputs in the local manifest. Focused campaign CLI checks passed 3/3, the campaign module passed 21/21 in an isolated clean clone, and 14 focused `run_poc` checks passed, all within the 222/222 Phase 2.5 technical suite. The separate public-site tests are outside this control claim. These are application-level interlocks, not OS/mount containment, TOCTOU/race resistance, comprehensive hardlink protection, or confinement of direct writer APIs.
 
 The campaign module also instruments construction of `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider` during every reference attempt. A negative sensitivity regression injected all three constructions, produced nonzero counters and a mismatch, and proved the closed schema rejects the row. This is a bounded Python construction sensor, not a general allocation monitor, OS boundary, or target-side effect proof.
 
-**Claim 11 — Selected Gate B failures have exact causal identities and bounded payload-access observations.** The release-candidate scaffolding registers 25 selected closed identities: 24 pre-payload mutations and one post-qualification threshold identity. The oracle accepts only exact closed tuples for classified failures, and unclassified Gate B errors remain unscorable. For the 24 selected pre-payload mutations, the bounded observer recorded zero `cases` or `adjudications` roles under its enumerated Python file APIs. This is CE-1 test instrumentation only, not a complete failure taxonomy, OS-level nonaccess/non-egress proof, sandbox, reference monitor, or `P2-CE-005` campaign evidence.
+**Claim 11 — Selected Gate B failures have exact causal identities and bounded payload-access observations.** The published Phase 2.5 scaffolding registers 25 selected closed identities: 24 pre-payload mutations and one post-qualification threshold identity. The oracle accepts only exact closed tuples for classified failures, and unclassified Gate B errors remain unscorable. For the 24 selected pre-payload mutations, the bounded observer recorded zero `cases` or `adjudications` roles under its enumerated Python file APIs. This is CE-1 test instrumentation only, not a complete failure taxonomy, OS-level nonaccess/non-egress proof, sandbox, reference monitor, or `P2-CE-005` campaign evidence.
+
+## Phase 3 local candidate claims
+
+**Claim 12 — Request claims cannot create authority.** The v0.3.0 raw request is
+untrusted and cannot carry the invocation credential. Agent identity/status/
+roles/authority come from an opaque credential resolved by the firewall to a
+signed principal; source trust, target facts, action bounds, policy, current
+time, and target state come from validated registries and the read-only
+observer. AI recommendation and confidence are non-authoritative.
+
+**Claim 13 — Synthetic evidence is integrity and subject bound.** Runtime HMAC
+attestation binds source/type, provenance, observation time, canonical content,
+support/contradiction semantics, relevance, and subject target. The evaluator
+also checks freshness, corroboration, conflicts, missing sources, and poisoned
+text. This is synthetic shared-key assurance, not external source truth.
+
+**Claim 14 — Consequence and machine policy can block an apparently confident action.** The
+decision path uses trusted criticality, dependencies, cascading effects,
+reversibility, blast radius, downtime, mission/safety/availability impact, and
+required human authority. The high-risk domain-controller demo therefore
+escalates without a token or effect despite AI confidence `0.96`. Code-owned
+policy invariants also preserve exact rule precedence, conservative evidence
+and zero-conflict automation floors, severe-consequence approval floors, and
+Tier-0 treatment for every domain controller.
+
+**Claim 15 — Authorization and broker scope are closed.** Allowed decisions
+produce a short-lived HMAC token binding issuer, request, decision, agent,
+action, target, canonical parameters, policy/digest, decision context, target
+precondition, time, and nonce. The process-local ledger permits one consumption,
+including after a failed attempt. The broker rejects missing, altered, expired,
+replayed, prior-instance, and wrong-scope tokens.
+
+**Claim 16 — The designed target path is broker mediated.** The exact in-memory
+environment creates the broker and retains a private execution capability;
+target mutation requires that capability and rechecks the authorized state
+precondition under the target lock. This is an application-level Python
+boundary, not OS/process isolation or hostile same-process resistance.
+
+**Claim 17 — Verification is observation based.** A functionally separate same-project read-only
+interface supplies post-state. The target verifier—not the broker result—returns
+`VERIFIED`, `FAILED`, `PARTIAL`, `UNEXPECTED_EFFECT`, or
+`ROLLBACK_REQUIRED`. The verifier remains same-project/process and is not an
+external target oracle.
+
+**Claim 18 — Approval cannot execute.** `ESCALATE` produces an exact expiring
+signed registered approval requirement and no token. A separate opaque
+credential must resolve to a trusted human with exact authority before that
+requirement can be consumed once and an atomically recorded signed
+`APPROVED_FOR_REEVALUATION` receipt returned. The approval gate cannot mint
+action authorization, cause reevaluation, or invoke the broker.
 
 ## Safety invariants
 
@@ -46,9 +117,44 @@ The campaign module also instruments construction of `AuthorizationGate`, `Actio
 - No runtime access to ground-truth labels.
 - No success declaration without post-action state verification.
 - No silent audit-log mutation.
+- No Phase 3 authority from agent recommendation, confidence, self-asserted
+  roles/authority, target labels, source trust, or free text.
+- No Phase 3 automation with failed evidence attestation/content/subject
+  binding, stale/conflicting/insufficient evidence, unsafe cascading
+  consequence, or insufficient trusted authority.
+- No Phase 3 broker attempt without an exact valid single-use token; no token
+  reuse after an attempted failure.
+- No direct Phase 3 target mutation through the supported API without the
+  broker-held capability.
+- No Phase 3 `VERIFIED` status inferred from the broker return value.
+- No Phase 3 human approval converted directly into action authorization.
+- No Phase 3 policy accepted after weakening the closed rule order, evidence
+  floors, zero-conflict automation, severe-consequence floors, or Tier-0
+  domain-controller treatment.
+- No Phase 3 executed-path audit/result whose request, decision, token, attempt,
+  target-state, effect, or verification semantics contradict one another.
 
 ## Residual risks
 
-The policy and verifier share configuration and may share design defects. The reference implementations share requirements, project governance, process, runtime, and input bytes with production and may contain correlated defects. Provenance identifiers are synthetic and not cryptographically rooted in external trust infrastructure. The v0.1 signing key has a POC fallback and is not protected by a hardware security module. V0.1 trusts top-level canonical break-glass and asset-criticality fields; Phase 2 rejects conflicting canonical inventory assertions but does not prove that the source values are authentic or correct. The audit lacks external custody. The in-memory simulator does not represent vendor API semantics, independent target readback, rate limits, race conditions, or eventual consistency. Local path guards and the Python-API observer are not OS security boundaries and do not rule out same-user access outside the observed process. No historical, live, privacy-effectiveness, production-isolation, model-efficacy, operational-safety, or bounded-failure-rate claim is available. These residual risks prohibit operational use.
+Policy and verifiers share requirements, project governance, runtime, and
+configuration and may contain correlated defects. Phase 3 source attestations
+use runtime synthetic HMAC keys rather than enterprise device identity,
+PKI/HSM custody, or independent provenance. Its request and authorization
+ledgers are in memory and are not durable, distributed, crash consistent, or
+multi-node. Private attributes/capabilities and exact-type construction do not
+create OS/process isolation. Human approval is an in-process fixture, not a
+production separation-of-duties workflow.
 
-See [`phase2/SHADOW_MODE_SAFETY.md`](phase2/SHADOW_MODE_SAFETY.md) and [`phase2/CLAIM_EVIDENCE_STANDARD.md`](phase2/CLAIM_EVIDENCE_STANDARD.md) for the current release boundary.
+The self-custodied audit lacks an external anchor, WORM storage, trusted time,
+and whole-chain replacement/truncation protection. The in-memory simulator does
+not represent vendor API semantics, external target-side custody, rate limits,
+network partitions, eventual consistency, rollback feasibility, or production
+race conditions. A functionally separate observer in the same process is not
+organizational independence. No historical, live, privacy-effectiveness,
+production-isolation, model-efficacy or calibration, operational-safety, or
+bounded-failure-rate claim is available. These residual risks prohibit
+operational use.
+
+See [`phase2/SHADOW_MODE_SAFETY.md`](phase2/SHADOW_MODE_SAFETY.md),
+[`phase2/CLAIM_EVIDENCE_STANDARD.md`](phase2/CLAIM_EVIDENCE_STANDARD.md), and
+[`phase3/SECURITY_AND_SAFETY_CASE.md`](phase3/SECURITY_AND_SAFETY_CASE.md).

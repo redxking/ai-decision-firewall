@@ -1,0 +1,335 @@
+from __future__ import annotations
+
+import hashlib
+import hmac
+import uuid
+from datetime import datetime, timedelta, timezone
+from threading import Lock
+from typing import Any, Callable
+
+from adf_poc.utils import canonical_json, sha256_json
+
+from .metrics import Phase3Metrics
+from .models import (
+    AuthorizationToken,
+    DecisionOutcome,
+    DecisionRecord,
+    DecisionVerification,
+)
+
+
+class AuthorizationError(RuntimeError):
+    def __init__(self, reason_code: str, message: str) -> None:
+        super().__init__(message)
+        self.reason_code = reason_code
+
+
+def _parse_timestamp(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise AuthorizationError(
+            "AUTHORIZATION_TIME_INVALID",
+            "Authorization timestamps must include a UTC offset.",
+        )
+    return parsed.astimezone(timezone.utc)
+
+
+class InMemoryAuthorizationLedger:
+    """Atomic, process-local token ledger.
+
+    Tokens are additionally bound to a random issuer-instance identifier, so a
+    token from a prior process is rejected even if the same signing key is
+    configured. This is deliberately not a durable distributed replay ledger.
+    """
+
+    def __init__(self) -> None:
+        self._states: dict[str, str] = {}
+        self._lock = Lock()
+
+    def register(self, token_id: str) -> None:
+        with self._lock:
+            if token_id in self._states:
+                raise AuthorizationError(
+                    "AUTHORIZATION_ID_COLLISION",
+                    "Authorization token identifier already exists.",
+                )
+            self._states[token_id] = "ISSUED"
+
+    def consume_once(self, token_id: str) -> None:
+        with self._lock:
+            state = self._states.get(token_id)
+            if state is None:
+                raise AuthorizationError(
+                    "AUTHORIZATION_UNKNOWN",
+                    "Authorization was not issued by this firewall instance.",
+                )
+            if state != "ISSUED":
+                raise AuthorizationError(
+                    "AUTHORIZATION_REPLAY",
+                    "Authorization has already been consumed.",
+                )
+            self._states[token_id] = "CONSUMED"
+
+    def state(self, token_id: str) -> str | None:
+        with self._lock:
+            return self._states.get(token_id)
+
+
+class AuthorizationGate:
+    def __init__(
+        self,
+        *,
+        signing_key: bytes,
+        decision_verification_key: bytes,
+        verifier_instance_id: str,
+        ttl_seconds: int,
+        metrics: Phase3Metrics,
+        clock: Callable[[], datetime] | None = None,
+        ledger: InMemoryAuthorizationLedger | None = None,
+        issuer_instance_id: str | None = None,
+        id_factory: Callable[[str], str] | None = None,
+    ) -> None:
+        if len(signing_key) < 32:
+            raise ValueError(
+                "Phase 3 authorization signing key must be at least 32 bytes."
+            )
+        if ttl_seconds < 1 or ttl_seconds > 3600:
+            raise ValueError("Authorization TTL must be within 1..3600 seconds.")
+        self._signing_key = bytes(signing_key)
+        if len(decision_verification_key) < 32 or not verifier_instance_id:
+            raise ValueError("Decision-verification trust configuration is invalid.")
+        self._decision_verification_key = bytes(decision_verification_key)
+        self._verifier_instance_id = str(verifier_instance_id)
+        self.ttl_seconds = int(ttl_seconds)
+        self.metrics = metrics
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
+        self.ledger = ledger or InMemoryAuthorizationLedger()
+        self.issuer_instance_id = issuer_instance_id or f"issuer-{uuid.uuid4()}"
+        self.id_factory = id_factory or (lambda prefix: f"{prefix}-{uuid.uuid4()}")
+        self._issuance_lock = Lock()
+        self._used_verification_ids: set[str] = set()
+        self._authorized_decision_ids: set[str] = set()
+
+    def _sign(self, value: dict[str, Any]) -> str:
+        return hmac.new(
+            self._signing_key,
+            canonical_json(value).encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+    def issue(
+        self,
+        *,
+        decision: DecisionRecord,
+        agent_id: str,
+        target_state_sha256: str,
+        decision_verification: DecisionVerification,
+    ) -> AuthorizationToken:
+        if type(decision) is not DecisionRecord:
+            self.metrics.record_authorization_failure()
+            raise AuthorizationError(
+                "AUTHORIZATION_DECISION_TYPE_INVALID",
+                "Authorization requires an exact immutable DecisionRecord.",
+            )
+        decision_projection = DecisionRecord.to_dict(decision)
+        authorization_projection = dict(decision_projection)
+        authorization_projection.pop("latency_ms", None)
+        authorization_projection.pop("explanation", None)
+        authorization_projection.pop("approval_requirement", None)
+        decision_authorization_sha256 = sha256_json(authorization_projection)
+        if decision.outcome not in {
+            DecisionOutcome.ALLOW.value,
+            DecisionOutcome.ALLOW_CONSTRAINED.value,
+        }:
+            self.metrics.record_authorization_failure()
+            raise AuthorizationError(
+                "AUTHORIZATION_OUTCOME_PROHIBITED",
+                "Only ALLOW or ALLOW_CONSTRAINED decisions may be authorized.",
+            )
+        if type(decision_verification) is not DecisionVerification:
+            self.metrics.record_authorization_failure()
+            raise AuthorizationError(
+                "AUTHORIZATION_DECISION_VERIFICATION_INVALID",
+                "Authorization requires a signed decision-verification receipt.",
+            )
+        expected_verification_signature = hmac.new(
+            self._decision_verification_key,
+            canonical_json(decision_verification.unsigned_dict()).encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        now = self.clock().astimezone(timezone.utc).replace(microsecond=0)
+        try:
+            verification_age = (
+                now - _parse_timestamp(decision_verification.verified_at)
+            ).total_seconds()
+        except AuthorizationError:
+            verification_age = -1.0
+        verification_bound = (
+            hmac.compare_digest(
+                expected_verification_signature, decision_verification.signature
+            )
+            and decision_verification.verifier_instance_id == self._verifier_instance_id
+            and decision_verification.passed
+            and decision_verification.decision_id == decision.decision_id
+            and decision_verification.decision_context_sha256
+            == decision.decision_context_sha256
+            and decision_verification.decision_sha256 == decision_authorization_sha256
+            and decision_verification.request_sha256 == decision.request_sha256
+            and decision_verification.principal_id == agent_id
+            and decision_verification.policy_sha256 == decision.policy_sha256
+            and decision.authority.principal_id == agent_id
+            and 0.0 <= verification_age <= 60.0
+        )
+        if not verification_bound:
+            self.metrics.record_authorization_failure()
+            raise AuthorizationError(
+                "AUTHORIZATION_DECISION_NOT_VERIFIED",
+                "The signed deterministic decision verification did not pass or bind exactly.",
+            )
+        permitted = decision_projection["permitted_action"]
+        if not isinstance(permitted, dict):
+            self.metrics.record_authorization_failure()
+            raise AuthorizationError(
+                "AUTHORIZATION_SCOPE_MISSING",
+                "Allowed decision does not contain an exact permitted command.",
+            )
+
+        unsigned = {
+            "token_id": self.id_factory("auth"),
+            "issuer_instance_id": self.issuer_instance_id,
+            "request_id": decision.request_id,
+            "decision_id": decision.decision_id,
+            "agent_id": agent_id,
+            "action_type": str(permitted["type"]),
+            "target_id": str(permitted["target"]),
+            "permitted_parameters": dict(permitted["parameters"]),
+            "issued_at": now.isoformat(),
+            "expires_at": (now + timedelta(seconds=self.ttl_seconds)).isoformat(),
+            "policy_id": decision.policy_id,
+            "policy_version": decision.policy_version,
+            "policy_sha256": decision.policy_sha256,
+            "decision_context_sha256": decision.decision_context_sha256,
+            "target_state_sha256": target_state_sha256,
+            "nonce": self.id_factory("nonce"),
+        }
+        token = AuthorizationToken(signature=self._sign(unsigned), **unsigned)
+        with self._issuance_lock:
+            if (
+                decision_verification.verification_id in self._used_verification_ids
+                or decision.decision_id in self._authorized_decision_ids
+            ):
+                self.metrics.record_authorization_failure()
+                raise AuthorizationError(
+                    "AUTHORIZATION_DECISION_REPLAY",
+                    "This verified decision has already issued an authorization.",
+                )
+            self.ledger.register(token.token_id)
+            self._used_verification_ids.add(decision_verification.verification_id)
+            self._authorized_decision_ids.add(decision.decision_id)
+        return token
+
+    def validate_and_consume(
+        self,
+        token: AuthorizationToken,
+        *,
+        request_id: str,
+        decision_id: str,
+        agent_id: str,
+        action_type: str,
+        target_id: str,
+        parameters: dict[str, Any],
+        policy_id: str,
+        policy_version: str,
+        policy_sha256: str,
+        decision_context_sha256: str,
+        target_state_sha256: str,
+        evaluated_at: datetime | None = None,
+    ) -> None:
+        try:
+            self._validate(
+                token,
+                request_id=request_id,
+                decision_id=decision_id,
+                agent_id=agent_id,
+                action_type=action_type,
+                target_id=target_id,
+                parameters=parameters,
+                policy_id=policy_id,
+                policy_version=policy_version,
+                policy_sha256=policy_sha256,
+                decision_context_sha256=decision_context_sha256,
+                target_state_sha256=target_state_sha256,
+                evaluated_at=evaluated_at,
+            )
+            self.ledger.consume_once(token.token_id)
+        except AuthorizationError:
+            self.metrics.record_authorization_failure()
+            raise
+
+    def _validate(
+        self,
+        token: AuthorizationToken,
+        *,
+        request_id: str,
+        decision_id: str,
+        agent_id: str,
+        action_type: str,
+        target_id: str,
+        parameters: dict[str, Any],
+        policy_id: str,
+        policy_version: str,
+        policy_sha256: str,
+        decision_context_sha256: str,
+        target_state_sha256: str,
+        evaluated_at: datetime | None,
+    ) -> None:
+        expected_signature = self._sign(token.unsigned_dict())
+        if not hmac.compare_digest(expected_signature, token.signature):
+            raise AuthorizationError(
+                "AUTHORIZATION_SIGNATURE_INVALID",
+                "Authorization signature is invalid.",
+            )
+        if token.issuer_instance_id != self.issuer_instance_id:
+            raise AuthorizationError(
+                "AUTHORIZATION_ISSUER_MISMATCH",
+                "Authorization belongs to another firewall instance.",
+            )
+        if self.ledger.state(token.token_id) == "CONSUMED":
+            raise AuthorizationError(
+                "AUTHORIZATION_REPLAY",
+                "Authorization has already been consumed.",
+            )
+        bindings: tuple[tuple[str, Any, Any], ...] = (
+            ("REQUEST", token.request_id, request_id),
+            ("DECISION", token.decision_id, decision_id),
+            ("AGENT", token.agent_id, agent_id),
+            ("ACTION", token.action_type, action_type),
+            ("TARGET", token.target_id, target_id),
+            ("PARAMETERS", token.permitted_parameters, parameters),
+            ("POLICY_ID", token.policy_id, policy_id),
+            ("POLICY_VERSION", token.policy_version, policy_version),
+            ("POLICY_DIGEST", token.policy_sha256, policy_sha256),
+            (
+                "DECISION_CONTEXT",
+                token.decision_context_sha256,
+                decision_context_sha256,
+            ),
+            ("TARGET_STATE", token.target_state_sha256, target_state_sha256),
+        )
+        for name, expected, observed in bindings:
+            if expected != observed:
+                raise AuthorizationError(
+                    f"AUTHORIZATION_{name}_MISMATCH",
+                    f"Authorization {name.lower()} binding does not match.",
+                )
+        now = (evaluated_at or self.clock()).astimezone(timezone.utc)
+        if now < _parse_timestamp(token.issued_at):
+            raise AuthorizationError(
+                "AUTHORIZATION_NOT_YET_VALID",
+                "Authorization issue time is in the future.",
+            )
+        if now >= _parse_timestamp(token.expires_at):
+            raise AuthorizationError(
+                "AUTHORIZATION_EXPIRED",
+                "Authorization has expired.",
+            )

@@ -6,11 +6,11 @@ Phase 2 introduces the read-only evaluation boundary needed to test the AI Decis
 
 | Attribute | Phase 2 starter state |
 |---|---|
-| Prior published evidence baseline | `0.2.0-alpha.5` at commit `f7f6b5c`; version-bound evidence through `P2-CE-004` |
-| Predecessor design-freeze baseline | Untagged `0.2.0-alpha.6` at `08ce203c0965e8d43b7653454d4ea8315996021f`; historical 193-test local suite, CI, and Dependency Graph results remain bound to that exact commit |
-| This package candidate | Bounded path controls and Gate B causal-test scaffolding plus docs, visuals, and status artifacts; tracked data, campaign-bound model, and baseline outputs remain at committed bytes; source reconciliation complete; Phase 2.5 technical suite passed 222/222; campaign module passed 21/21; generated-and-verified integrity manifest and inspected final-source status renders included; package publication and exact-package GitHub CI remain external gates |
-| Separate public-site scope | Candidate rebased onto published `github/main@c3400e0`; public-site module passed 9/9; outside Phase 2.5 and `P2-CE-005` evidence |
-| Combined repository aggregate | 231/231 passed locally: 222 Phase 2.5 technical tests plus 9 separate public-site tests |
+| Published Phase 2.5 package | Exact Commit `854b15c56397a81de6326b719d3d7d1dc847608f` on `main`; exact-commit CI and Dependency Graph passed; bounded path controls, Gate B causal scaffolding, docs, visuals, status artifacts, generated/verified manifest, and inspected renders included |
+| Published Phase 2 evidence | Version-bound `P2-CE-001` through `P2-CE-004`; Phase 2.5 package publication does not broaden them |
+| Phase 2.5 implementation verification | 222/222 technical tests; campaign module 21/21; narrow CE-1 implementation conformance |
+| Separate public-site scope | 9/9 passed at the package boundary; outside Phase 2.5 and `P2-CE-005` evidence |
+| Then-current repository aggregate | 231/231 at exact Phase 2.5 package boundary: 222 technical plus 9 separate site tests |
 | Implementation maturity | Phase 2 starter through Phase 2.5 source-to-decision assurance; not an operational capability |
 | Included data | Synthetic fixture data only: three-case starter, seven-record qualification campaign, and ephemeral synthetic Gate B, feature-assurance, and planned source-to-decision campaign inputs |
 | `historical_case_count` | `0` |
@@ -23,9 +23,9 @@ Phase 2 introduces the read-only evaluation boundary needed to test the AI Decis
 | Feature-assurance implementation | CE-1: typed/source-authorized inputs, exact inventory binding, and separately implemented in-process reference projection |
 | `P2-CE-004` campaign | CE-2 SELF result against corrected Commit `53e409d6`: two complete 16-attempt repetitions; 32/32 project-controlled expected-outcome matches |
 | `P2-CE-004` review | `SELF`; automated and project-controlled, not independent assurance |
-| Source-to-decision implementation | CE-1 implementation conformance for predecessor design-freeze Commit `08ce203c`: separate same-process recomputation of `EVIDENCE`, `MODEL`, `POLICY`, `VERIFIER`, and `FINAL_SURFACE`; historical 193/193 local suite and commit-bound CI succeeded; candidate coverage is included in the 222/222 Phase 2.5 technical suite, not the separate site module |
-| Campaign CLI and reference-attempt instrumentation | This package candidate; 3/3 CLI checks, one constructor-sensitivity regression, one check-leaf safety regression, and 21/21 campaign-module tests passed in an isolated clean clone; bounded operator-error and named Python-construction scope only |
-| `run_poc` destination guard | This package candidate; 14 focused tests passed; ordinary repository writes limited to `data/local/**` and `outputs/local/**`, explicit freeze writes limited to `data/**` and `outputs/baseline/**`; bounded operator interlock only |
+| Source-to-decision implementation | CE-1 implementation conformance in published Commit `854b15c`: separate same-process recomputation of `EVIDENCE`, `MODEL`, `POLICY`, `VERIFIER`, and `FINAL_SURFACE`; included in 222/222 technical scope, not the separate site module |
+| Campaign CLI and reference-attempt instrumentation | Published in `854b15c`; 3/3 CLI checks, one constructor-sensitivity regression, one check-leaf safety regression, and 21/21 campaign-module tests; bounded operator-error and named Python-construction scope only |
+| `run_poc` destination guard | Published in `854b15c`; 14 focused tests; ordinary repository writes limited to `data/local/**` and `outputs/local/**`, explicit freeze writes limited to `data/**` and `outputs/baseline/**`; bounded operator interlock only |
 | Gate B causal identity/oracle/observer | CE-1 scaffolding: 25 selected identities, comprising 24 pre-payload mutations plus one post-qualification threshold identity; zero governed payload roles observed for the 24 selected pre-payload mutations under enumerated Python APIs; hard-link aliases to governed files are outside the observer boundary; not a complete taxonomy or OS-level nonaccess proof |
 | `P2-CE-005` campaign | CE-0 `NOT_EVALUATED`; 40-attempt fixed plan using 20 shared production baselines and 40 reference calls across two runs, with no result ledger, evidence record, or pass claim |
 | Live data feeds | Not implemented |
@@ -36,7 +36,13 @@ Phase 2 introduces the read-only evaluation boundary needed to test the AI Decis
 
 The words *historical replay* and *shadow mode* describe execution semantics, not the data maturity of this code. The repository does not contain historical cases, production telemetry, direct identifiers, vendor connectors, or a live-feed integration. All committed observed results report `historical_case_count: 0` and identify their origin as synthetic. Phase 2.5 does not advance the project to historical processing, live testing, or shadow-feed testing.
 
-Predecessor design-freeze Commit `08ce203c` is not a tag, release artifact, or evidence package. Its successful workflows apply only to that exact commit. This package candidate completed its local test, chart, manifest, and rendered-status gates, but package commit and publication and GitHub CI on that exact published commit remain before any `P2-CE-005` execution. No successor campaign has been executed.
+Exact Phase 2.5 Commit `854b15c` is a published code/package baseline with green
+exact-commit workflows; it is not a tag or `P2-CE-005` evidence package. The
+separate campaign protocol was not entered and no successor campaign executed.
+Phase 3 `0.3.0-alpha.1` local simulation work is documented separately under
+[`../phase3/README.md`](../phase3/README.md). Its local CE-1 observations and
+action-capable in-memory simulation do not alter Phase 2's structural read-only
+boundary or create `P2-CE-005` evidence.
 
 ## Objective
 

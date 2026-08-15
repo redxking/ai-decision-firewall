@@ -1,6 +1,13 @@
 # Gate B historical-pilot preflight
 
-> **Repository status.** `0.2.0-alpha.5` is the prior published evidence baseline. Exact Commit `08ce203c` is the predecessor untagged `0.2.0-alpha.6` Phase 2.5 design-freeze baseline, with historical CI and Dependency Graph success bound to that commit. This package candidate adds bounded path controls, selected Gate B causal-test scaffolding, documentation, and packaging; its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the combined repository aggregate passed 231/231. The site module is outside Phase 2.5 and Gate B evidence. The candidate includes a generated-and-verified integrity manifest and inspected final-source status renders. Package publication and GitHub CI on the exact published package commit remain external gates. Neither state is an approved execution baseline, tag, release, or evidence package. No Gate B package is approved or stored here. `P2-CE-005` is CE-0 `NOT_EVALUATED`; its plan, design freeze, generator, or tests do not authorize historical access or establish an eligible campaign result.
+> **Repository status.** Exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main`; its
+> exact-commit CI/Dependency Graph checks passed. Its package boundary includes
+> the 222/222 technical suite and separate 9/9 site tests; site tests are
+> outside Gate B evidence. Publication does not create an approved historical
+> execution baseline. No Gate B package is approved or stored here.
+> `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`; neither that
+> plan nor the local Phase 3 candidate authorizes historical access.
 
 Gate B is the authorization and evidence boundary for the first small, de-identified historical replay. It remains offline and read-only. It does not authorize a live feed, shadow-feed deployment, operational recommendation workflow, action credential, write-capable connector, or operational action.
 
@@ -8,7 +15,7 @@ The public repository contains the contract and blank templates needed to design
 
 The separate [`P2-CE-003` synthetic campaign](../../contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json) exercises fixed preflight and stop-condition cases under ephemeral test-only authorization content. Its 32/32 project-controlled expected-outcome matches are CE-2 controlled-behavior evidence for that bound campaign only. They are not a Gate B approval, a historical pilot, independent assurance, or evidence that any external authority, privacy, custody, de-identification, or operational claim is true.
 
-This package candidate separately adds CE-1 test scaffolding for 25 selected causal identities: 24 selected pre-payload mutations and one post-qualification threshold identity. Classified errors must match exact closed tuples; unclassified Gate B errors remain unscorable. A bounded observer recorded zero `cases` or `adjudications` roles for the 24 selected pre-payload mutations under its enumerated Python file APIs. Six oracle and four observer tests passed within the 222/222 Phase 2.5 technical suite; the separate 9/9 public-site module is outside this Gate B claim. This does not retroactively change `P2-CE-003`, define a complete failure taxonomy, prove OS-level nonaccess/non-egress, or establish a new campaign result.
+Published Phase 2.5 Commit `854b15c` separately adds CE-1 test scaffolding for 25 selected causal identities: 24 selected pre-payload mutations and one post-qualification threshold identity. Classified errors must match exact closed tuples; unclassified Gate B errors remain unscorable. A bounded observer recorded zero `cases` or `adjudications` roles for the 24 selected pre-payload mutations under its enumerated Python file APIs. Six oracle and four observer tests passed within the 222/222 Phase 2.5 technical suite; the separate 9/9 public-site module is outside this Gate B claim. This does not retroactively change `P2-CE-003`, define a complete failure taxonomy, prove OS-level nonaccess/non-egress, or establish a new campaign result.
 
 ## Gate outcome
 
@@ -40,7 +47,14 @@ Use the public templates only as starting points:
 
 Every committed template is `NOT APPROVED` and contains no historical data. Complete operational packages belong in an approved restricted system, not this repository.
 
-A design-freeze commit, package candidate, unit-test or CI run, schema-valid draft, or synthetic campaign plan is not an approved pilot implementation. The restricted package must identify one exact released commit and the completion artifacts required by that release. The prior alpha.5 baseline requires its Phase 2.4 reference-feature receipt for a newly generated replay. Any future final alpha.6 package would require both the feature and source-to-decision receipts plus successful final harness return; predecessor Commit `08ce203c` and this package candidate do not establish that release or approval state.
+A design-freeze or published commit, unit-test/CI run, schema-valid draft, local
+Phase 3 candidate, or synthetic campaign plan is not an approved pilot
+implementation. The restricted package must identify one exact released commit
+and the completion artifacts required by that release. The prior alpha.5
+baseline requires its Phase 2.4 reference-feature receipt for a newly generated
+replay. Published Phase 2.5 Commit `854b15c` requires both feature and
+source-to-decision receipts plus successful final harness return. None of these
+software states establishes external Gate B approval.
 
 Within a restricted working copy, authorization and bound control artifacts must be placed under ignored `local/gate_b/`; historical output must use a new ignored run-specific `outputs/replay/<run>/` directory with owner-only access. The runtime retains directory descriptors for snapshots and artifacts, rejects changed path bindings, and never gives the historical decision runner a filesystem path. This blocks path-redirection failures inside the application boundary; it is not an operating-system isolation control against another process running as the same user. The runtime does not implement a one-time authorization-consumption ledger. If single-use approval is required, that control must be externally anchored and checked before each run; otherwise an unchanged package may be reused only within its recorded scope and validity interval.
 

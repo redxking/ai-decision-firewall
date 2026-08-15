@@ -14,6 +14,7 @@ from scripts.build_public_site_data import (
     build_public_data,
     commit_for,
     load_claim_records,
+    project_version_at_commit,
     serialize,
 )
 
@@ -71,7 +72,9 @@ class PublicSiteDataTests(unittest.TestCase):
         self.assertEqual(current, serialize(self.data))
 
     def test_phase2_scenarios_are_read_only_and_synthetic(self) -> None:
-        phase2 = [row for row in self.data["scenarios"] if row["phase"] == "PHASE_2_READ_ONLY"]
+        phase2 = [
+            row for row in self.data["scenarios"] if row["phase"] == "PHASE_2_READ_ONLY"
+        ]
         self.assertEqual(len(phase2), 3)
         for scenario in phase2:
             self.assertFalse(scenario["effect"]["authorization_issued"])
@@ -101,7 +104,13 @@ class PublicSiteDataTests(unittest.TestCase):
         candidate = self.data["site_status"]["candidate"]
         self.assertIsNotNone(candidate)
         self.assertEqual(candidate["evaluation"], "NOT_EVALUATED")
-        self.assertEqual(candidate["design_commit"], commit_for(SOURCE_TO_DECISION_PLAN))
+        self.assertEqual(
+            candidate["design_commit"], commit_for(SOURCE_TO_DECISION_PLAN)
+        )
+        self.assertEqual(
+            candidate["version"],
+            project_version_at_commit(candidate["design_commit"]),
+        )
         self.assertNotIn("results", candidate)
 
     def test_claim_accounting_reconciles(self) -> None:
@@ -126,19 +135,29 @@ class PublicSiteStructureTests(unittest.TestCase):
         parser.feed((ROOT / "site/index.html").read_text(encoding="utf-8"))
         self.assertTrue(parser.has_main)
         self.assertTrue(parser.has_h1)
-        self.assertTrue({"decision-demo", "how-it-works", "evidence", "boundaries"}.issubset(parser.ids))
+        self.assertTrue(
+            {"decision-demo", "how-it-works", "evidence", "boundaries"}.issubset(
+                parser.ids
+            )
+        )
         self.assertEqual(parser.scripts, ["./app.js?v=1.0.4"])
         self.assertEqual(parser.stylesheets, ["./styles.css?v=1.0.4"])
-        self.assertEqual(parser.run_decision_links, ["#decision-demo", "#decision-demo"])
+        self.assertEqual(
+            parser.run_decision_links, ["#decision-demo", "#decision-demo"]
+        )
         source = (ROOT / "site/index.html").read_text(encoding="utf-8")
         self.assertNotIn("independent verification", source.lower())
         self.assertNotIn("independent verify", source.lower())
 
     def test_evidence_loader_is_versioned_bounded_and_fail_closed(self) -> None:
         script = (ROOT / "site/app.js").read_text(encoding="utf-8")
-        self.assertIn('const PUBLIC_DATA_URL = "./data/public-results.json?v=1.0.4";', script)
+        self.assertIn(
+            'const PUBLIC_DATA_URL = "./data/public-results.json?v=1.0.4";', script
+        )
         self.assertIn("const PUBLIC_DATA_ATTEMPTS = 3;", script)
-        self.assertIn("The validated public evidence bundle could not be loaded.", script)
+        self.assertIn(
+            "The validated public evidence bundle could not be loaded.", script
+        )
         self.assertNotIn("independent checks approve", script.lower())
         self.assertNotIn("an independent, non-model control", script.lower())
 

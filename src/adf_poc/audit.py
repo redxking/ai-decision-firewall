@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 from copy import deepcopy
 from pathlib import Path
+from threading import RLock
 from typing import Any, Iterable
 
 from .utils import canonical_json, sha256_json, utc_now_iso
@@ -35,6 +38,7 @@ class AuditLogger:
     """Append-only, hash-chained audit log for POC decisions and actions."""
 
     def __init__(self, path: str | Path | None = None) -> None:
+        self._lock = RLock()
         self.path = Path(path) if path is not None else None
         self._rows: list[dict[str, Any]] = []
         self.previous_hash = "0" * 64
@@ -42,40 +46,59 @@ class AuditLogger:
         if self.path is None:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if self.path.exists():
+            metadata = self.path.lstat()
+            if (
+                self.path.is_symlink()
+                or not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_nlink != 1
+            ):
+                raise ValueError(
+                    "Audit path must be a singly linked regular file."
+                )
         if self.path.exists() and self.path.stat().st_size:
             rows = self.read_all()
+            valid, errors = self.verify_rows(rows)
+            if not valid:
+                raise ValueError(
+                    "Existing audit chain is invalid: " + "; ".join(errors)
+                )
             last = rows[-1]
             self.previous_hash = str(last["record_hash"])
             self.sequence = int(last["sequence"]) + 1
 
     def append(self, record_type: str, payload: dict[str, Any]) -> dict[str, Any]:
-        body: dict[str, Any] = {
-            "sequence": self.sequence,
-            "recorded_at": utc_now_iso(),
-            "record_type": record_type,
-            "previous_hash": self.previous_hash,
-            "payload": payload,
-        }
-        body["record_hash"] = sha256_json(body)
-        if self.path is None:
-            self._rows.append(deepcopy(body))
-        else:
-            with self.path.open("a", encoding="utf-8") as handle:
-                handle.write(canonical_json(body) + "\n")
-        self.previous_hash = body["record_hash"]
-        self.sequence += 1
-        return deepcopy(body) if self.path is None else body
+        with self._lock:
+            body: dict[str, Any] = {
+                "sequence": self.sequence,
+                "recorded_at": utc_now_iso(),
+                "record_type": record_type,
+                "previous_hash": self.previous_hash,
+                "payload": payload,
+            }
+            body["record_hash"] = sha256_json(body)
+            if self.path is None:
+                self._rows.append(deepcopy(body))
+            else:
+                with self.path.open("a", encoding="utf-8") as handle:
+                    handle.write(canonical_json(body) + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            self.previous_hash = body["record_hash"]
+            self.sequence += 1
+            return _decode_audit_row(canonical_json(body))
 
     def read_all(self) -> list[dict[str, Any]]:
-        if self.path is None:
-            return deepcopy(self._rows)
-        if not self.path.exists():
-            return []
-        return [
-            _decode_audit_row(line)
-            for line in self.path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ]
+        with self._lock:
+            if self.path is None:
+                return deepcopy(self._rows)
+            if not self.path.exists():
+                return []
+            return [
+                _decode_audit_row(line)
+                for line in self.path.read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            ]
 
     @staticmethod
     def verify_rows(rows: Iterable[dict[str, Any]]) -> tuple[bool, list[str]]:

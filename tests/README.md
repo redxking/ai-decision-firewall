@@ -6,7 +6,58 @@ Run from the repository root:
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. The predecessor alpha.6 design-freeze implementation passed **193/193 tests in a review-local run**, and CI succeeded for exact Commit `08ce203c` on 2026-08-15. This package candidate passed the Phase 2.5 technical suite **222/222**: the predecessor 193 tests plus five campaign-delta tests, 14 `run_poc` safety checks, six Gate B causal-oracle checks, and four bounded payload-observer checks. The separate public-site module passed **9/9**, yielding a combined repository aggregate of **231/231**. The site module is not part of Phase 2.5 or `P2-CE-005` evidence. These are narrow CE-1 implementation-conformance observations within their stated boundaries; they are not a tagged release, an evidence package, or `P2-CE-005` campaign evidence. GitHub CI must still pass on the exact published package commit. Coverage includes the original abstention, break-glass, human-authority, authorization, label-separation, and audit-tamper controls plus the Phase 2 read-only execution boundary, replay contracts, path confinement, canonical-context consistency, frozen input snapshots, descriptor-bound historical output, in-memory historical decision processing, temporal normalization, post-decision adjudication decoding, deterministic artifacts, exact eight-stage decision/audit binding, Gate B campaign evidence, typed/source-authorized features, separate feature and source-to-decision recomputation, strict evidence-number handling, exact authorization-state rejection, and zero token/broker/effect assertions.
+The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` passed the **222/222** technical suite and exact-commit CI/Dependency Graph after publication. The separate public-site module passed **9/9**, yielding a then-current aggregate of **231/231**. Site tests are not Phase 2.5 or `P2-CE-005` evidence, and `P2-CE-005` remains CE-0 `NOT_EVALUATED`. The local Phase 3 `0.3.0-alpha.1` candidate adds focused contract, opaque-credential identity, evidence/consequence/decision, policy-safety-floor, authorization/broker/bypass/approval, verifier/fault, lifecycle/metrics/demo, and deterministic corpus tests. The current focused result is **57/57**, and the complete settled-candidate repository suite passed **288/288** locally.
+
+## Phase 3 focused suite
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest \
+  tests.test_phase3_contracts \
+  tests.test_phase3_decision_path \
+  tests.test_phase3_authorization_boundary \
+  tests.test_phase3_adversarial \
+  tests.test_phase3_end_to_end \
+  tests.test_phase3_corpus \
+  tests.test_phase3_release_blockers -v
+```
+
+Coverage includes:
+
+- closed raw request/policy contracts, duplicate/non-finite/time/resource
+  rejection, and stable fail-closed codes;
+- opaque-credential resolution to a signed principal, trusted target facts,
+  evidence HMAC/content/semantic/time/subject binding, key-domain separation,
+  freshness, corroboration, conflict, missing source, poisoning, and
+  confidence/recommendation invariance;
+- all four decisions, canonical constraints, cascading consequence, Tier-0
+  escalation, and zero effect for non-allow outcomes;
+- exact token bindings, expiration boundary, sequential/concurrent/prior-instance
+  replay, failed-attempt consumption, missing/wrong token, broker scope, direct
+  target bypass, and target precondition drift;
+- exact-scope single-use human approval through a separate opaque credential,
+  with failure-atomic receipt/audit recording and reevaluation only;
+- functionally separate same-project state-based `VERIFIED`, `FAILED`,
+  `PARTIAL`, `UNEXPECTED_EFFECT`, and `ROLLBACK_REQUIRED` behavior under
+  injected faults;
+- exact-type/deep-immutable security objects, machine-enforced policy safety
+  floors, principal-namespaced requests, fail-closed injected clock/identifier/
+  dependency failures, exact executed-path/post-effect audit correlation, and
+  one honest `POST_EFFECT_ACCOUNTING_FAILURE` / `ROLLBACK_REQUIRED` recovery
+  record with exactly-once decision/failure metrics after a post-effect prewrite
+  append failure;
+- correlated secret-free audit lifecycle, metrics reconciliation, demo output,
+  no-clobber writers, simulation-only environment rejection; and
+- a deterministic 46-case declarative corpus whose project-controlled
+  expectations passed 46/46 locally.
+
+The local candidate review found and closed release-blocking defects across the
+consequence, evidence, identity, policy, replay/receipt, dependency-failure, and
+audit boundaries. The **57/57** result includes the dedicated release-blocker
+regressions. The full local repository result is **288/288**. The exact commit
+and CI remain pending. These tests do not establish
+OS/process isolation, durable/distributed replay control, enterprise source
+provenance, external verifier independence, live action safety, efficacy, or a
+statistical failure bound.
 
 Phase 2.1 qualification coverage includes:
 
@@ -38,7 +89,7 @@ Phase 2.2 Gate B coverage includes:
 
 These tests establish implementation and negative-control coverage in the current checkout. No real Gate B approval or historical evidence bundle exists, so they do not establish organizational authority, privacy effectiveness, custody validity, or historical performance.
 
-This package candidate adds a validator-owned closed registry and exact-match oracle for 25 selected Gate B identities: 24 selected pre-payload mutations plus one post-qualification threshold identity. Six oracle methods and four bounded observer methods passed. The observer recorded zero `cases` or `adjudications` roles for the 24 selected pre-payload mutations under `builtins.open`, `io.open`, `os.open`, `Path.open`, `Path.read_bytes`, and `Path.read_text`; hard-link aliases to governed files are explicitly outside its boundary. Unclassified Gate B errors remain unscorable. This is CE-1 scaffolding, not a complete taxonomy, OS-level nonaccess/non-egress proof, reference monitor, or campaign result.
+Published Phase 2.5 Commit `854b15c` adds a validator-owned closed registry and exact-match oracle for 25 selected Gate B identities: 24 selected pre-payload mutations plus one post-qualification threshold identity. Six oracle methods and four bounded observer methods passed. The observer recorded zero `cases` or `adjudications` roles for the 24 selected pre-payload mutations under `builtins.open`, `io.open`, `os.open`, `Path.open`, `Path.read_bytes`, and `Path.read_text`; hard-link aliases to governed files are explicitly outside its boundary. Unclassified Gate B errors remain unscorable. This is CE-1 scaffolding, not a complete taxonomy, OS-level nonaccess/non-egress proof, reference monitor, or campaign result.
 
 Phase 2.3 audit-conformance coverage additionally rejects:
 
@@ -90,4 +141,4 @@ These tests are CE-1 implementation-conformance evidence only. The reference pat
 
 `P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC` remains CE-0 `NOT_EVALUATED`. Its planned ten clean/mutant pairs per run share ten directly instrumented production baselines, so two runs budget 20 baseline executions, 20 calls to each production component, and 40 reference-path calls across the 40-attempt denominator. Direct authorization-gate/broker/target-effect/scoped-write counters and decision-derived token/result/effect fields are separately checked. These counts, zeros, and stage outcomes are expected values only. Unit or integration tests do not create the campaign result; CE-2 requires the documented exact-commit execution and evidence-only publication protocol.
 
-This package candidate adds three campaign CLI destination regressions: `test_cli_destination_preflight_accepts_only_repo_confined_fresh_paths`, `test_cli_destination_preflight_rejects_escape_symlink_and_overlap`, and `test_cli_rejects_outside_destination_before_campaign_execution`. They passed 3/3. `test_check_rejects_unsafe_leaf_aliases_before_read_or_rebuild` verifies that check mode rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. `test_reference_scope_constructor_instrumentation_is_sensitive` separately injected construction of `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider` during a reference attempt, observed nonzero counters and mismatch, and proved closed-schema rejection. The full campaign module passed 21/21 in an isolated clean clone. Fourteen `run_poc` safety methods separately passed for ordinary versus explicit-freeze destinations, repository aliases, redirects/overlap, unsafe existing generated leaves, and seven-output local-manifest binding. All are included in the 222/222 Phase 2.5 technical suite; the separate public-site module contributes nine tests only to the 231/231 repository aggregate. GitHub CI remains required on the exact published package commit. These are bounded operator-error and Python-instrumentation controls only; they do not establish OS/mount isolation, adversarial race or TOCTOU resistance, comprehensive hard-link defense, direct writer confinement, general allocation monitoring, target-side proof, or a campaign result.
+Published Phase 2.5 Commit `854b15c` adds three campaign CLI destination regressions: `test_cli_destination_preflight_accepts_only_repo_confined_fresh_paths`, `test_cli_destination_preflight_rejects_escape_symlink_and_overlap`, and `test_cli_rejects_outside_destination_before_campaign_execution`. They passed 3/3. `test_check_rejects_unsafe_leaf_aliases_before_read_or_rebuild` verifies that check mode rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. `test_reference_scope_constructor_instrumentation_is_sensitive` separately injected construction of `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider` during a reference attempt, observed nonzero counters and mismatch, and proved closed-schema rejection. The full campaign module passed 21/21. Fourteen `run_poc` safety methods separately passed for ordinary versus explicit-freeze destinations, repository aliases, redirects/overlap, unsafe existing generated leaves, and seven-output local-manifest binding. All are included in the 222/222 Phase 2.5 technical suite; the separate public-site module contributes nine tests only to the then-current 231/231 aggregate. Exact-commit CI passed. These are bounded operator-error and Python-instrumentation controls only; they do not establish OS/mount isolation, adversarial race or TOCTOU resistance, comprehensive hard-link defense, direct writer confinement, general allocation monitoring, target-side proof, or a campaign result.
