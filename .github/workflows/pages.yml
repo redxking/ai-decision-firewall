@@ -1,0 +1,71 @@
+name: Publish evidence-gated website
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the immutable release source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install validation dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run the complete project test suite
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
+
+      - name: Validate committed claim evidence
+        run: |
+          python -m scripts.validate_claim_evidence
+          python -m scripts.validate_claim_evidence --record contracts/v0.2.0/examples/phase2-qualification-evidence-record.json --profile P2-CE-002
+          python -m scripts.validate_claim_evidence --record contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json --profile P2-CE-003
+          python -m scripts.validate_claim_evidence --record contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json --profile P2-CE-004
+
+      - name: Verify the sanitized website bundle
+        run: python scripts/build_public_site_data.py --check
+
+      - name: Verify the release manifest
+        run: shasum -a 256 -c MANIFEST.sha256
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload validated static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: validate-and-build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the complete validated artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

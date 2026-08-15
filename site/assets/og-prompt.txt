@@ -1,0 +1,14 @@
+Mode: Built-in image generator
+
+Use case: ads-marketing
+Asset type: 1200x630 landscape social preview card for the AI Decision Firewall website
+Primary request: Create a polished, high-contrast editorial technology card that visually explains a decision-control airlock between an AI recommendation and operational action.
+Scene/backdrop: Deep navy control-room field with restrained grid texture. On the left, three abstract evidence cards send thin cyan signal paths toward a central transparent airlock-style checkpoint with three visible layers. On the right, the path resolves into a calm verified outcome. Keep the composition architectural and precise, not futuristic fantasy.
+Style/medium: Premium cybersecurity systems-engineering editorial design; flat dimensional graphic with subtle glass and light, crisp enough for LinkedIn, Slack, and browser link previews.
+Composition/framing: Wide landscape. Strong text block in the upper-left/center-left with clear negative space. Central airlock motif is the distinctive visual. No tiny interface labels.
+Lighting/mood: Controlled, credible, mission-focused, restrained.
+Color palette: background #06111C, surfaces #0B1D2B and #102A3E, primary cyan #52C8FF, success accent #4FD39A, small amber accent #F5B94C, off-white #F3F8FC.
+Text (verbatim): "AI Decision Firewall" and beneath it "The model proposes. The firewall decides."
+Typography: Modern clean sans-serif, large and highly legible. Render both lines exactly as written.
+Constraints: Include only the two exact text lines. Preserve substantial safe margins for social cropping. No logos, no vendor marks, no people, no robots, no brain imagery, no code, no statistics, no locks, no padlocks, no shields, no watermark.
+Avoid: generic glowing AI chip, stock cyber imagery, neon overload, illegible microtext, invented words, spelling changes.

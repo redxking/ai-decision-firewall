@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#06111c" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self'; form-action 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self'"
+    />
+    <meta
+      name="description"
+      content="Watch the AI Decision Firewall turn advisory model output into evidence-bound, policy-controlled decisions."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AI Decision Firewall" />
+    <meta property="og:title" content="AI Decision Firewall — The model proposes. The firewall decides." />
+    <meta
+      property="og:description"
+      content="An evidence-driven demonstration of decision assurance, abstention, authorization boundaries, and verified effects."
+    />
+    <meta property="og:image" content="https://redxking.github.io/ai-decision-firewall/assets/og.png" />
+    <meta property="og:image:alt" content="AI Decision Firewall evidence paths passing through a three-layer decision checkpoint" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI Decision Firewall — The model proposes. The firewall decides." />
+    <meta
+      name="twitter:description"
+      content="See why a confident recommendation is not the same as authorized, verified action."
+    />
+    <meta name="twitter:image" content="https://redxking.github.io/ai-decision-firewall/assets/og.png" />
+    <title>AI Decision Firewall — Decision assurance, made visible</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%2306111c'/%3E%3Cpath d='M16 16h32v7H16zm0 13h24v7H16zm0 13h15v7H16z' fill='%2352c8ff'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#decision-demo">Skip to the decision demonstration</a>
+
+    <div class="scope-strip" role="note">
+      <span><i aria-hidden="true"></i> Offline synthetic evidence</span>
+      <span>No live systems connected</span>
+      <span>Operational authority: none</span>
+    </div>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="AI Decision Firewall home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span><strong>AI Decision Firewall</strong><small>Decision assurance control plane</small></span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#how-it-works">How it works</a>
+        <a href="#evidence">Evidence</a>
+        <a href="#boundaries">Boundaries</a>
+        <a class="nav-github" href="https://github.com/redxking/ai-decision-firewall">View GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">A model recommendation is not authority.</p>
+          <h1 id="hero-title">The model proposes.<br /><em>The firewall decides.</em></h1>
+          <p class="hero-lede">
+            Watch evidence, policy, and independent verification turn an AI recommendation into a
+            defensible decision—without giving the model direct control.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#decision-demo">Run a decision <span aria-hidden="true">→</span></a>
+            <a class="button button-secondary" href="#evidence">Inspect the evidence</a>
+          </div>
+          <ul class="boundary-list" aria-label="Current system boundary">
+            <li><strong>Offline</strong><span>Synthetic replay</span></li>
+            <li><strong>Read-only</strong><span>Execution suppressed</span></li>
+            <li><strong>Advisory</strong><span>Model cannot act</span></li>
+          </ul>
+        </div>
+
+        <div class="player-shell" id="decision-demo" aria-labelledby="player-title" tabindex="-1">
+          <div class="player-loading" data-player-loading>
+            <span aria-hidden="true"></span>
+            <p>Loading the validated public evidence bundle…</p>
+          </div>
+          <div class="player-content" data-player-content hidden>
+            <div class="scenario-selector-wrap">
+              <span class="micro-label">Choose a synthetic scenario</span>
+              <div class="scenario-selector" data-scenario-selector role="radiogroup" aria-label="Synthetic scenarios"></div>
+            </div>
+
+            <div class="player-topline">
+              <div>
+                <span class="micro-label" data-scenario-phase></span>
+                <h2 id="player-title" data-scenario-title></h2>
+                <p data-scenario-summary></p>
+              </div>
+              <span class="status-chip" data-scenario-status></span>
+            </div>
+
+            <div class="stage-rail" data-stage-rail aria-label="Decision stages"></div>
+
+            <div class="decision-scene" data-decision-scene>
+              <div class="scene-column evidence-column">
+                <span class="scene-heading">Evidence signals</span>
+                <div class="signal-stack" data-signal-stack></div>
+              </div>
+
+              <div class="flow-line" aria-hidden="true"><span></span></div>
+
+              <div class="scene-column model-column">
+                <span class="scene-heading">Advisory model</span>
+                <div class="risk-dial" data-risk-dial>
+                  <strong data-risk-value>—</strong>
+                  <span>Estimated risk</span>
+                </div>
+                <span class="advisory-tag">Advisory only</span>
+              </div>
+
+              <div class="flow-line gate-line" aria-hidden="true"><span></span></div>
+
+              <div class="firewall-gate" aria-label="Decision firewall checkpoint">
+                <span class="gate-title">Decision firewall</span>
+                <div data-gate="evidence"><i aria-hidden="true">1</i><span>Evidence</span><b>Waiting</b></div>
+                <div data-gate="policy"><i aria-hidden="true">2</i><span>Policy &amp; authority</span><b>Waiting</b></div>
+                <div data-gate="verify"><i aria-hidden="true">3</i><span>Independent verify</span><b>Waiting</b></div>
+              </div>
+
+              <div class="flow-line outcome-line" aria-hidden="true"><span></span></div>
+
+              <div class="scene-column outcome-column">
+                <span class="scene-heading">Final disposition</span>
+                <span class="outcome-symbol" data-outcome-symbol aria-hidden="true">…</span>
+                <strong data-outcome-label>Pending checks</strong>
+                <small data-outcome-mode>Decision not finalized</small>
+              </div>
+            </div>
+
+            <div class="narration" aria-live="polite" aria-atomic="true">
+              <span class="narration-step" data-narration-step></span>
+              <div>
+                <strong data-narration-title></strong>
+                <p data-narration-body></p>
+              </div>
+            </div>
+
+            <div class="player-controls">
+              <button type="button" class="icon-button" data-action="previous" aria-label="Previous step">←</button>
+              <button type="button" class="play-button" data-action="play" aria-pressed="false">
+                <span data-play-icon aria-hidden="true">▶</span><span data-play-label>Play decision</span>
+              </button>
+              <button type="button" class="icon-button" data-action="next" aria-label="Next step">→</button>
+              <button type="button" class="replay-button" data-action="replay">↻ Replay</button>
+            </div>
+
+            <div class="result-triad" aria-label="Decision, effect, and evaluation results">
+              <article data-result="decision"><span>Decision</span><strong></strong><p></p></article>
+              <article data-result="effect"><span>Effect</span><strong></strong><p></p></article>
+              <article data-result="evaluation"><span>Evaluation</span><strong></strong><p></p></article>
+            </div>
+
+            <details class="technical-trace">
+              <summary>Technical trace and plain-text transcript</summary>
+              <div class="trace-grid">
+                <div>
+                  <span class="micro-label">Policy rule</span>
+                  <code data-policy-rule></code>
+                  <span class="micro-label trace-label">Proposed actions</span>
+                  <p data-counterfactual-actions></p>
+                </div>
+                <div>
+                  <span class="micro-label">Evidence source</span>
+                  <a data-scenario-source href="">Open immutable artifact <span aria-hidden="true">↗</span></a>
+                  <span class="micro-label trace-label">Execution boundary</span>
+                  <p data-execution-boundary></p>
+                </div>
+              </div>
+              <ol class="transcript" data-transcript></ol>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="principle" aria-label="Core operating principle">
+        <span>01</span>
+        <p><strong>Confidence can inform a decision.</strong> It cannot authorize one.</p>
+      </section>
+
+      <section class="section outcomes-section" id="how-it-works" aria-labelledby="outcomes-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Four defensible outcomes</p>
+            <h2 id="outcomes-title">The safest decision is not always “act.”</h2>
+          </div>
+          <p>The firewall can approve a bounded proposal, decline it, request more evidence, or place the decision with a human authority.</p>
+        </div>
+        <div class="outcome-grid">
+          <article><span class="card-index">01</span><i class="outcome-card-icon" aria-hidden="true">○</i><h3>No action</h3><p>Evidence supports benign activity and risk remains below the policy threshold.</p></article>
+          <article><span class="card-index">02</span><i class="outcome-card-icon icon-investigate" aria-hidden="true">?</i><h3>Investigate</h3><p>Evidence is missing, stale, conflicting, low-integrity, or otherwise not decision-grade.</p></article>
+          <article><span class="card-index">03</span><i class="outcome-card-icon icon-contain" aria-hidden="true">✓</i><h3>Contain reversibly</h3><p>Only allow-listed, bounded actions can pass the deterministic control boundary.</p></article>
+          <article><span class="card-index">04</span><i class="outcome-card-icon icon-escalate" aria-hidden="true">↑</i><h3>Escalate to human</h3><p>Critical assets, break-glass identities, or consequential actions remain with accountable authority.</p></article>
+        </div>
+      </section>
+
+      <section class="section semantics-section" aria-labelledby="semantics-title">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Why “blocked” can mean success</p>
+            <h2 id="semantics-title">Three results. Three different questions.</h2>
+          </div>
+        </div>
+        <div class="semantics-grid">
+          <article class="semantic-card">
+            <span class="semantic-number">A</span>
+            <div><h3>Decision</h3><p>What did the system choose?</p></div>
+            <strong>No action · Investigate · Contain · Escalate</strong>
+          </article>
+          <article class="semantic-card">
+            <span class="semantic-number">B</span>
+            <div><h3>Effect</h3><p>Did anything happen?</p></div>
+            <strong>Suppressed · Verified · Failed · Unknown</strong>
+          </article>
+          <article class="semantic-card">
+            <span class="semantic-number">C</span>
+            <div><h3>Evaluation</h3><p>Did behavior match the test expectation?</p></div>
+            <strong>Matched · Mismatched · Not evaluated</strong>
+          </article>
+        </div>
+        <div class="contrast-grid">
+          <article class="contrast-card safe">
+            <span class="contrast-label">Blocked as designed · Test passed</span>
+            <h3>Conflicting evidence correctly stops automation.</h3>
+            <p>The model may still produce a score. The control system succeeds because it refuses to treat uncertainty as authority.</p>
+          </article>
+          <article class="contrast-card failed">
+            <span class="contrast-label">Effect failure · Control detected it</span>
+            <h3>A command is not the same as a verified state change.</h3>
+            <p>The v0.1 simulator includes an injected downstream failure so post-action verification cannot report a false success.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section evidence-section" id="evidence" aria-labelledby="evidence-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Versioned evidence ledger</p>
+            <h2 id="evidence-title">The website updates only when the evidence qualifies.</h2>
+          </div>
+          <p>New code can be newer without being better—or evaluated. The site preserves that distinction.</p>
+        </div>
+
+        <div class="version-ledger" data-version-ledger aria-live="polite"></div>
+        <div class="claim-grid" data-claim-grid></div>
+
+        <div class="model-snapshot" data-model-snapshot>
+          <div class="snapshot-copy">
+            <p class="eyebrow">Model mechanics snapshot</p>
+            <h3 data-model-label></h3>
+            <p data-model-interpretation></p>
+            <a data-model-source href="">Open the committed metrics <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="metric-grid" data-metric-grid></div>
+        </div>
+      </section>
+
+      <section class="section release-section" aria-labelledby="release-title">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Automatic, with a release gate</p>
+            <h2 id="release-title">A candidate never overwrites validated evidence.</h2>
+          </div>
+        </div>
+        <ol class="release-flow">
+          <li><span>01</span><strong>Freeze version</strong><p>Bind code, model, policy, tests, and evidence inputs.</p></li>
+          <li><span>02</span><strong>Validate claims</strong><p>Reconcile schemas, hashes, counts, outcomes, and limitations.</p></li>
+          <li><span>03</span><strong>Build public data</strong><p>Export only closed, sanitized, metadata-only fields.</p></li>
+          <li><span>04</span><strong>Publish atomically</strong><p>Deploy the complete release or retain the last known-good site.</p></li>
+        </ol>
+      </section>
+
+      <section class="section boundary-section" id="boundaries" aria-labelledby="boundaries-title">
+        <div class="boundary-panel">
+          <div>
+            <p class="eyebrow">Evidence boundary</p>
+            <h2 id="boundaries-title">What this does—and does not—establish.</h2>
+            <p class="boundary-intro">The current site reports project-controlled synthetic evidence. It does not turn a proof of mechanics into a claim of operational effectiveness.</p>
+          </div>
+          <div class="proves-column">
+            <h3><span aria-hidden="true">✓</span> What is observed</h3>
+            <ul>
+              <li>The named fixed synthetic scenarios matched their project-authored expectations.</li>
+              <li>Read-only replay produced no authorization, broker, or operational effect.</li>
+              <li>Named malformed and altered inputs were quarantined or blocked as designed.</li>
+              <li>Evidence is bound to exact versions, denominators, and immutable artifacts.</li>
+            </ul>
+          </div>
+          <div class="not-proves-column">
+            <h3><span aria-hidden="true">×</span> What remains unproven</h3>
+            <ul data-non-inferences></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing-section" aria-labelledby="closing-title">
+        <p class="eyebrow">Defensible action over unchecked autonomy</p>
+        <h2 id="closing-title">The goal is not to make AI act more often.<br />It is to make every consequential decision defensible.</h2>
+        <div>
+          <a class="button button-primary" href="#decision-demo">Run another scenario <span aria-hidden="true">↑</span></a>
+          <a class="button button-secondary" href="https://github.com/redxking/ai-decision-firewall">Inspect the repository <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand footer-brand" href="#top">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span><strong>AI Decision Firewall</strong><small>Open synthetic proof of concept</small></span>
+      </a>
+      <p>Model-agnostic decision assurance · Synthetic evidence only · No operational authority</p>
+      <a href="https://github.com/redxking/ai-decision-firewall">GitHub <span aria-hidden="true">↗</span></a>
+    </footer>
+  </body>
+</html>
