@@ -158,3 +158,13 @@ operational use.
 See [`phase2/SHADOW_MODE_SAFETY.md`](phase2/SHADOW_MODE_SAFETY.md),
 [`phase2/CLAIM_EVIDENCE_STANDARD.md`](phase2/CLAIM_EVIDENCE_STANDARD.md), and
 [`phase3/SECURITY_AND_SAFETY_CASE.md`](phase3/SECURITY_AND_SAFETY_CASE.md).
+
+## Stage A boundary
+
+The optional Stage A SQLite ledger closes the verified single-host restart
+replay for request claims, verified-decision issuance, authorization
+consumption, and attempt reservation/outcome. It does not remove the residual
+risks above: target receipts are not durable, the broker and observer are not
+isolated, keys and audit remain project-custodied, and no distributed recovery
+or external system has been evaluated. The machine production gate is
+`BLOCKED`; see [`production/PRODUCTION_READINESS.md`](production/PRODUCTION_READINESS.md).

@@ -11,12 +11,20 @@ and
 checks passed. That release remains a simulation-only CE-1 implementation
 baseline. `P2-CE-005` remains CE-0 `NOT_EVALUATED`.
 
-The current checkout adds a Phase 3.1 synthetic-only model-evaluation mechanism.
-It does not read historical or live data, does not select an operational model,
-and has no imports or interfaces for credentials, authorization, brokers,
-targets or effects. The focused module passed 11/11 tests and the current
-repository suite passed 299/299 locally. These are working-tree observations
-until an exact Phase 3.1 commit is frozen, published and revalidated by CI.
+Published Phase 3.1 exact Commit
+[`bb6b8f28afba0961bb97b24e6050fccaa94d5702`](https://github.com/redxking/ai-decision-firewall/commit/bb6b8f28afba0961bb97b24e6050fccaa94d5702)
+adds a synthetic-only model-evaluation mechanism. Its exact-commit
+[CI](https://github.com/redxking/ai-decision-firewall/actions/runs/31911161052)
+passed on Python 3.11 and 3.12, and its
+[Dependency Graph](https://github.com/redxking/ai-decision-firewall/actions/runs/31911162048)
+check passed. No Phase 3.1 tag or GitHub Release exists.
+
+The mechanism does not read historical or live data, does not select an
+operational model, and has no imports or interfaces for credentials,
+authorization, brokers, targets or effects. The focused module passed 11/11
+tests and the then-current repository suite passed 299/299 at that exact
+boundary. These are synthetic implementation and mechanism observations, not
+historical validation, promotion authority, or operational effectiveness.
 
 ## Purpose
 

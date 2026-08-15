@@ -13,10 +13,14 @@
   CI and Dependency Graph checks passed. Its simulation-only boundary includes
   57/57 focused tests, two demonstration checks PASS, a 46/46 corpus and the
   then-current 288/288 repository aggregate.
-- Phase 3.1 is a working `0.3.1-alpha.1` synthetic-only model-evaluation
-  candidate. Its focused module passed 11/11 and the current repository suite
-  passed 299/299 locally. No historical/live adapter, owner promotion threshold
-  or action path exists.
+- Phase 3.1 `0.3.1-alpha.1` is published at exact Commit `bb6b8f28`; its
+  focused module passed 11/11 and the then-current repository suite passed
+  299/299 locally and in exact-commit CI. No historical/live adapter, owner
+  promotion threshold or action path exists.
+- The unreleased `0.4.0-alpha.1` Stage A production-development candidate adds
+  single-host durable request, authorization, attempt, and audit-outbox state.
+  Its machine-derived production gate is `BLOCKED`; no Stage B or C activity is
+  authorized.
 - No historical organizational data, approved Gate B package, live feed,
   test-tenant/production connector, operational credential, or live action is
   authorized or present.
@@ -96,9 +100,9 @@ same-project verification is not external independence.
 **Exit condition:** met for the published simulation-only code baseline at
 `423685d`. This exit does not authorize live data or action.
 
-## Phase 3.1A — Governed model-validation groundwork (`0.3.1-alpha.1` candidate)
+## Phase 3.1A — Governed model-validation groundwork (`0.3.1-alpha.1` published baseline)
 
-The working candidate adds closed plan/result contracts, SHA-256-bound synthetic
+The published baseline adds closed plan/result contracts, SHA-256-bound synthetic
 source pools, a disjoint temporal training/calibration/evaluation split, one
 logistic baseline, one Platt calibration challenger, aggregate discrimination,
 calibration, threshold, Wilson-interval, selective-risk and subgroup metrics,
@@ -109,20 +113,36 @@ evaluation rows. It demonstrates reproducible comparison mechanics only. It
 does not establish source realism, operational calibration, practical
 significance, model superiority or promotion eligibility.
 
-### Immediate gates
+### Remaining gates
 
-1. Freeze and verify the Phase 3.1 implementation, contracts, documentation,
-   diagram, focused tests and complete repository suite on one exact commit.
-2. Publish only under explicit authorization and require exact-commit CI.
-3. Before any historical payload access, obtain an authenticated external Gate
+1. Before any historical payload access, obtain an authenticated external Gate
    B package covering data authority, custody, privacy, source mapping,
    adjudication, temporal split, owner thresholds and stop conditions.
-4. Keep the final temporal holdout evaluator-controlled and prohibit repeated
+2. Keep the final temporal holdout evaluator-controlled and prohibit repeated
    candidate selection against it.
 
 **Exit condition:** published synthetic evaluation mechanism with green
 exact-commit CI and no model-promotion claim. Historical evaluation remains a
 separate authority state.
+
+## Stage A — Durable single-host authority state (`0.4.0-alpha.1` candidate)
+
+This bounded increment corrects the verified process-restart replay path with
+an explicitly configured SQLite/WAL ledger. It serializes immutable request
+claims, one authorization per verified decision, atomic token consumption plus
+attempt reservation, terminal attempt digests, recovery to `UNKNOWN_EFFECT`,
+and digest-only authority outbox events.
+
+**Exit condition for this increment:** restart, process-race, storage-failure,
+and post-effect recovery regressions pass; the full suite remains green; the
+18-domain production gate derives `BLOCKED`; exact local commit and manifest are
+verified. This is not exit from Stage A as a whole.
+
+**Next safe gate:** durable synthetic adapter receipts and terminal request
+result lookup with process-termination injection at every transition boundary.
+Process isolation follows that receipt contract. External identity, connectors,
+targets, representative data, and deployment remain separately authorized
+activities.
 
 ## Phase 3.1B — Approved read-only evidence realism
 

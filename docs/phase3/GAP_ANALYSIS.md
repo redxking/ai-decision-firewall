@@ -123,3 +123,22 @@ trust/authority remain non-authoritative even when schema valid.
 
 The [Phase 3 T&E plan](TEST_AND_EVALUATION_PLAN.md) separates locally observed
 checks from remaining acceptance evidence.
+
+## Stage A production-development delta
+
+Exact-baseline restart testing demonstrated that process-local request and
+authorization state allowed the same completed request to cause a second
+synthetic effect after reconstruction. The Stage A candidate closes that
+specific path with opt-in SQLite/WAL authority state and tests request conflict,
+verified-decision replay, atomic token/attempt reservation, independent-process
+races, storage-lock failure, and conservative post-effect recovery.
+
+This moves the single-host durable-ledger item from `Missing` to
+`Integration tested` for the named synthetic boundary only. The following
+parts of the original gap remain open: terminal full-result retrieval, durable
+adapter receipts, crash injection at every instruction boundary, bounded load,
+retention/compaction, outbox export, process isolation, managed keys, external
+audit custody, multi-node consensus/fencing, failover, partitions, HA/DR, and
+vendor semantics. The 18-domain release gate in
+[`../production/PRODUCTION_READINESS.md`](../production/PRODUCTION_READINESS.md)
+therefore derives `BLOCKED`.

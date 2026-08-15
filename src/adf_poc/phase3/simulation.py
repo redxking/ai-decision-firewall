@@ -380,6 +380,22 @@ def build_simulated_execution_boundary(
             )
         attempted_at = attempted_at.astimezone(timezone.utc).replace(microsecond=0)
 
+        # The attempt identifier is correlation metadata allocated for this
+        # invocation.  Excluding it keeps the durable idempotency binding stable
+        # if recovery must compare the same authorized command to a later retry.
+        durable_attempt_binding = {
+            "token_id": token.token_id,
+            "request_id": request_id,
+            "decision_id": decision_id,
+            "agent_id": agent_id,
+            "command": deepcopy(normalized_command),
+            "policy_id": policy_id,
+            "policy_version": policy_version,
+            "policy_sha256": policy_sha256,
+            "decision_context_sha256": decision_context_sha256,
+            "target_state_sha256": sha256_json(state_before),
+        }
+
         try:
             validate_and_consume(
                 token,
@@ -395,6 +411,8 @@ def build_simulated_execution_boundary(
                 decision_context_sha256=decision_context_sha256,
                 target_state_sha256=sha256_json(state_before),
                 evaluated_at=attempted_at,
+                attempt_id=attempt_id,
+                attempt_binding_sha256=sha256_json(durable_attempt_binding),
             )
         except AuthorizationError:
             with attempt_lock:
@@ -483,6 +501,12 @@ def build_simulated_execution_boundary(
         }
         with attempt_lock:
             attempt_binding_digests[attempt_id] = sha256_json(attempt_binding)
+        gate.record_attempt_outcome(
+            attempt_id=attempt_id,
+            outcome_state=("COMPLETED" if reported_success else "FAILED_NO_EFFECT"),
+            outcome_sha256=sha256_json(result.to_dict()),
+            completed_at=attempted_at.isoformat(),
+        )
         return result
 
     def verify_execution(

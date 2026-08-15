@@ -190,3 +190,22 @@ non-production integration would require a new trust model, process isolation,
 durable authorization/idempotency store, managed keys, external audit custody,
 vendor-specific independent readback, rollback orchestration, rate/circuit
 controls, and separate operational authorization.
+
+## Stage A durability addendum
+
+The unreleased `0.4.0-alpha.1` production-development candidate adds an
+explicit, opt-in SQLite control-ledger path. When configured, the request claim,
+verified-decision issuance, token consumption, attempt reservation/outcome, and
+digest-only authority outbox survive reconstruction of every firewall object.
+Token consumption and attempt reservation commit atomically before the
+synthetic target call. No transaction is held across target I/O. A terminal
+attempt digest commits afterward; a failure in that second commit produces
+conservative `ROLLBACK_REQUIRED` handling and leaves a reservation that startup
+reconciliation moves to `UNKNOWN_EFFECT` without retry.
+
+This addendum corrects the verified restart-replay path on one host. It does
+not change the deployment boundary above: the broker, observer, target, and
+keys remain same-process; target state and command receipts remain in memory;
+the audit exporter is not implemented; and SQLite is not consensus,
+distributed idempotency, fencing, HA, or disaster recovery. The full decision
+and remaining gates are recorded in [ADR-014](../adr/014_stage_a_durable_transaction_spine.md).

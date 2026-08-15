@@ -6,7 +6,24 @@ Run from the repository root:
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` passed the **222/222** technical suite and exact-commit CI/Dependency Graph after publication. The separate public-site module passed **9/9**, yielding a then-current aggregate of **231/231**. Site tests are not Phase 2.5 or `P2-CE-005` evidence, and `P2-CE-005` remains CE-0 `NOT_EVALUATED`. Published Phase 3 `0.3.0-alpha.1` at exact Commit `423685d105be813056617db738297eba83d3d9d0` passed **57/57** focused tests and the then-current **288/288** repository suite in exact-commit CI. The Phase 3.1 working candidate adds a separate synthetic-only model-evaluation module; its counts remain working-tree observations until the final freeze.
+The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` passed the **222/222** technical suite and exact-commit CI/Dependency Graph after publication. The separate public-site module passed **9/9**, yielding a then-current aggregate of **231/231**. Site tests are not Phase 2.5 or `P2-CE-005` evidence, and `P2-CE-005` remains CE-0 `NOT_EVALUATED`. Published Phase 3 `0.3.0-alpha.1` at exact Commit `423685d105be813056617db738297eba83d3d9d0` passed **57/57** focused tests and the then-current **288/288** repository suite in exact-commit CI. Published Phase 3.1 `0.3.1-alpha.1` at exact Commit `bb6b8f28afba0961bb97b24e6050fccaa94d5702` passed **11/11** focused tests and the then-current **299/299** repository suite in exact-commit CI. The unreleased Stage A candidate passed **16/16** durable-ledger tests, **18/18** production-gate tests, and the complete **333/333** local repository suite before its local commit freeze. No exact-commit CI result is claimed for the unpushed Stage A branch.
+
+## Stage A focused suites
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src PYTHONWARNINGS=error::ResourceWarning \
+  python3 -m unittest tests.test_stage_a_durable_control_ledger -v
+
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+  python3 -m unittest tests.test_production_readiness_gate -v
+```
+
+These tests exercise single-host durable request claims, authorization and
+attempt uniqueness, restart replay, process concurrency, fail-closed SQLite
+storage, conservative recovery, and strict derivation of the 18-domain
+production gate. They do not establish a durable external adapter receipt,
+distributed linearizability, process isolation, HA/DR, production deployment,
+owner acceptance, or operational effectiveness.
 
 ## Phase 3 focused suite
 

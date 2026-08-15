@@ -78,6 +78,10 @@ all fixture labels to calculate final aggregate metrics. This same-process
 separation is not independent custody, and the results are not representative
 of operational performance.
 
+The Stage A durability tests create only ephemeral synthetic requests and
+temporary local SQLite databases. They add no dataset, historical record,
+representative sample, external source, or permission to process one.
+
 Each synthetic evidence item has a canonical content digest and a runtime HMAC
 attestation binding source identity/type, provenance, observation time,
 support/contradiction semantics, relevance, and subject target. Source keys are

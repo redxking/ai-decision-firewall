@@ -11,6 +11,11 @@ from time import perf_counter
 from typing import Any, Callable
 
 from adf_poc.audit import AuditLogger
+from adf_poc.stage_a import (
+    ControlLedgerError,
+    InMemoryControlLedger,
+    SQLiteControlLedger,
+)
 from adf_poc.utils import canonical_json, sha256_json
 
 from .approval import HumanApprovalGate
@@ -62,23 +67,6 @@ def _fallback_utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
 
 
-class _RequestLedger:
-    def __init__(self) -> None:
-        self._requests: dict[tuple[str, str], str] = {}
-        self._lock = Lock()
-
-    def claim(self, principal_id: str, request_id: str, request_sha256: str) -> str:
-        key = (principal_id, request_id)
-        with self._lock:
-            existing = self._requests.get(key)
-            if existing is None:
-                self._requests[key] = request_sha256
-                return "NEW"
-            if existing == request_sha256:
-                return "DUPLICATE"
-            return "CONFLICT"
-
-
 class Phase3DecisionFirewall:
     """Simulation-only Phase 3 request-to-decision-to-verification path."""
 
@@ -92,6 +80,8 @@ class Phase3DecisionFirewall:
         evidence_attestation_keys: dict[str, bytes],
         principal_resolver: TrustedPrincipalResolver,
         audit_path: str | Path | None = None,
+        control_ledger_path: str | Path | None = None,
+        control_ledger_busy_timeout_ms: int = 1000,
         clock: Callable[[], datetime] | None = None,
         id_factory: Callable[[str], str] | None = None,
         fault_modes: dict[str, str] | None = None,
@@ -123,6 +113,27 @@ class Phase3DecisionFirewall:
         self.__principal_resolver = principal_resolver.immutable_snapshot()
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.id_factory = id_factory or (lambda prefix: f"{prefix}-{uuid.uuid4()}")
+        if audit_path is not None and control_ledger_path is not None:
+            try:
+                audit_candidate = Path(audit_path)
+                control_candidate = Path(control_ledger_path)
+                paths_collide = audit_candidate.resolve(
+                    strict=False
+                ) == control_candidate.resolve(strict=False)
+                if (
+                    not paths_collide
+                    and audit_candidate.exists()
+                    and control_candidate.exists()
+                ):
+                    paths_collide = audit_candidate.samefile(control_candidate)
+            except (OSError, RuntimeError) as exc:
+                raise ValueError(
+                    "Audit and control-ledger paths could not be resolved safely."
+                ) from exc
+            if paths_collide:
+                raise ValueError(
+                    "Audit and control-ledger paths must identify distinct files."
+                )
         self._audit = AuditLogger(audit_path)
         existing_audit_valid, existing_audit_errors = validate_phase3_audit_chain(
             self._audit.read_all()
@@ -134,7 +145,14 @@ class Phase3DecisionFirewall:
             )
         self._metrics = Phase3Metrics()
         self._process_lock = Lock()
-        self._request_ledger = _RequestLedger()
+        self._control_ledger = (
+            SQLiteControlLedger(
+                control_ledger_path,
+                busy_timeout_ms=control_ledger_busy_timeout_ms,
+            )
+            if control_ledger_path is not None
+            else InMemoryControlLedger()
+        )
         self.__evidence_attestation_verifier = EvidenceAttestationVerifier(
             evidence_attestation_keys,
             required_source_instances=set(self._policy.evidence.trusted_sources),
@@ -167,6 +185,8 @@ class Phase3DecisionFirewall:
             ttl_seconds=self._policy.authorization_ttl_seconds,
             metrics=self._metrics,
             clock=self.clock,
+            ledger=self._control_ledger,
+            issuer_instance_id=self._control_ledger.issuer_instance_id,
             id_factory=self.id_factory,
         )
         self.observer, self.__broker, self.__target_verifier = (
@@ -1003,14 +1023,21 @@ class Phase3DecisionFirewall:
                 started=started,
             )
 
-        ledger_state = self._request_ledger.claim(
-            principal.id, request_id, request_sha256
-        )
+        try:
+            ledger_state = self._control_ledger.claim_request(
+                principal.id, request_id, request_sha256
+            )
+        except ControlLedgerError:
+            ledger_state = "UNAVAILABLE"
         if ledger_state != "NEW":
             preflight_reason = (
                 "DUPLICATE_REQUEST"
                 if ledger_state == "DUPLICATE"
-                else "REQUEST_ID_CONFLICT"
+                else (
+                    "REQUEST_ID_CONFLICT"
+                    if ledger_state == "CONFLICT"
+                    else "CONTROL_LEDGER_UNAVAILABLE"
+                )
             )
             self._append(
                 "REQUEST_REJECTED",
@@ -1474,7 +1501,7 @@ class Phase3DecisionFirewall:
                 if operational_effects
                 else VerificationStatus.FAILED.value
             )
-            attempt_id = _deterministic_failure_id(
+            attempt_id = getattr(exc, "attempt_id", None) or _deterministic_failure_id(
                 "failed-attempt", token.token_id, request_id, decision_id
             )
             verification = PostActionVerification(

@@ -1,6 +1,6 @@
 digraph phase31_model_evaluation {
   graph [
-    label="AI Decision Firewall — Phase 3.1 Governed Model Evaluation\nPublished Phase 3 @ 423685d • Phase 3.1 working candidate • synthetic mechanism only",
+    label="AI Decision Firewall — Phase 3.1 Governed Model Evaluation\nPublished Phase 3.1 @ bb6b8f28 • synthetic mechanism only • promotion NOT_AUTHORIZED",
     labelloc=t,
     fontsize=20,
     fontname="Helvetica",

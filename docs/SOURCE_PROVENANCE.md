@@ -25,8 +25,10 @@ a signature, or an external trust anchor. The manifest committed in exact Phase
 project-authored code, contracts, policy, tests, documentation, demos, and
 synthetic corpus fixtures published in exact Commit `423685d`; they are not
 derived from an external operational dataset or vendor connector. The Phase
-3.1 working candidate adds only digest-bound repository synthetic fixtures and
-has no historical/live source adapter.
+3.1 exact Commit `bb6b8f28` adds only digest-bound repository synthetic fixtures
+and has no historical/live source adapter. The Stage A durability increment
+adds code, tests, and local temporary SQLite test databases only; no external
+source, historical payload, connector, credential, or target was introduced.
 
 Phase 3 evidence attestations are runtime synthetic HMAC controls, not source
 provenance for this repository and not an independent source trust anchor. No

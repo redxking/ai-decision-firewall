@@ -1,6 +1,6 @@
 # ADR 013: Govern Phase 3.1 model evaluation before adding model complexity
 
-**Status:** Accepted for the Phase 3.1 working candidate
+**Status:** Accepted in the published Phase 3.1 baseline
 
 **Date:** 2026-08-15
 **Decision owners:** Project architecture, model-risk, data-governance and T&E owners

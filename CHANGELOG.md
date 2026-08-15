@@ -1,6 +1,36 @@
 # Changelog
 
-## Unreleased — `0.3.1-alpha.1` Phase 3.1 governed model-evaluation candidate
+## Unreleased — `0.4.0-alpha.1` Stage A production-development candidate
+
+- Reproduced a critical restart replay on the published Phase 3.1 baseline:
+  two newly constructed firewall instances sharing the same valid audit path
+  accepted the same authenticated request and each reported one synthetic
+  operational effect. The hash-linked audit remained valid because it was not
+  the authority-state ledger.
+- Added an opt-in single-host SQLite transaction ledger for immutable request
+  claims, unique verified-decision issuance, atomic authorization consumption
+  plus attempt reservation, monotonic outcomes, digest-only audit outbox, and
+  conservative `UNKNOWN_EFFECT` reconciliation. WAL, `synchronous=FULL`, strict
+  schema/version checks, foreign keys, bounded lock waits, and unsafe-path
+  refusal fail closed.
+- Added restart, conflict, process-concurrency, storage-lock, unknown-schema,
+  unsafe-path, durable-outbox, incomplete-attempt, and post-effect outcome-write
+  regressions. The Stage A ledger suite passed 16/16, the production-gate suite
+  passed 18/18, and the complete local repository suite passed 333/333 before
+  the commit freeze. This is a synthetic/offline single-host mechanism, not
+  distributed idempotency, HA, process isolation, or operational validation.
+- Added a strict 18-domain production-readiness matrix and validator whose
+  derived production gate remains `BLOCKED`, plus threat, failure/recovery,
+  operations, architecture, and evidence-boundary records.
+- No historical or live data, connector, operational credential, external
+  target, model promotion, deployment, push, merge, tag, or release is included.
+
+## `0.3.1-alpha.1` — published Phase 3.1 governed model-evaluation baseline
+
+Exact Commit `bb6b8f28afba0961bb97b24e6050fccaa94d5702` was published to
+`main` on 2026-08-15. Exact-commit CI passed on Python 3.11 and 3.12, and the
+Dependency Graph workflow passed. No Phase 3.1 GitHub tag or Release was
+created; the commit is a published code baseline, not a packaged release.
 
 - Added closed v0.3.1 plan/result schemas and fixed plan `P3-1-MEV-001` for a
   synthetic-only model-evaluation mechanism. The plan binds the four committed
@@ -23,8 +53,8 @@
 - Added 10 focused regressions for plan safety, source binding, temporal
   separation, deterministic execution, metrics, calibration inputs, no-clobber
   output, no action/historical imports, and structural refusal of promotion.
-  The focused module passed 11/11 and the current repository suite passed
-  299/299 locally; exact candidate commit and CI remain pending.
+  The focused module passed 11/11 and the then-current repository suite passed
+  299/299 locally and in exact-commit CI.
 - Added the Phase 3.1 architecture diagram, data-governance gate, model
   evaluation plan, contracts, ADR 013, and traceability matrix. No historical
   payload was accessed and no action credential, authorization, broker, target,

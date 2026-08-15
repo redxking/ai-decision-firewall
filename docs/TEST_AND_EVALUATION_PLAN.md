@@ -126,3 +126,17 @@ The repository now exercises schema-version mismatch, bounded parsing, delayed/o
 - controlled test-tenant and operational validation under separate authority.
 
 See [`phase2/VALIDATION_PLAN.md`](phase2/VALIDATION_PLAN.md) and [`phase2/CLAIM_EVIDENCE_STANDARD.md`](phase2/CLAIM_EVIDENCE_STANDARD.md) for current detailed gates and prohibited inferences.
+
+## Stage A production-development verification
+
+The current Stage A increment adds single-host durable-control tests for
+restart replay, conflicting duplicates, authorization/attempt persistence,
+process races, bounded lock failure, unknown schema, unsafe storage paths,
+outbox durability, post-effect outcome-write failure, and idempotent recovery
+to `UNKNOWN_EFFECT`. These tests close the reproduced restart-replay defect for
+the explicitly configured synthetic boundary only.
+
+The repository-wide production gate remains `BLOCKED`. The exact current
+coverage and every unresolved degraded mode are recorded in
+[`production/FAILURE_RECOVERY_MATRIX.md`](production/FAILURE_RECOVERY_MATRIX.md)
+and [`production/PRODUCTION_READINESS.md`](production/PRODUCTION_READINESS.md).

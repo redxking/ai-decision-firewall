@@ -9,9 +9,10 @@
 > `423685d105be813056617db738297eba83d3d9d0` and its green exact-commit CI do not
 > retrain, evaluate, or grant authority to this model; Phase 3 accepts an
 > external recommendation/confidence as explicitly non-authoritative request
-> fields. The Phase 3.1 working candidate adds a separate synthetic-only
-> temporal evaluation mechanism. It does not replace the tracked v0.1 model or
-> authorize model promotion.
+> fields. Published Phase 3.1 exact Commit `bb6b8f28` adds a separate
+> synthetic-only temporal evaluation mechanism. It does not replace the
+> tracked v0.1 model or authorize model promotion. The Stage A durability
+> increment does not train, select, promote, or change a model.
 
 ## Purpose
 
@@ -55,7 +56,7 @@ monitor effectiveness.
 
 ## Phase 3.1 evaluation mechanism
 
-The Phase 3.1 working candidate recombines the 1,200 committed synthetic cases
+The published Phase 3.1 baseline recombines the 1,200 committed synthetic cases
 as source pools and creates disjoint temporal partitions: 720 training, 240
 calibration and 240 evaluation rows. It fits a new logistic baseline on the
 training partition and a Platt calibration challenger on calibration scores and

@@ -23,13 +23,24 @@ published boundary passed 57/57 focused Phase 3 tests; both demo acceptance chec
 reported PASS; the corpus reported 46/46; and the full repository regression
 passed 288/288 locally and in exact-commit CI.
 
-Third, Phase 3.1 is a working **`0.3.1-alpha.1` synthetic model-evaluation
-candidate**. It adds digest-bound repository fixtures, disjoint temporal
+Third, Phase 3.1 is a published **`0.3.1-alpha.1` synthetic model-evaluation
+baseline** at exact Commit `bb6b8f28afba0961bb97b24e6050fccaa94d5702`.
+Its Python 3.11/3.12 exact-commit CI and Dependency Graph checks passed. It adds
+digest-bound repository fixtures, disjoint temporal
 training/calibration/evaluation roles, a logistic baseline, a Platt calibration
 challenger, aggregate discrimination/calibration/error/abstention/subgroup
 metrics, and an unconditional `NOT_AUTHORIZED` promotion state. It contains no
 historical/live adapter or action path and has no owner-approved performance
 threshold or model-promotion authority.
+
+Fourth, the unreleased **`0.4.0-alpha.1` Stage A production-development
+candidate** adds an opt-in, single-host SQLite authority ledger after exact-
+baseline testing found that a completed request could cause a second synthetic
+effect after restart. The ledger makes request claims, verified-decision
+issuance, token consumption, attempt reservation/outcome, and a digest-only
+audit outbox durable. Its 18-domain production gate remains `BLOCKED`. It is
+not a deployed service, distributed replay control, process isolation, or
+operational authority.
 
 All Phase 3 observations are CE-1 implementation-conformance evidence over
 synthetic inputs and effects. They do not establish live containment,
@@ -46,7 +57,8 @@ external independence.
 | Phase 3 implementation | Published at exact Commit `423685d`; raw request through optional synthetic effect and separate readback implemented |
 | Phase 3 T&E | Required high-risk/no-effect and low-risk/verified-effect demo acceptance PASS; deterministic corpus 46/46; focused tests 57/57; exact-commit CI passed |
 | Phase 3 repository aggregate | Then-current 288/288 passed locally and in exact-commit CI |
-| Phase 3.1 model evaluation | Working synthetic-only candidate; temporal baseline/challenger mechanism; no historical data or promotion authority |
+| Phase 3.1 model evaluation | Published exact Commit `bb6b8f28`; 11/11 focused and 299/299 then-current aggregate; exact-commit CI/Dependency Graph passed; no historical data or promotion authority |
+| Stage A durability increment | Unreleased `0.4.0-alpha.1` production-development candidate; single-host synthetic SQLite authority state; production gate `BLOCKED` |
 | Data/action boundary | Synthetic only; no historical organizational data, live feed, test tenant, production connector, credential, or live action |
 
 ## What Phase 3 adds

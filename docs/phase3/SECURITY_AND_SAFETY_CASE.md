@@ -206,3 +206,36 @@ efficacy measure, or calibration result.
   testing;
 - human-approval workflow with separation of duties; and
 - explicit change-control and authorizing-official acceptance.
+
+## Stage A safety-case addendum
+
+### New claim supported
+
+For an explicitly configured, single-host SQLite control ledger, the tested
+same-principal/same-request replay cannot create a second authorization, broker
+call, or synthetic effect after service-object reconstruction. A conflicting
+canonical request digest fails closed. Verified-decision issuance is unique,
+and authorization consumption plus attempt reservation is transactional before
+synthetic target invocation. Independent-process race tests exercise the
+database uniqueness and write-serialization boundary.
+
+### Failure honesty
+
+Unknown schema, unsafe path, integrity failure, or a lock extending beyond the
+bounded timeout prevents new authority and target invocation. A post-effect
+attempt-outcome commit failure cannot return `VERIFIED`; it returns
+`ROLLBACK_REQUIRED`, leaves the token consumed, and explicit restart
+reconciliation moves the reservation to `UNKNOWN_EFFECT`. Reconciliation is
+idempotent and never automatically reissues the command.
+
+### Residual risk
+
+This is a single-host synthetic mechanism. It has no durable target-side
+receipt, so an unresolved reservation cannot distinguish lost response from
+committed effect. Exact duplicates are blocked rather than returning a
+persisted full result. SQLite availability can deny service and has no
+multi-node fencing, quorum, failover, or split-brain behavior. Same-process
+compromise can still subvert broker, target, observer, keys, and application
+audit. The detailed threat/control/residual-risk mapping is in
+[`../production/THREAT_CONTROL_REGISTER.md`](../production/THREAT_CONTROL_REGISTER.md).
+These residual risks continue to prohibit production use.

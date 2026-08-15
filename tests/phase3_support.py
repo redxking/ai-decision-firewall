@@ -143,6 +143,8 @@ def new_harness(
     now: datetime | None = None,
     fault_modes: Mapping[str, str] | None = None,
     audit_path: str | Path | None = None,
+    control_ledger_path: str | Path | None = None,
+    control_ledger_busy_timeout_ms: int = 1000,
     principal: AuthenticatedPrincipal | None = None,
 ) -> Phase3Harness:
     policy = Phase3PolicyConfig.load(POLICY_PATH)
@@ -199,6 +201,8 @@ def new_harness(
         evidence_attestation_keys=source_keys,
         principal_resolver=resolver,
         audit_path=audit_path,
+        control_ledger_path=control_ledger_path,
+        control_ledger_busy_timeout_ms=control_ledger_busy_timeout_ms,
         clock=clock,
         id_factory=id_factory,
         fault_modes=configured_faults,

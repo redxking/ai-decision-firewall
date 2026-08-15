@@ -127,12 +127,24 @@ def _assert_finite_json_numbers(value: Any) -> None:
             pending.extend(current)
 
 
+POST_CAMPAIGN_ISOLATED_SOURCES = frozenset({"src/adf_poc/stage_a.py"})
+
+
 def _package_source_paths() -> dict[str, str]:
-    """Bind the whole in-repo package to cover import-time transitive sources."""
+    """Bind the Phase 2.4 package surface and its transitive imports.
+
+    The later Stage A module is an authorization/attempt-ledger boundary that
+    the fixed feature-only campaign cannot import or invoke.  Keeping it outside
+    this historical campaign surface preserves both the no-authorization claim
+    and the published schema's bounded source registry.  Stage A has separate
+    exact-commit and manifest evidence.
+    """
 
     paths: dict[str, str] = {}
     for path in sorted((ROOT / "src/adf_poc").rglob("*.py")):
         relative = str(path.relative_to(ROOT))
+        if relative in POST_CAMPAIGN_ISOLATED_SOURCES:
+            continue
         role = "ADF_" + re.sub(r"[^A-Za-z0-9]+", "_", relative).strip("_").upper()
         paths[role] = relative
     return paths

@@ -469,3 +469,33 @@ test discovery, or a prior-commit result. The local observations in this plan
 are explicitly date-bound and must be replaced by exact-candidate results at
 freeze. Do not represent simulation results as live containment, production
 safety, measured operational efficacy, or external independent assurance.
+
+## Stage A durable-control qualification
+
+The `0.4.0-alpha.1` production-development candidate adds focused qualification
+for the optional SQLite authority ledger. The test set covers:
+
+- WAL/FULL/foreign-key/schema/permission configuration and unknown-schema or
+  unsafe-path refusal;
+- exact duplicate and request-digest conflict across newly constructed service
+  objects sharing the ledger;
+- durable authorization and terminal attempt state plus digest-only outbox;
+- monotonic recovery of an incomplete attempt to `UNKNOWN_EFFECT`;
+- unique authorization issuance for one verified decision across reopen;
+- bounded database-lock failure before effect;
+- independent operating-system processes racing for one request claim and one
+  token/attempt reservation; and
+- injected post-effect attempt-outcome failure with honest
+  `ROLLBACK_REQUIRED`, a consumed token, and restart recovery.
+
+Acceptance requires no second broker invocation or effect after restart, no
+token reopening, exactly one winner in each process race, and no fabricated
+success/no-effect/rollback after an indeterminate post-effect failure. The full
+Phase 3 and repository regressions must remain green.
+
+Not covered: a durable adapter receipt, full terminal-result lookup, abrupt
+process kill at every boundary, queue behavior, bounded load/retention,
+multi-node partitions/failover, external audit export, managed-key lifecycle,
+process isolation, eventual target readback, or executable rollback. Those
+remain release blockers in the
+[`failure/recovery matrix`](../production/FAILURE_RECOVERY_MATRIX.md).

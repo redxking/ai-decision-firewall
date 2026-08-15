@@ -4,9 +4,13 @@ import hashlib
 import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
-from threading import Lock
 from typing import Any, Callable
 
+from adf_poc.stage_a import (
+    ControlLedgerError,
+    InMemoryControlLedger,
+    SQLiteControlLedger,
+)
 from adf_poc.utils import canonical_json, sha256_json
 
 from .metrics import Phase3Metrics
@@ -24,6 +28,15 @@ class AuthorizationError(RuntimeError):
         self.reason_code = reason_code
 
 
+class AttemptPersistenceError(RuntimeError):
+    """A possible effect exists but its durable attempt outcome did not commit."""
+
+    def __init__(self, reason_code: str, message: str, *, attempt_id: str) -> None:
+        super().__init__(message)
+        self.reason_code = reason_code
+        self.attempt_id = attempt_id
+
+
 def _parse_timestamp(value: str) -> datetime:
     parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None or parsed.utcoffset() is None:
@@ -34,45 +47,8 @@ def _parse_timestamp(value: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-class InMemoryAuthorizationLedger:
-    """Atomic, process-local token ledger.
-
-    Tokens are additionally bound to a random issuer-instance identifier, so a
-    token from a prior process is rejected even if the same signing key is
-    configured. This is deliberately not a durable distributed replay ledger.
-    """
-
-    def __init__(self) -> None:
-        self._states: dict[str, str] = {}
-        self._lock = Lock()
-
-    def register(self, token_id: str) -> None:
-        with self._lock:
-            if token_id in self._states:
-                raise AuthorizationError(
-                    "AUTHORIZATION_ID_COLLISION",
-                    "Authorization token identifier already exists.",
-                )
-            self._states[token_id] = "ISSUED"
-
-    def consume_once(self, token_id: str) -> None:
-        with self._lock:
-            state = self._states.get(token_id)
-            if state is None:
-                raise AuthorizationError(
-                    "AUTHORIZATION_UNKNOWN",
-                    "Authorization was not issued by this firewall instance.",
-                )
-            if state != "ISSUED":
-                raise AuthorizationError(
-                    "AUTHORIZATION_REPLAY",
-                    "Authorization has already been consumed.",
-                )
-            self._states[token_id] = "CONSUMED"
-
-    def state(self, token_id: str) -> str | None:
-        with self._lock:
-            return self._states.get(token_id)
+class InMemoryAuthorizationLedger(InMemoryControlLedger):
+    """Backward-compatible name for the Phase 3 process-local ledger."""
 
 
 class AuthorizationGate:
@@ -85,7 +61,7 @@ class AuthorizationGate:
         ttl_seconds: int,
         metrics: Phase3Metrics,
         clock: Callable[[], datetime] | None = None,
-        ledger: InMemoryAuthorizationLedger | None = None,
+        ledger: InMemoryControlLedger | SQLiteControlLedger | None = None,
         issuer_instance_id: str | None = None,
         id_factory: Callable[[str], str] | None = None,
     ) -> None:
@@ -103,12 +79,19 @@ class AuthorizationGate:
         self.ttl_seconds = int(ttl_seconds)
         self.metrics = metrics
         self.clock = clock or (lambda: datetime.now(timezone.utc))
+        if ledger is not None and type(ledger) not in {
+            InMemoryControlLedger,
+            InMemoryAuthorizationLedger,
+            SQLiteControlLedger,
+        }:
+            raise TypeError("Authorization ledger type is not supported.")
         self.ledger = ledger or InMemoryAuthorizationLedger()
-        self.issuer_instance_id = issuer_instance_id or f"issuer-{uuid.uuid4()}"
+        self.issuer_instance_id = (
+            issuer_instance_id
+            or getattr(self.ledger, "issuer_instance_id", None)
+            or f"issuer-{uuid.uuid4()}"
+        )
         self.id_factory = id_factory or (lambda prefix: f"{prefix}-{uuid.uuid4()}")
-        self._issuance_lock = Lock()
-        self._used_verification_ids: set[str] = set()
-        self._authorized_decision_ids: set[str] = set()
 
     def _sign(self, value: dict[str, Any]) -> str:
         return hmac.new(
@@ -213,19 +196,15 @@ class AuthorizationGate:
             "nonce": self.id_factory("nonce"),
         }
         token = AuthorizationToken(signature=self._sign(unsigned), **unsigned)
-        with self._issuance_lock:
-            if (
-                decision_verification.verification_id in self._used_verification_ids
-                or decision.decision_id in self._authorized_decision_ids
-            ):
-                self.metrics.record_authorization_failure()
-                raise AuthorizationError(
-                    "AUTHORIZATION_DECISION_REPLAY",
-                    "This verified decision has already issued an authorization.",
-                )
-            self.ledger.register(token.token_id)
-            self._used_verification_ids.add(decision_verification.verification_id)
-            self._authorized_decision_ids.add(decision.decision_id)
+        try:
+            self.ledger.register(
+                token.token_id,
+                verification_id=decision_verification.verification_id,
+                decision_id=decision.decision_id,
+            )
+        except ControlLedgerError as exc:
+            self.metrics.record_authorization_failure()
+            raise AuthorizationError(exc.reason_code, str(exc)) from exc
         return token
 
     def validate_and_consume(
@@ -244,6 +223,8 @@ class AuthorizationGate:
         decision_context_sha256: str,
         target_state_sha256: str,
         evaluated_at: datetime | None = None,
+        attempt_id: str | None = None,
+        attempt_binding_sha256: str | None = None,
     ) -> None:
         try:
             self._validate(
@@ -261,10 +242,43 @@ class AuthorizationGate:
                 target_state_sha256=target_state_sha256,
                 evaluated_at=evaluated_at,
             )
-            self.ledger.consume_once(token.token_id)
+            consumed_at = (
+                evaluated_at or self.clock()
+            ).astimezone(timezone.utc).replace(microsecond=0).isoformat()
+            self.ledger.consume_once(
+                token.token_id,
+                attempt_id=attempt_id,
+                attempt_binding_sha256=attempt_binding_sha256,
+                consumed_at=consumed_at,
+            )
+        except ControlLedgerError as exc:
+            self.metrics.record_authorization_failure()
+            raise AuthorizationError(exc.reason_code, str(exc)) from exc
         except AuthorizationError:
             self.metrics.record_authorization_failure()
             raise
+
+    def record_attempt_outcome(
+        self,
+        *,
+        attempt_id: str,
+        outcome_state: str,
+        outcome_sha256: str,
+        completed_at: str,
+    ) -> None:
+        try:
+            self.ledger.record_attempt_outcome(
+                attempt_id,
+                outcome_state=outcome_state,
+                outcome_sha256=outcome_sha256,
+                completed_at=completed_at,
+            )
+        except ControlLedgerError as exc:
+            raise AttemptPersistenceError(
+                exc.reason_code,
+                "Durable attempt outcome did not commit; effect is indeterminate.",
+                attempt_id=attempt_id,
+            ) from exc
 
     def _validate(
         self,
@@ -294,7 +308,11 @@ class AuthorizationGate:
                 "AUTHORIZATION_ISSUER_MISMATCH",
                 "Authorization belongs to another firewall instance.",
             )
-        if self.ledger.state(token.token_id) == "CONSUMED":
+        try:
+            ledger_state = self.ledger.state(token.token_id)
+        except ControlLedgerError as exc:
+            raise AuthorizationError(exc.reason_code, str(exc)) from exc
+        if ledger_state == "CONSUMED":
             raise AuthorizationError(
                 "AUTHORIZATION_REPLAY",
                 "Authorization has already been consumed.",
