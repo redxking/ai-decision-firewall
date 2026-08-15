@@ -19,7 +19,8 @@ The datasets under `data/phase2_starter/` and `data/phase2_qualification/` are s
 - `contracts/v0.2.0/evaluation-evidence.schema.json`
 - `contracts/v0.2.0/gate-b-authorization.schema.json`
 - `contracts/v0.2.0/reference-feature-assurance.schema.json`
-- `contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json` (planned `P2-CE-004` profile/result shapes; no result exists)
+- `contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json`
+- `contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json`
 - `contracts/v0.2.0/examples/gate-b-authorization-draft.json`
 - `contracts/v0.2.0/examples/phase2-starter-evidence-record.json`
 - `contracts/v0.2.0/README.md`
@@ -303,4 +304,4 @@ Adjudication JSON and semantics are intentionally evaluated later. Duplicate JSO
 
 For both included fixtures, historical efficacy, historical calibration, and historical acceptance rates are unavailable because `historical_case_count=0`. Unavailable adjudication metrics are represented as `null`; they must not be described as measured zero performance. Model measures computed on accepted cases are conditional on qualification and cannot be generalized to the complete source population without explicit missingness and survivorship-bias analysis.
 
-The frozen `P2-CE-004` plan describes two intended 16-attempt synthetic repetitions, but no campaign result, repeatability artifact, evidence record, or CE-2 observation exists. The plan is not part of the current observed denominator.
+The fixed `P2-CE-004` campaign binds corrected implementation Commit `53e409d6ffa4af98ea892bc1a81302bf30870693` to two complete deterministic same-process repetitions of 16 synthetic attempts. All 32 observations matched the project-controlled expectations with zero retries, exclusions, failures, or deviations: 16 clean matches, eight qualification quarantines, and eight reference-projection blocks. The two sanitized ledgers are byte-identical. This is SELF-reviewed CE-2 evidence only; it does not establish historical/live behavior, source truth, full decision correctness, independent assurance, exhaustive coverage, or a bounded failure rate.

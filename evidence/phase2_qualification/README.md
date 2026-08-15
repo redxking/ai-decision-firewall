@@ -16,7 +16,7 @@ The observed result is deliberately narrow:
 Validate the complete bundle and its public wording boundary from the repository root:
 
 ```bash
-python3 scripts/validate_claim_evidence.py \
+python -m scripts.validate_claim_evidence \
   --record contracts/v0.2.0/examples/phase2-qualification-evidence-record.json \
   --profile P2-CE-002
 ```

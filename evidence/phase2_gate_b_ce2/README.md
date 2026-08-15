@@ -55,7 +55,7 @@ Run from the repository root:
 
 ```bash
 python3 scripts/generate_gate_b_ce2_campaign.py --validate-plan
-python3 scripts/validate_claim_evidence.py \
+python -m scripts.validate_claim_evidence \
   --record contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json \
   --profile P2-CE-003
 ```

@@ -1,0 +1,417 @@
+{
+  "artifact_kind": "CAMPAIGN_PROFILE",
+  "budget": {
+    "attempts_per_run": 16,
+    "engine_call_budget": 0,
+    "evaluation_runs": 2,
+    "retries": 0,
+    "total_attempt_executions": 32
+  },
+  "campaign_id": "P2-CE-004-FEATURE-ASSURANCE-SYNTHETIC",
+  "campaign_plan_sha256": "25538fb7904e8ac7f897c1bb2df6bea8e87a28b4e6925a4195b6a29bd9b1b856",
+  "campaign_seed": 20260815,
+  "claim_id": "P2-CE-004",
+  "configuration_binding": {
+    "canonical_sha256": "d99d813b0da891b6b8ae65e1f1702f0c7b9ee67ef7ccb1f89ec2857b5c3af9ae",
+    "configuration": {
+      "campaign_mode": "SYNTHETIC_FEATURE_ASSURANCE",
+      "decision_engine_enabled": false,
+      "live_actions_enabled": false,
+      "projection_authority": "READ_ONLY_LOCAL_COMPARISON",
+      "qualification_api": "qualify_case_bytes",
+      "reference_projection_api": "verify_reference_feature_projections",
+      "schema_version": "0.2.0",
+      "zero_effects_required": true
+    }
+  },
+  "design": {
+    "actual_historical_records": 0,
+    "attempt_order_frozen": true,
+    "data_origin": "SYNTHETIC_FIXTURE",
+    "execution_authority": "NONE",
+    "failure_policy": "ABORT_WITHOUT_EVIDENCE_NO_RETRY",
+    "input_authorization": "FIXED_GENERATED_SCENARIOS_ONLY",
+    "network_capability_status": "UNVERIFIED_AVAILABLE_CAPABILITY",
+    "output_authorization": "SANITIZED_ENUMERATED_METADATA_ONLY",
+    "result_capture": "NO_RAW_CASE_OR_PROJECTION_CONTENT",
+    "stored_approval_package": false,
+    "stored_historical_data": false
+  },
+  "evaluated_at": "2026-08-15T12:13:03Z",
+  "expected_attempts": [
+    {
+      "attempt_id": "P2-CE-004-P01-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P01",
+      "sequence": 1
+    },
+    {
+      "attempt_id": "P2-CE-004-P01-MUTANT-BOOL-STRING",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "INVALID_BOOLEAN",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "BOOLEAN_STRING",
+      "pair_id": "P01",
+      "sequence": 2
+    },
+    {
+      "attempt_id": "P2-CE-004-P02-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P02",
+      "sequence": 3
+    },
+    {
+      "attempt_id": "P2-CE-004-P02-MUTANT-COUNT-NAN-STRING",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "INVALID_TYPE",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "COUNT_NAN_STRING",
+      "pair_id": "P02",
+      "sequence": 4
+    },
+    {
+      "attempt_id": "P2-CE-004-P03-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P03",
+      "sequence": 5
+    },
+    {
+      "attempt_id": "P2-CE-004-P03-MUTANT-THREAT-SOURCE",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "UNAUTHORIZED_MODELED_SIGNAL",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "UNAUTHORIZED_THREAT_SOURCE",
+      "pair_id": "P03",
+      "sequence": 6
+    },
+    {
+      "attempt_id": "P2-CE-004-P04-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P04",
+      "sequence": 7
+    },
+    {
+      "attempt_id": "P2-CE-004-P04-MUTANT-BENIGN-SOURCE",
+      "control_kind": "MUTANT",
+      "expected_error_category": "SEMANTICS",
+      "expected_error_code": "UNAUTHORIZED_MODELED_SIGNAL",
+      "expected_outcome": "QUARANTINED",
+      "expected_stage": "QUALIFICATION",
+      "mutation_id": "UNAUTHORIZED_BENIGN_SOURCE",
+      "pair_id": "P04",
+      "sequence": 8
+    },
+    {
+      "attempt_id": "P2-CE-004-P05-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P05",
+      "sequence": 9
+    },
+    {
+      "attempt_id": "P2-CE-004-P05-MUTANT-VALUE-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "FEATURE_VALUE_REHASH",
+      "pair_id": "P05",
+      "sequence": 10
+    },
+    {
+      "attempt_id": "P2-CE-004-P06-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P06",
+      "sequence": 11
+    },
+    {
+      "attempt_id": "P2-CE-004-P06-MUTANT-TRACE-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "FEATURE_TRACE_REHASH",
+      "pair_id": "P06",
+      "sequence": 12
+    },
+    {
+      "attempt_id": "P2-CE-004-P07-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P07",
+      "sequence": 13
+    },
+    {
+      "attempt_id": "P2-CE-004-P07-MUTANT-ORDER-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "INPUT_EVENT_ORDER_REHASH",
+      "pair_id": "P07",
+      "sequence": 14
+    },
+    {
+      "attempt_id": "P2-CE-004-P08-CLEAN",
+      "control_kind": "CLEAN",
+      "expected_error_category": "NONE",
+      "expected_error_code": "NONE",
+      "expected_outcome": "ACCEPTED_PROJECTION_MATCH",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "NONE",
+      "pair_id": "P08",
+      "sequence": 15
+    },
+    {
+      "attempt_id": "P2-CE-004-P08-MUTANT-REPLACEMENT-REHASH",
+      "control_kind": "MUTANT",
+      "expected_error_category": "REFERENCE",
+      "expected_error_code": "REFERENCE_FEATURE_PROJECTION_MISMATCH",
+      "expected_outcome": "BLOCKED_REFERENCE_PROJECTION",
+      "expected_stage": "REFERENCE_PROJECTION",
+      "mutation_id": "CROSS_CASE_VALUES_REHASH",
+      "pair_id": "P08",
+      "sequence": 16
+    }
+  ],
+  "implementation_commit": "53e409d6ffa4af98ea892bc1a81302bf30870693",
+  "runtime_fingerprint": {
+    "jsonschema_version": "4.26.0",
+    "numpy_version": "2.5.2",
+    "platform_machine": "arm64",
+    "platform_release": "25.6.0",
+    "platform_system": "Darwin",
+    "python_implementation": "CPython",
+    "python_version": "3.14.7"
+  },
+  "schema_version": "1.0.0",
+  "source_bindings": [
+    {
+      "path": "src/adf_poc/actions.py",
+      "role": "ADF_SRC_ADF_POC_ACTIONS_PY",
+      "sha256": "cd23ffa3899e5ff39a89274ecdc687fc2862869a08ca318cf0d994611bc37952"
+    },
+    {
+      "path": "src/adf_poc/audit.py",
+      "role": "ADF_SRC_ADF_POC_AUDIT_PY",
+      "sha256": "adb54ab9d4f6ed36fd2f4516fd9b27f6bf5670f1ede491f56edaf3cf582ef6c1"
+    },
+    {
+      "path": "src/adf_poc/engine.py",
+      "role": "ADF_SRC_ADF_POC_ENGINE_PY",
+      "sha256": "eaf8c8337073371a72164ec4a3757949e05d9e0a70aaf1bdab838c5b30f85370"
+    },
+    {
+      "path": "src/adf_poc/evidence.py",
+      "role": "ADF_SRC_ADF_POC_EVIDENCE_PY",
+      "sha256": "e3fe6c6ab13c99015b9fa154aa58caa5a4189b8ce110288527b44be2b279a6e2"
+    },
+    {
+      "path": "src/adf_poc/execution.py",
+      "role": "ADF_SRC_ADF_POC_EXECUTION_PY",
+      "sha256": "453eb2c4b351eefe5c7f37872855007d5ff6d6c5948fc6a2a2773fe76618fc6f"
+    },
+    {
+      "path": "src/adf_poc/features.py",
+      "role": "ADF_SRC_ADF_POC_FEATURES_PY",
+      "sha256": "acf3a1c92a07f9a78883d2a0ab464466ddfc3e454a710bbdb2c848ff36b9c79d"
+    },
+    {
+      "path": "src/adf_poc/feature_contract.py",
+      "role": "ADF_SRC_ADF_POC_FEATURE_CONTRACT_PY",
+      "sha256": "8f75a3f54926d3ba42d05025acbe073ca21792dbf4e4aa2bec6302ab1f19ecdc"
+    },
+    {
+      "path": "src/adf_poc/__init__.py",
+      "role": "ADF_SRC_ADF_POC_INIT_PY",
+      "sha256": "211174b5cf2948e1c5ca5f009df662a4e92a574b45feb0dd6c232cdc9a4c2ae0"
+    },
+    {
+      "path": "src/adf_poc/metrics.py",
+      "role": "ADF_SRC_ADF_POC_METRICS_PY",
+      "sha256": "98ab245a778716257bd3e6a0276e6a478f107bfb8337dcdea5a3ec8eaff83cbd"
+    },
+    {
+      "path": "src/adf_poc/model.py",
+      "role": "ADF_SRC_ADF_POC_MODEL_PY",
+      "sha256": "43b42f82bf5542507d9aca9e4963268a0868714ff653d6abbaf9b2024d435695"
+    },
+    {
+      "path": "src/adf_poc/policy.py",
+      "role": "ADF_SRC_ADF_POC_POLICY_PY",
+      "sha256": "534b29cba0074b37ea383d9aa480b564915601c49e0099a1cc3d5416c618c39a"
+    },
+    {
+      "path": "src/adf_poc/replay/adapters.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_ADAPTERS_PY",
+      "sha256": "9163a13399de3b05c52c270a966c4fc62661330c14c9d490a04423340c71cbc2"
+    },
+    {
+      "path": "src/adf_poc/replay/contracts.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_CONTRACTS_PY",
+      "sha256": "d1632cfc69510e8fced34c8607c2b6e0c056dabd971e7103c7a307c19245cd51"
+    },
+    {
+      "path": "src/adf_poc/replay/gate_b.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_GATE_B_PY",
+      "sha256": "1b368bca62ca6f4de47354240eb7be6f067d1e50f02a172853b76b347d70cde4"
+    },
+    {
+      "path": "src/adf_poc/replay/harness.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_HARNESS_PY",
+      "sha256": "e08d75c788df0fb49c4d750831e4c31dc8bc44f4624e7dbc751d5645b751bbc4"
+    },
+    {
+      "path": "src/adf_poc/replay/__init__.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_INIT_PY",
+      "sha256": "f40af135e9413a407956f8024b4300845bbb454fc2f6af241349a05d4a7726b3"
+    },
+    {
+      "path": "src/adf_poc/replay/metrics.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_METRICS_PY",
+      "sha256": "04e95d64985994f8783295533323386def739e6aa42660426b65f5653e9639aa"
+    },
+    {
+      "path": "src/adf_poc/replay/normalizer.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_NORMALIZER_PY",
+      "sha256": "b4de251e4dab0f2c316cdcc22dd93692ffaab21a4ec5ddf59c7efb8c91de797c"
+    },
+    {
+      "path": "src/adf_poc/replay/qualification.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_QUALIFICATION_PY",
+      "sha256": "f7f638d7d6576863c0b342984f714c26d1bd125bc6fbc80f7ea2731424a87b42"
+    },
+    {
+      "path": "src/adf_poc/replay/reference_features.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_REFERENCE_FEATURES_PY",
+      "sha256": "228987eeb46baab740fc031054fa3f761b6450750f2490723ff9e9b02ecd3a0b"
+    },
+    {
+      "path": "src/adf_poc/replay/secure_output.py",
+      "role": "ADF_SRC_ADF_POC_REPLAY_SECURE_OUTPUT_PY",
+      "sha256": "2e69072ce103fd957cc96ae46073bc08219028708fc6170a4e58e6f5694e5ddb"
+    },
+    {
+      "path": "src/adf_poc/reporting.py",
+      "role": "ADF_SRC_ADF_POC_REPORTING_PY",
+      "sha256": "236ddfa547edf8eb3eaf8b3a25f6fca2f1c55d88178d22565d1ef7603b087c53"
+    },
+    {
+      "path": "src/adf_poc/schemas.py",
+      "role": "ADF_SRC_ADF_POC_SCHEMAS_PY",
+      "sha256": "ee6f0b2cb25799570bbef913dfa3267ed61bcdcf71d502cc3db1c51809306bb1"
+    },
+    {
+      "path": "src/adf_poc/synthetic.py",
+      "role": "ADF_SRC_ADF_POC_SYNTHETIC_PY",
+      "sha256": "fca02d98c01e5f1d61febebecec291f790ea650c13607c0ce06d20212035a239"
+    },
+    {
+      "path": "src/adf_poc/utils.py",
+      "role": "ADF_SRC_ADF_POC_UTILS_PY",
+      "sha256": "28df556a122298198596d1be57a4c85064d66e1fa4b03dc46d056617fe403b31"
+    },
+    {
+      "path": "src/adf_poc/verifier.py",
+      "role": "ADF_SRC_ADF_POC_VERIFIER_PY",
+      "sha256": "5d868016e180a16eb0ed60cc31179ebb66736a182c0d9b67db7a39dd6275707f"
+    },
+    {
+      "path": "scripts/generate_feature_assurance_ce2_campaign.py",
+      "role": "CAMPAIGN_GENERATOR",
+      "sha256": "ca3a7c0abf7a2102b23af9fa8a88277654350b25db0bc166bcd9faba0c4674de"
+    },
+    {
+      "path": "config/feature_assurance_ce2_campaign_plan.json",
+      "role": "CAMPAIGN_PLAN",
+      "sha256": "25538fb7904e8ac7f897c1bb2df6bea8e87a28b4e6925a4195b6a29bd9b1b856"
+    },
+    {
+      "path": "contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json",
+      "role": "CAMPAIGN_SCHEMA",
+      "sha256": "17530ea30238cc6ca64620472b4f47dcb5650dbbc9d1777c1130af5e4b79b3d7"
+    },
+    {
+      "path": "scripts/validate_claim_evidence.py",
+      "role": "CLAIM_VALIDATOR",
+      "sha256": "c780ff6f13036a4c908ac10fac536002b3b50ff7a0a286ed7afa2f7cf3a9a36b"
+    },
+    {
+      "path": "requirements.txt",
+      "role": "DEPENDENCY_DECLARATIONS",
+      "sha256": "7e51e610be25b0db5d7c67f7e0cb04feccb9e78beba74d3e71495be01c77c6f2"
+    },
+    {
+      "path": "contracts/v0.2.0/evaluation-evidence.schema.json",
+      "role": "EVIDENCE_SCHEMA",
+      "sha256": "8a5d66ea1d680f9e7064323b6598af19379df2821472914bce7dbb964d502682"
+    },
+    {
+      "path": "contracts/v0.2.0/examples/phase2-qualification-evidence-record.json",
+      "role": "EVIDENCE_TEMPLATE",
+      "sha256": "c2a623f878ba9654c893e14fa54373ca9b4bd4e1c6c118661f86d360a4a9c4fd"
+    },
+    {
+      "path": "pyproject.toml",
+      "role": "PROJECT_METADATA",
+      "sha256": "483c7db0c8f8d672b70891869ceef4431680880aa45832f9b67bfa7e304092ab"
+    },
+    {
+      "path": "contracts/v0.2.0/replay-qualification.schema.json",
+      "role": "QUALIFICATION_SCHEMA",
+      "sha256": "4693a5e6d1c9a7e063ec34aba7fc252360dc868e7781b19f3848b14a5d7baf3b"
+    },
+    {
+      "path": "contracts/v0.2.0/reference-feature-assurance.schema.json",
+      "role": "REFERENCE_ASSURANCE_SCHEMA",
+      "sha256": "7cb168bdf37b0e5e2d1e723e8cb3e7bd2dabf7a80689dbd40bb8ccce907567de"
+    },
+    {
+      "path": "contracts/v0.2.0/replay-case.schema.json",
+      "role": "REPLAY_CASE_SCHEMA",
+      "sha256": "35df3dbd934725c94eb66dbf8a6878274844abc4be10c1bcae105142415da37b"
+    }
+  ]
+}

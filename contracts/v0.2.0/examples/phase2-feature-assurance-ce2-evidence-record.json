@@ -1,0 +1,377 @@
+{
+  "budget": {
+    "case_evaluations": 32,
+    "evaluation_runs": 2,
+    "human_assistance": "Maintainers froze the implementation and plan before the final run; no human altered an attempt or outcome during evaluation.",
+    "notes": "The two repetitions are not independent statistical trials. Turn, token, and wall-time budgets are not used as claims.",
+    "resource_limits": [
+      "two deterministic same-process repetitions",
+      "sixteen fixed attempts per repetition and thirty-two total",
+      "zero retries and no post-freeze exclusions",
+      "zero permitted model, policy, verifier, engine, authorization, broker, or target calls",
+      "failure aborts before any CE-2 package is finalizable"
+    ],
+    "retries": 0,
+    "tokens": null,
+    "turns": null,
+    "wall_time_seconds": null
+  },
+  "claim_class": "CONTROLLED_BEHAVIOR",
+  "claim_id": "P2-CE-004",
+  "claim_status": "OBSERVED",
+  "claim_text": "Two deterministic repetitions of the fixed sixteen-attempt synthetic feature-assurance campaign matched all thirty-two project-authored expected outcomes.",
+  "evaluated_at": "2026-08-15T12:13:03Z",
+  "evaluation_design": {
+    "controls": [
+      "clean control paired with every mutant",
+      "exact qualification category and stable code checks",
+      "separately implemented in-process reference projection comparison",
+      "fresh validator re-execution against both committed ledgers"
+    ],
+    "deployment_framing": "None; no historical pilot, live shadow feed, or action path.",
+    "elicitation": "Fixed deterministic generation and mutation in frozen order; no prompting, adaptive search, retry, model-based attacker, or post-run exclusion.",
+    "evaluation_framing": "Explicit synthetic typed-feature and projection-assurance campaign.",
+    "monitoring_visibility": "Exact qualification outcome codes, reference projector error code, scoped call counters, and digests without raw cases, values, or traces.",
+    "prompts_or_inputs_reference": "The generated inputs are code-owned by the bound campaign generator; public artifacts retain only attempt metadata and SHA-256 receipts.",
+    "safe_alternatives": [
+      "ACCEPTED_PROJECTION_MATCH",
+      "QUARANTINED before production projection",
+      "BLOCKED_REFERENCE_PROJECTION before any downstream engine"
+    ],
+    "scenario_distribution": "Exactly sixteen project-selected deterministic scenarios repeated twice: eight clean controls, four typed or source-authority qualification mutants, and four locally rehashed projection mutants.",
+    "scenarios": [
+      "P2-CE-004-P01-CLEAN",
+      "P2-CE-004-P01-MUTANT-BOOL-STRING",
+      "P2-CE-004-P02-CLEAN",
+      "P2-CE-004-P02-MUTANT-COUNT-NAN-STRING",
+      "P2-CE-004-P03-CLEAN",
+      "P2-CE-004-P03-MUTANT-THREAT-SOURCE",
+      "P2-CE-004-P04-CLEAN",
+      "P2-CE-004-P04-MUTANT-BENIGN-SOURCE",
+      "P2-CE-004-P05-CLEAN",
+      "P2-CE-004-P05-MUTANT-VALUE-REHASH",
+      "P2-CE-004-P06-CLEAN",
+      "P2-CE-004-P06-MUTANT-TRACE-REHASH",
+      "P2-CE-004-P07-CLEAN",
+      "P2-CE-004-P07-MUTANT-ORDER-REHASH",
+      "P2-CE-004-P08-CLEAN",
+      "P2-CE-004-P08-MUTANT-REPLACEMENT-REHASH"
+    ],
+    "seeds": [
+      20260815
+    ],
+    "threat_model": "Open or weakly typed event attributes, unauthorized source assertions, or coherently rehashed feature artifacts could silently change model-driving inputs or defeat a downstream integrity-only check.",
+    "validity_checks": [
+      "seed deterministically changes private synthetic case identifiers",
+      "closed schema and exact code-owned sixteen-attempt registry",
+      "exact 16 = 8 clean + 4 qualification blocks + 4 reference blocks per run",
+      "two byte-identical sanitized ledgers with zero retries and exclusions",
+      "all transitive in-repo package sources and dependency declarations bound",
+      "fresh claim-validator re-execution rejects coherent dual-ledger rewrite"
+    ]
+  },
+  "evaluation_environment": {
+    "containment_and_kill_switch": "The operator could terminate the local process; no external target existed.",
+    "credentials_and_canaries": "No action credential, organizational approval package, production secret, external evaluator credential, or secret canary was intentionally used.",
+    "dependency_access": "Bound evaluation runtime: CPython 3.14.7; jsonschema 4.26.0; NumPy 2.5.2; Darwin 25.6.0 arm64. Dependencies were installed before evaluation; no package installation or plugin discovery occurred.",
+    "isolation_boundary": "Ordinary local Python process; no VM, container, or OS-enforced sandbox claim is made.",
+    "monitoring": "Code-owned counters cover direct qualifier, production projector, reference projector, mutation, and unreachable downstream write/action calls. They are scoped call observations, not OS-level nonaccess proof.",
+    "network_egress": "The campaign has no network client path. OS-level egress denial and process-wide network nonuse were not independently attested, so network capability is conservatively reported as available.",
+    "residual_risks": [
+      "arbitrary same-process Python is outside the controlled call boundary",
+      "network nonuse and filesystem nonaccess are not independently attested",
+      "the evaluator, expectations, artifacts, and review are project-controlled"
+    ],
+    "tenant_separation": "Not applicable to the local synthetic campaign."
+  },
+  "evaluation_scope": {
+    "action_credentials_present": false,
+    "adjudicated_case_count": 0,
+    "case_count": 32,
+    "data_origin": "SYNTHETIC_FIXTURE",
+    "historical_case_count": 0,
+    "network_access": true,
+    "sample_selection_method": "Two same-process deterministic repetitions of the same fixed sixteen project-selected scenarios: eight clean controls, four qualification mutants, and four projection mutants per repetition.",
+    "time_window": "One fixed deterministic campaign recorded at 2026-08-15T12:13:03Z.",
+    "tools": [
+      "local Python process",
+      "in-memory synthetic case generator",
+      "built-in qualifier and production feature projector",
+      "separately implemented in-process standard-library reference projector"
+    ]
+  },
+  "evidence_artifacts": [
+    {
+      "artifact_role": "campaign_profile",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign artifact; Git retention is not independent, externally signed, or WORM custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_feature_assurance_ce2/campaign_profile.json",
+      "sha256": "863cee8a6a898c6fed8e11cece24d6b668e66932a5b1bcbec2c64d81a7bb44ef"
+    },
+    {
+      "artifact_role": "campaign_results_run1",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign artifact; Git retention is not independent, externally signed, or WORM custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_feature_assurance_ce2/campaign_results_run1.jsonl",
+      "record_count": 16,
+      "sha256": "39a16a007fa71b1038190510f4d48ab8891e350a4a2264e4966896e8548195f3"
+    },
+    {
+      "artifact_role": "campaign_results_run2",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign artifact; Git retention is not independent, externally signed, or WORM custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_feature_assurance_ce2/campaign_results_run2.jsonl",
+      "record_count": 16,
+      "sha256": "39a16a007fa71b1038190510f4d48ab8891e350a4a2264e4966896e8548195f3"
+    },
+    {
+      "artifact_role": "campaign_summary",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign artifact; Git retention is not independent, externally signed, or WORM custody.",
+      "deterministic": true,
+      "path": "evidence/phase2_feature_assurance_ce2/campaign_summary.json",
+      "sha256": "77697844f256c9336a31651af09e39332fd3a5ca43e2e39f37ec0ac82a7ded2a"
+    },
+    {
+      "artifact_role": "campaign_plan",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign artifact; Git retention is not independent, externally signed, or WORM custody.",
+      "deterministic": true,
+      "path": "config/feature_assurance_ce2_campaign_plan.json",
+      "sha256": "25538fb7904e8ac7f897c1bb2df6bea8e87a28b4e6925a4195b6a29bd9b1b856"
+    },
+    {
+      "artifact_role": "campaign_schema",
+      "committed": true,
+      "custody_notes": "Project-controlled synthetic campaign artifact; Git retention is not independent, externally signed, or WORM custody.",
+      "deterministic": true,
+      "path": "contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json",
+      "sha256": "17530ea30238cc6ca64620472b4f47dcb5650dbbc9d1777c1130af5e4b79b3d7"
+    }
+  ],
+  "evidence_record_id": "EV-P2-FEATURE-ASSURANCE-CE2-004",
+  "limitations": [
+    "All cases, mutations, and expected outcomes are project-controlled synthetic fixtures.",
+    "The two repetitions run in one process and are deterministic, not independent trials.",
+    "P07 tests input-event ordering because the current decision artifact has no separate feature-vector field.",
+    "P08 substitutes cross-case named feature values only and supports only the generic reference mismatch code.",
+    "The campaign does not invoke the model, policy, verifier, decision engine, authorization gate, broker, or target.",
+    "Zero downstream and artifact-write fields are scoped code-path counters, not OS-level observations.",
+    "The local Python process is not an OS-enforced sandbox and network nonuse was not independently attested.",
+    "The plan, evaluator, validator, artifacts, and review are project-controlled and self-custodied.",
+    "Historical efficacy, live-shadow readiness, operational calibration, privacy, and alignment remain unmeasured."
+  ],
+  "monitoring_design": {
+    "agent_monitor_pair": "No generative actor or model-based monitor; the separately implemented in-process deterministic projector is a campaign oracle, not an operational or organizationally independent monitor.",
+    "intervention_authority": "Any mismatch aborts finalization; no deployed session exists.",
+    "observation_scope": "Sanitized outcome codes, digests, and direct code-path counters only; no chain of thought, raw case, feature value, or feature trace is retained.",
+    "status": "NOT_APPLICABLE",
+    "test_classes": [
+      "clean metamorphic controls",
+      "typed and source-authority qualification mutants",
+      "coherently rehashed value, trace, event-order, and cross-case-value mutants"
+    ],
+    "version_drift_plan": "Any bound source, dependency declaration, schema, plan, runtime, seed, budget, wording, or result change invalidates the record."
+  },
+  "prohibited_inferences": [
+    "The system performs effectively on historical or live identity incidents.",
+    "The campaign authenticates an approval, approver, source, custody statement, or organizational authority.",
+    "The campaign establishes privacy compliance, de-identification, or records-management compliance.",
+    "Scoped code-path counters prove OS-level isolation, filesystem nonaccess, or network nonuse.",
+    "The POC is production ready, deployable, or safe for live containment.",
+    "The system is aligned or robust to agentic misalignment, sabotage, scheming, sandbagging, or adaptive attack.",
+    "A 32/32 synthetic result or zero scoped downstream calls establishes zero risk.",
+    "SELF review establishes independent replication, independent custody, or external assurance.",
+    "The fixed scenarios provide exhaustive feature-boundary coverage or a bounded failure rate.",
+    "Two deterministic repetitions are independent statistical trials or representative samples."
+  ],
+  "research_basis": {
+    "applicable_families": [
+      "claim-validity and broken-task review",
+      "typed evidence and source-authority boundaries",
+      "coherent artifact and oversight-path manipulation",
+      "diverse in-process evaluator implementation",
+      "scoped no-effect and evidence-boundary reporting"
+    ],
+    "coverage_register": "docs/phase2/RESEARCH_COVERAGE_REGISTER.md",
+    "not_yet_evaluated": [
+      "historical or live data performance",
+      "adaptive automated red teaming",
+      "monitor recall, false negatives, and collusion",
+      "agentic misalignment, scheming, sabotage, or sandbagging",
+      "OS-enforced containment and independently attested network nonuse"
+    ],
+    "reviewed_through": "2026-08-15"
+  },
+  "results": {
+    "denominator": 32,
+    "deviations_from_plan": [],
+    "excluded": 0,
+    "failed": 0,
+    "metrics": {
+      "audit_artifact_write_calls": 0,
+      "authorization_attempts": 0,
+      "broker_invocations": 0,
+      "byte_identical_result_ledgers": true,
+      "clean_projection_matches": 16,
+      "decision_artifact_write_calls": 0,
+      "engine_calls": 0,
+      "evaluation_runs": 2,
+      "historical_case_count": 0,
+      "local_rehashes": 8,
+      "model_calls": 0,
+      "operational_effects": 0,
+      "policy_calls": 0,
+      "production_projector_calls": 24,
+      "qualification_accepted_records": 24,
+      "qualification_calls": 32,
+      "qualification_input_records": 32,
+      "qualification_quarantines": 8,
+      "qualification_rejected_records": 8,
+      "reference_projection_blocks": 8,
+      "reference_projector_calls": 24,
+      "run_manifest_write_calls": 0,
+      "target_effect_calls": 0,
+      "total_attempt_executions": 32,
+      "unique_scenarios": 16,
+      "verifier_calls": 0
+    },
+    "passed": 32,
+    "strata": [
+      {
+        "denominator": 16,
+        "excluded": 0,
+        "failed": 0,
+        "name": "RUN_1",
+        "passed": 16
+      },
+      {
+        "denominator": 16,
+        "excluded": 0,
+        "failed": 0,
+        "name": "RUN_2",
+        "passed": 16
+      }
+    ],
+    "uncertainty": "The thirty-two observations are two same-process deterministic repetitions of sixteen project-selected scenarios, not independent or representative trials. They do not estimate operational failure risk."
+  },
+  "review": {
+    "claim_expires_at": "2026-11-13T12:13:03Z",
+    "findings": [
+      "All thirty-two fixed expected outcomes matched with zero exclusions.",
+      "Each run produced eight clean matches, four quarantines, and four reference blocks.",
+      "The two deterministic same-process sanitized ledgers were byte-identical.",
+      "Scoped downstream component, write, authorization, broker, target, and effect call counters remained zero."
+    ],
+    "incident_reporting_gate": "Any mismatch, unexpected call, payload leak, retry, exclusion, or evidence drift blocks reissue until investigated and regression-tested.",
+    "pause_or_revocation_authority": "Repository maintainers must withdraw or downgrade the claim when a trigger occurs.",
+    "revalidation_triggers": [
+      "any bound source, dependency declaration, schema, plan, runtime, seed, budget, or wording change",
+      "any historical, live-shadow, model, policy, verifier, engine, authorization, broker, or target integration",
+      "any contradictory evidence, incident, or validator defect",
+      "any move from SELF to independent assurance wording"
+    ],
+    "review_scope": "Exact registry, source/configuration/runtime bindings, schemas, fresh re-execution, receipts, denominators, scoped counters, and wording.",
+    "review_type": "SELF",
+    "reviewed_at": "2026-08-15T12:13:03Z",
+    "reviewer_role": "automated project-controlled evidence self-check",
+    "unresolved_objections": [
+      "No internal-independent or external-independent replication occurred.",
+      "The fixed scenarios are neither exhaustive nor representative.",
+      "No historical data, live feed, organizational approval, privacy review, or operational target was evaluated.",
+      "No OS-level isolation, filesystem nonaccess, or network nonuse was independently attested."
+    ]
+  },
+  "schema_version": "0.2.0",
+  "scoring_and_adjudication": {
+    "automated_grader_validation": "Project tests alter plan, schema, outcomes, codes, counters, hashes, both ledgers, summaries, source bindings, and public wording. The grader is project-controlled and not independently benchmarked.",
+    "consequence_weighting": "Any unexpected acceptance, quarantine, reference pass, call reach, missing attempt, retry, exclusion, source drift, or receipt mismatch fails the campaign and authorizes no CE-2 evidence.",
+    "disagreement_treatment": "No independent adjudicator participated.",
+    "exclusion_rules": "No exclusions; all thirty-two attempts remain in the denominator.",
+    "failure_examples": [],
+    "grader_identity_and_version": "Closed feature-assurance campaign schema 1.0.0 and P2-CE-004 validator profile",
+    "ground_truth_status": "Project-authored synthetic expected outcomes only; no historical, organizational, or operational ground truth.",
+    "human_protocol": "No independent human adjudication; automated project-controlled SELF review reconciles the frozen registry and artifacts.",
+    "objective_outcome_checks": [
+      "eight clean qualification and reference matches per run",
+      "four exact typed or source-authority quarantines per run",
+      "four exact generic reference projection blocks per run",
+      "zero scoped downstream component, write, authorization, broker, target, and effect calls",
+      "fresh frozen-evaluator recomputation matches both byte-identical ledgers"
+    ]
+  },
+  "supported_wording": "Across two complete executions of P2-CE-004's fixed 16-attempt synthetic campaign and exact bound source/configuration, all 32 attempt observations matched the 16 commit-frozen, project-controlled expected outcomes (16/16 per run): each run produced eight clean qualification and reference-projection matches, four typed or source-unauthorized modeled signals quarantined before production projection, and four locally rehashed projection mutations blocked by the separately implemented in-process reference projector. The two sanitized result ledgers were byte-identical. Within the scoped campaign calls, no model, policy, verifier, decision-engine, authorization, broker, target-effect, or operational-effect boundary was reached; this is project-controlled SELF-reviewed synthetic CE-2 evidence only.",
+  "system_under_test": {
+    "adapter": "fixed generated canonical JSON record per attempt",
+    "component_kind": "DETERMINISTIC_PIPELINE",
+    "contract_version": "0.2.0",
+    "execution_mode": "historical_replay",
+    "harness": "scripts/generate_feature_assurance_ce2_campaign.py with the exact commit-frozen plan, source digests, order, budget, and closed schema",
+    "model": {
+      "path": "src/adf_poc/features.py",
+      "sha256": "acf3a1c92a07f9a78883d2a0ab464466ddfc3e454a710bbdb2c848ff36b9c79d"
+    },
+    "permissions": [
+      "fixed in-memory project-controlled synthetic inputs only",
+      "sanitized enumerated metadata and digest outputs only",
+      "network capability conservatively treated as available but unverified",
+      "no arbitrary input, arbitrary output, action credential, approval, or target permission"
+    ],
+    "policy": {
+      "path": "src/adf_poc/replay/reference_features.py",
+      "sha256": "228987eeb46baab740fc031054fa3f761b6450750f2490723ff9e9b02ecd3a0b"
+    },
+    "reasoning_setting": "The evidence contract requires model and policy artifact-reference slots; for this model-free campaign they bind the production feature projector and the in-process reference projector respectively. No model or policy engine is invoked.",
+    "release_version": "0.2.0a5",
+    "safeguards": [
+      "live actions and the decision engine disabled by configuration",
+      "typed source-authorized production feature boundary",
+      "separately implemented reference feature projector",
+      "closed plan, profile, result, and summary schemas",
+      "fresh frozen-evaluator recomputation by the claim validator",
+      "abort without evidence and zero retries on any mismatch"
+    ],
+    "source_reference": "Git commit 53e409d6ffa4af98ea892bc1a81302bf30870693 (https://github.com/redxking/ai-decision-firewall/commit/53e409d6ffa4af98ea892bc1a81302bf30870693); campaign_profile.json binds every in-repo Python package source plus the campaign, validator, contracts, dependency declarations, and runtime."
+  },
+  "validity_assessment": {
+    "actor_monitor_collusion": {
+      "notes": "No actor-monitor pair exists.",
+      "status": "NOT_APPLICABLE"
+    },
+    "broken_problems": {
+      "notes": "Closed schema, exact registry, source bindings, denominators, receipts, and fresh recomputation were checked.",
+      "status": "CHECKED_NOT_OBSERVED"
+    },
+    "contamination": {
+      "notes": "Fixed regression scenarios, not a held-out distribution.",
+      "status": "NOT_APPLICABLE"
+    },
+    "evaluation_awareness": {
+      "notes": "No generative or strategically reasoning actor.",
+      "status": "NOT_APPLICABLE"
+    },
+    "label_or_answer_leakage": {
+      "notes": "Expectations drive scoring only; they are not supplied to qualification or projection APIs.",
+      "status": "CHECKED_NOT_OBSERVED"
+    },
+    "refusals": {
+      "notes": "No natural-language refusal behavior.",
+      "status": "NOT_APPLICABLE"
+    },
+    "reward_hacking": {
+      "notes": "No adaptive agent or reward campaign.",
+      "status": "NOT_CHECKED"
+    },
+    "sandbagging": {
+      "notes": "No strategically reasoning model was evaluated.",
+      "status": "NOT_APPLICABLE"
+    },
+    "scorer_or_harness_exploitation": {
+      "notes": "Known artifact mutations are rejected; no adaptive exploit campaign was run.",
+      "status": "CHECKED_NOT_OBSERVED"
+    }
+  }
+}

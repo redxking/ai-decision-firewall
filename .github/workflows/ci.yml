@@ -44,16 +44,21 @@ jobs:
       - name: Validate commit-frozen feature-assurance campaign plan
         run: python scripts/generate_feature_assurance_ce2_campaign.py --validate-plan
       - name: Validate committed Phase 2 claim evidence
-        run: python scripts/validate_claim_evidence.py
+        run: python -m scripts.validate_claim_evidence
       - name: Validate committed Phase 2.1 qualification evidence
         run: >-
-          python scripts/validate_claim_evidence.py
+          python -m scripts.validate_claim_evidence
           --record contracts/v0.2.0/examples/phase2-qualification-evidence-record.json
           --profile P2-CE-002
       - name: Validate committed Phase 2.3 Gate B campaign evidence
         run: >-
-          python scripts/validate_claim_evidence.py
+          python -m scripts.validate_claim_evidence
           --record contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json
           --profile P2-CE-003
+      - name: Validate committed Phase 2.4 feature-assurance campaign evidence
+        run: >-
+          python -m scripts.validate_claim_evidence
+          --record contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json
+          --profile P2-CE-004
       - name: Verify repository manifest
         run: shasum -a 256 -c MANIFEST.sha256

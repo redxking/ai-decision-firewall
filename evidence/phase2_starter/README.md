@@ -13,7 +13,7 @@ The bundle includes:
 - adjudication comparisons and replay metrics; and
 - the run manifest that binds every input and output digest and record count.
 
-The controlling evidence record is [`contracts/v0.2.0/examples/phase2-starter-evidence-record.json`](../../contracts/v0.2.0/examples/phase2-starter-evidence-record.json). Run `python scripts/validate_claim_evidence.py` from the repository root to validate its schema, artifact hashes and counts, run-manifest cross-checks, audit chain, and narrow result totals.
+The controlling evidence record is [`contracts/v0.2.0/examples/phase2-starter-evidence-record.json`](../../contracts/v0.2.0/examples/phase2-starter-evidence-record.json). Run `python -m scripts.validate_claim_evidence` from the repository root to validate its schema, artifact hashes and counts, run-manifest cross-checks, audit chain, and narrow result totals.
 
 ## Evidence boundary
 

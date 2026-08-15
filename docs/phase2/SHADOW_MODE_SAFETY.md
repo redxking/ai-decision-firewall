@@ -6,7 +6,7 @@ Under the built-in runner, canonical adapter, and tested repository configuratio
 
 This CE-2 controlled-behavior claim applies only to the repository-controlled path and exact configuration identified by the run evidence. The starter is a same-process Python program, not an OS-enforced sandbox against arbitrary imported code. The claim does not authorize a live data connection. The included fixture is synthetic, `historical_case_count=0`, and no live-feed connector or action capability exists.
 
-Phase 2.4 adds a separate CE-1 implementation-conformance boundary: modeled attributes require exact types and authorized sources, canonical inventory context is bound exactly, and a separately implemented in-process projector must reproduce the serialized 20-feature values and traces before evaluation metrics or a completed run manifest. This does not expand the CE-2 no-effect claim, and the corrected `P2-CE-004` freeze has no valid published campaign evidence.
+Phase 2.4 adds a separate CE-1 implementation-conformance boundary: modeled attributes require exact types and authorized sources, canonical inventory context is bound exactly, and a separately implemented in-process projector must reproduce the serialized 20-feature values and traces before evaluation metrics or a completed run manifest. The fixed `P2-CE-004` campaign adds narrow SELF-reviewed CE-2 evidence for 32 commit-bound synthetic attempts. It does not expand the replay no-effect claim or authorize historical, live, shadow-feed, or action use.
 
 ## Safety invariants
 
@@ -117,7 +117,7 @@ Reference assurance begins only after read-only decision validation, determinist
 
 A mismatch raises a stable code-owned error and emits no reference-assurance artifact, qualification/rejection publication, adjudication comparison, metrics, or completed run manifest. Raw/normalized/deterministic decisions and the audit may already exist and must remain visibly incomplete rather than being treated as a completed replay.
 
-This check does not prove that source assertions are authentic or true, recompute `source_conflict` or evidence quality, recompute model probability, validate policy/disposition/verifier correctness, provide external custody, or constitute independent replication. `P2-CE-004` is a planned synthetic campaign with no observed outcomes or evidence record.
+This check does not prove that source assertions are authentic or true, recompute `source_conflict` or evidence quality, recompute model probability, validate policy/disposition/verifier correctness, provide external custody, or constitute independent replication. `P2-CE-004` observed only the fixed synthetic result recorded in its evidence bundle; it does not broaden any of those claims.
 
 ## Prohibited Phase 2 changes
 

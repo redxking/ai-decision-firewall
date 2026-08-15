@@ -1,0 +1,70 @@
+{
+  "artifact_bindings": {
+    "campaign_profile_sha256": "863cee8a6a898c6fed8e11cece24d6b668e66932a5b1bcbec2c64d81a7bb44ef",
+    "campaign_results_run1_sha256": "39a16a007fa71b1038190510f4d48ab8891e350a4a2264e4966896e8548195f3",
+    "campaign_results_run2_sha256": "39a16a007fa71b1038190510f4d48ab8891e350a4a2264e4966896e8548195f3"
+  },
+  "artifact_kind": "CAMPAIGN_SUMMARY",
+  "campaign_id": "P2-CE-004-FEATURE-ASSURANCE-SYNTHETIC",
+  "campaign_plan_sha256": "25538fb7904e8ac7f897c1bb2df6bea8e87a28b4e6925a4195b6a29bd9b1b856",
+  "campaign_seed": 20260815,
+  "claim_id": "P2-CE-004",
+  "evaluated_at": "2026-08-15T12:13:03Z",
+  "evidence_boundary": {
+    "review_type": "SELF",
+    "stored_approval_package": false,
+    "stored_historical_data": false,
+    "supported_claim_class": "CONTROLLED_BEHAVIOR"
+  },
+  "implementation_commit": "53e409d6ffa4af98ea892bc1a81302bf30870693",
+  "raw_outcomes": {
+    "denominator": 32,
+    "excluded": 0,
+    "matched": 32,
+    "mismatched": 0
+  },
+  "repeatability": {
+    "attempts_per_run": 16,
+    "byte_identical_result_ledgers": true,
+    "evaluation_runs": 2,
+    "total_attempt_executions": 32
+  },
+  "run_receipts": [
+    {
+      "result_ledger_sha256": "39a16a007fa71b1038190510f4d48ab8891e350a4a2264e4966896e8548195f3",
+      "run_id": "RUN_1"
+    },
+    {
+      "result_ledger_sha256": "39a16a007fa71b1038190510f4d48ab8891e350a4a2264e4966896e8548195f3",
+      "run_id": "RUN_2"
+    }
+  ],
+  "runtime_fingerprint": {
+    "jsonschema_version": "4.26.0",
+    "numpy_version": "2.5.2",
+    "platform_machine": "arm64",
+    "platform_release": "25.6.0",
+    "platform_system": "Darwin",
+    "python_implementation": "CPython",
+    "python_version": "3.14.7"
+  },
+  "schema_version": "1.0.0",
+  "stage_outcomes": {
+    "accepted_projection_match": 16,
+    "blocked_reference_projection": 8,
+    "quarantined": 8
+  },
+  "zero_effect_assurance": {
+    "audit_artifact_write_calls": 0,
+    "authorization_attempts": 0,
+    "broker_invocations": 0,
+    "decision_artifact_write_calls": 0,
+    "engine_calls": 0,
+    "model_calls": 0,
+    "operational_effects": 0,
+    "policy_calls": 0,
+    "run_manifest_write_calls": 0,
+    "target_effect_calls": 0,
+    "verifier_calls": 0
+  }
+}

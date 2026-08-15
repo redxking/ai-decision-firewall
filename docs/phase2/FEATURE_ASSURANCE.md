@@ -12,9 +12,11 @@ This increment remains synthetic, offline, and read-only. It does not introduce 
 
 ## Current status
 
-The typed/source-authorized production contract, exact four-field inventory binding, separately implemented in-process reference projector, closed metadata-only assurance schema, harness integration, metrics/manifest bindings, and negative tests are implemented in the current Phase 2.4 checkout. The full local suite passes 147 tests. This is CE-1 implementation-conformance evidence only.
+The typed/source-authorized production contract, exact four-field inventory binding, separately implemented in-process reference projector, closed metadata-only assurance schema, harness integration, metrics/manifest bindings, and negative tests are implemented in the current Phase 2.4 checkout. The full local suite passes 147 tests. This is CE-1 implementation-conformance evidence.
 
-`P2-CE-004` is a corrected implementation freeze and plan, including a generator/checker and claim-validator profile, not a result. No valid published result ledger, summary, repeatability evidence, claim-evidence record, Commit B, or GitHub CI conclusion exists. A prior unpublished package was invalidated after its frozen validator accepted non-finite JSON and is excluded from claim evidence. Until a new bound execution produces artifacts that pass the corrected validator, the campaign remains CE-0 / `NOT_EVALUATED`.
+Separately, [`P2-CE-004`](../../contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json) is CE-2 controlled-behavior evidence for the fixed campaign against corrected implementation Commit [`53e409d6`](https://github.com/redxking/ai-decision-firewall/commit/53e409d6ffa4af98ea892bc1a81302bf30870693). Two complete deterministic same-process repetitions produced 32/32 matches to commit-frozen, project-controlled expectations: 16 clean matches, eight qualification quarantines, and eight reference-projector blocks, with zero retries, exclusions, failures, or deviations and byte-identical ledgers. Review is `SELF`, automated, project-controlled, and self-custodied.
+
+An earlier unpublished package against Commit `1945ff283794c42f8eb649e320ba6adf91a6b982` was withheld after review found that its frozen validator accepted non-finite JSON. It is invalidated, excluded from every claim denominator, and is not evidence. The current package is one new execution against the corrected A2 freeze, not a retry within its 32-attempt denominator.
 
 ## Threat and failure model
 
@@ -80,9 +82,9 @@ This is a separate in-process orchestration check, not an independently develope
 
 ## Metamorphic and adversarial test design
 
-The frozen `P2-CE-004` plan contains eight clean/mutant pairs per repetition. Each 16-attempt repetition is intended to contain eight clean projection matches, four qualification quarantines (`INVALID_BOOLEAN`, `INVALID_TYPE`, and two `UNAUTHORIZED_MODELED_SIGNAL` cases), and four `REFERENCE_FEATURE_PROJECTION_MISMATCH` blocks covering a feature-value rehash, feature-trace rehash, input-event-order rehash, and cross-case named-feature-value rehash. Two deterministic same-process repetitions would produce 32 planned attempts, with zero retries and zero exclusions. The failure policy is `ABORT_WITHOUT_EVIDENCE_NO_RETRY`: any final mismatch yields no result/evidence package. These are expected outcomes, not observations, and the repetitions are not independent or fresh statistical trials.
+The frozen `P2-CE-004` plan contains eight clean/mutant pairs per repetition. Each 16-attempt repetition predeclares eight clean projection matches, four qualification quarantines (`INVALID_BOOLEAN`, `INVALID_TYPE`, and two `UNAUTHORIZED_MODELED_SIGNAL` cases), and four `REFERENCE_FEATURE_PROJECTION_MISMATCH` blocks covering a feature-value rehash, feature-trace rehash, input-event-order rehash, and cross-case named-feature-value rehash. The two completed deterministic same-process repetitions produced all 32 expected observations with zero retries or exclusions. The failure policy was `ABORT_WITHOUT_EVIDENCE_NO_RETRY`; the repetitions are not independent or fresh statistical trials.
 
-The planned controls cover:
+The fixed controls cover:
 
 1. JSON Boolean `false` remains feature value `0.0` and Boolean `true` becomes `1.0` only for an authorized source.
 2. String `"false"`, string `"true"`, numeric strings, `"nan"`, non-finite values, Boolean counts, negative counts, fractional counts, and values above the reviewed count bound fail closed.
@@ -99,7 +101,7 @@ The campaign plan, corpus, oracle, expected outcomes, seed, budget, runtime fing
 
 ## Implementation and campaign gates
 
-The current implementation gates are satisfied locally when all of the following are true:
+The implementation gates are satisfied locally when all of the following are true:
 
 - every committed replay fixture and baseline case satisfies both schema and runtime feature contracts;
 - schema/runtime differential tests cover every modeled key, source role, type, and numeric boundary;
@@ -111,20 +113,21 @@ The current implementation gates are satisfied locally when all of the following
 - coherent downstream rehashing and audit rechaining cannot hide a feature-value or trace mutation;
 - existing Phase 1 and Phase 2 tests remain green.
 
-The following campaign/release gates remain open and must not be inferred from the implementation tests:
+The following campaign evidence gates were satisfied by the bound `P2-CE-004` package and remain separate from the implementation tests:
 
-- bind the plan, implementation, harness, corpus/generator, runtime fingerprint, seed, budget, and expected outcomes to a committed Commit-A source state;
-- execute both complete 16-attempt repetitions with no retry, exclusion, or post-freeze change;
-- preserve raw 16-row ledgers, summary, failures, and repeatability evidence;
-- create and validate a `P2-CE-004` claim-evidence record with `SELF` review, environment limits, finite expiry, and every prohibited inference;
-- update and validate the release integrity manifest against the exact final tree; and
-- commit the observed artifacts separately and verify public `main` and GitHub CI for that evidence commit.
+- the plan, implementation, harness, corpus/generator, runtime fingerprint, seed, budget, and expected outcomes are bound to corrected Commit A2 `53e409d6ffa4af98ea892bc1a81302bf30870693`;
+- both complete 16-attempt repetitions executed with no retry, exclusion, failure, deviation, or post-freeze change;
+- both raw 16-row ledgers, the summary, receipts, and byte-identical repeatability evidence are preserved;
+- the `P2-CE-004` claim-evidence record validates with `SELF` review, environment limits, finite expiry, and every prohibited inference; and
+- the release CI is configured to validate the exact committed record and perform fresh frozen-evaluator re-execution.
+
+Public-branch, final-manifest, and CI status are release-state observations and must be verified separately rather than inferred from this document.
 
 ## Evidence and claim boundary
 
-Implementation existence is CE-1. `P2-CE-004` currently remains CE-0 / not evaluated. Only a later fixed, commit-bound synthetic campaign with positive controls, known-defect mutations, raw artifacts, two-run repeatability, and validated negative controls may support this CE-2 wording:
+Implementation existence is CE-1. The exact fixed, commit-bound `P2-CE-004` campaign supplies CE-2 controlled-behavior evidence for this wording:
 
-> Under the named synthetic inputs, implementation commit, runtime, and fixed mutation set, the typed feature boundary accepted the clean controls, rejected the predeclared invalid modeled signals, and the separate reference projector detected the predeclared coherent feature-value and trace forgeries.
+> Across two complete executions of P2-CE-004's fixed 16-attempt synthetic campaign and exact bound source/configuration, all 32 attempt observations matched the 16 commit-frozen, project-controlled expected outcomes (16/16 per run): each run produced eight clean qualification and reference-projection matches, four typed or source-unauthorized modeled signals quarantined before production projection, and four locally rehashed projection mutations blocked by the separately implemented in-process reference projector. The two sanitized result ledgers were byte-identical. Within the scoped campaign calls, no model, policy, verifier, decision-engine, authorization, broker, target-effect, or operational-effect boundary was reached; this is project-controlled SELF-reviewed synthetic CE-2 evidence only.
 
 The result must not be described as:
 
@@ -135,7 +138,7 @@ The result must not be described as:
 - correctness of `source_conflict`, evidence-quality grading, or any other decision input outside the 20-feature projection;
 - complete protection from evaluator, monitor, code, or data sabotage;
 - an independent replication, external audit, or externally preregistered study;
-- independent, fresh, or statistically representative trials from the two planned same-process repetitions;
+- independent, fresh, or statistically representative trials from the two same-process repetitions;
 - OS-level process isolation, non-egress, tamper resistance, or independent custody;
 - alignment, misalignment, scheming, sandbagging, or hidden-objective evidence;
 - a bounded failure probability, zero risk, production readiness, or authorization for historical/live processing.

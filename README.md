@@ -93,7 +93,9 @@ Phase 2.4 adds a bounded feature-assurance layer without changing the action bou
 - a successful check emits one closed, metadata-only `reference_feature_assurance.jsonl` row per case and binds its digest/count into metrics and the run manifest; and
 - a mismatch stops the run before qualification/rejection publication, adjudication loading, comparisons, metrics, or completed run-manifest finalization. Raw/normalized/deterministic decisions and the audit may already exist and must be treated as incomplete evidence.
 
-The fixed `P2-CE-004` campaign is currently a **corrected implementation freeze and plan only**. Its design calls for two deterministic same-process repetitions of 16 synthetic attempts each: eight clean projection matches, four qualification quarantines (`INVALID_BOOLEAN`, `INVALID_TYPE`, and two `UNAUTHORIZED_MODELED_SIGNAL` cases), and four `REFERENCE_FEATURE_PROJECTION_MISMATCH` blocks per repetition, with zero retries or exclusions. The repetitions are not independent or fresh statistical trials; any final mismatch aborts without a result/evidence package. An earlier unpublished package against Commit `1945ff283794c42f8eb649e320ba6adf91a6b982` was rejected after review identified a non-finite-JSON validation gap. It is excluded and is not CE-2 evidence. No valid result ledger or claim-evidence record exists yet, so `P2-CE-004` remains CE-0 / `NOT_EVALUATED`. The 147-test implementation result is CE-1 conformance evidence for this checkout, not the planned CE-2 campaign result.
+The fixed [`P2-CE-004`](contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json) campaign is now a narrow CE-2 `CONTROLLED_BEHAVIOR` result against corrected implementation Commit [`53e409d6`](https://github.com/redxking/ai-decision-firewall/commit/53e409d6ffa4af98ea892bc1a81302bf30870693). Two deterministic same-process repetitions of 16 synthetic attempts produced 32/32 matches to commit-frozen, project-controlled expectations with zero retries, exclusions, failures, or deviations: 16 clean qualification/reference matches, eight qualification quarantines, and eight reference-projection blocks. The two sanitized ledgers were byte-identical. No model, policy, verifier, decision engine, authorization, broker, target-effect, or operational-effect boundary was reached. This is SELF automated project-controlled evidence only; the 147-test implementation suite remains separate CE-1 conformance evidence.
+
+An earlier unpublished package against Commit `1945ff283794c42f8eb649e320ba6adf91a6b982` was withheld after review found that its frozen validator accepted non-finite JSON. That package is invalidated, excluded from every claim denominator, and is not evidence. The published package is one new execution against the corrected A2 freeze, not a retry within its 32-attempt denominator.
 
 The included Phase 2 fixture contains **zero historical cases**. It exercises the framework; it does not establish historical replay performance, analyst agreement, operational calibration, or readiness for live shadow deployment. See [`docs/phase2/`](docs/phase2/) for the architecture, data contract, requirements, safety case, and validation plan.
 
@@ -148,7 +150,25 @@ The fixed Phase 2.3 Gate B campaign reports the following separate CE-2 result:
 
 The exact [`evidence record`](contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json) binds the [`campaign profile and result bundle`](evidence/phase2_gate_b_ce2/README.md), fixed plan, schema, implementation commit, generator, validator, fixtures, model, and policy. It does not represent a real approval, actual historical data, a live feed or action, OS-level nonaccess or non-egress, target-side proof, exhaustive coverage, an operational failure-rate estimate, efficacy, or an alignment/misalignment evaluation.
 
-The worked [`starter evidence record`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json), [`qualification evidence record`](contracts/v0.2.0/examples/phase2-qualification-evidence-record.json), and [`Gate B campaign evidence record`](contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json) state the exact narrow claims these results support, identify the systems and artifacts, and carry forward limitations and prohibited inferences. The broader [`claim-evidence standard`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) defines what additional validity, adversarial, statistical, and independent-review evidence is required before stronger language is permitted. The current POC uses a logistic model and deterministic controls; it does not contain an autonomous generative-language-model agent.
+The fixed Phase 2.4 feature-assurance campaign reports the following separate CE-2 result:
+
+| `P2-CE-004` measure | Included result |
+|---|---:|
+| Complete repetitions | 2 |
+| Fixed scenarios per repetition | 16 |
+| Observations matching project-controlled expectations | 32 / 32; no exclusions |
+| Clean qualification and reference-projection matches | 16 |
+| Qualification quarantines | 8: 2 `INVALID_BOOLEAN`, 2 `INVALID_TYPE`, 4 `UNAUTHORIZED_MODELED_SIGNAL` |
+| Reference-projection mismatch blocks | 8 |
+| Model / policy / verifier / decision-engine calls | 0 / 0 / 0 / 0 |
+| Authorization / broker / target-effect / operational-effect calls | 0 / 0 / 0 / 0 |
+| Retries / exclusions / failures / deviations | 0 / 0 / 0 / 0 |
+| Sanitized result ledgers | Byte-identical across the two repetitions |
+| Historical cases | 0 |
+
+The exact [`feature-assurance evidence record`](contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json) binds the [`campaign bundle`](evidence/phase2_feature_assurance_ce2/README.md), fixed plan, schema, A2 implementation commit, generator, corrected validator, project sources, dependency declarations, runtime fingerprint, seed, order, expected outcomes, and budget. It does not establish source truth, full decision correctness, independent assurance, historical/live behavior, efficacy, production readiness, or alignment/misalignment behavior.
+
+The worked [`starter evidence record`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json), [`qualification evidence record`](contracts/v0.2.0/examples/phase2-qualification-evidence-record.json), [`Gate B campaign evidence record`](contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json), and [`feature-assurance campaign evidence record`](contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json) state the exact narrow claims these results support, identify the systems and artifacts, and carry forward limitations and prohibited inferences. The broader [`claim-evidence standard`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) defines what additional validity, adversarial, statistical, and independent-review evidence is required before stronger language is permitted. The current POC uses a logistic model and deterministic controls; it does not contain an autonomous generative-language-model agent.
 
 The committed `P2-CE-001` and `P2-CE-002` replay bundles predate alpha.5 and do not contain `reference_feature_assurance.jsonl`. Their original version-bound narrow claims remain validated as recorded; they were not retroactively upgraded to Phase 2.4 assurance. A newly generated alpha.5 replay is incomplete unless it produces and binds the new artifact.
 
@@ -358,20 +378,23 @@ python scripts/generate_gate_b_ce2_campaign.py \
   --implementation-commit e8aa8b0efc7d54efdf74f49fb3d10ee067f2b49b \
   --evaluated-at 2026-08-15T03:12:44Z \
   --check
-python scripts/validate_claim_evidence.py \
+python -m scripts.validate_claim_evidence \
   --record contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json \
   --profile P2-CE-003
 ```
 
 The `--check` command performs a new verification execution; it is not part of the published 32-observation denominator. The static claim-evidence command validates the committed record and artifacts. The campaign generator intentionally requires an already committed implementation SHA. A new evaluation time or any change to a bound source, plan, schema, fixture, model, policy, generator, validator, seed, or budget requires a new evidence record; do not overwrite the published result and retain its claim-lifecycle history.
 
-Validate only the frozen `P2-CE-004` plan/scaffold without running its campaign:
+Validate the frozen `P2-CE-004` plan and the committed A2 campaign evidence:
 
 ```bash
 python scripts/generate_feature_assurance_ce2_campaign.py --validate-plan
+python -m scripts.validate_claim_evidence \
+  --record contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json \
+  --profile P2-CE-004
 ```
 
-This command validates planned structure and bindings only. It does not create an observed denominator, result ledger, repeatability evidence, or CE-2 claim.
+The claim validator checks the committed artifacts and performs a fresh frozen-evaluator re-execution without rewriting them. That verification is not added to the published 32-attempt denominator. The plan-only command still validates structure and bindings only.
 
 Run the synthetic starter through the historical-replay code path:
 
@@ -419,7 +442,7 @@ shasum -a 256 -c MANIFEST.sha256
 │   ├── phase2_replay.json          # Whole-dataset, read-only replay configuration
 │   ├── phase2_qualification.json   # Cases-only synthetic qualification campaign
 │   ├── gate_b_ce2_campaign_plan.json # Fixed P2-CE-003 expected outcomes and budget
-│   └── feature_assurance_ce2_campaign_plan.json # Planned P2-CE-004 matrix; no results
+│   └── feature_assurance_ce2_campaign_plan.json # Fixed P2-CE-004 expected outcomes and budget
 ├── contracts/v0.2.0/               # Replay, Gate B, campaign, and claim-evidence contracts
 ├── data/
 │   ├── phase2_starter/             # Three-case synthetic replay fixture; no historical data
@@ -436,6 +459,7 @@ shasum -a 256 -c MANIFEST.sha256
 ├── evidence/phase2_starter/         # Sanitized evidence supporting the narrow CE-2 starter claim
 ├── evidence/phase2_qualification/   # Sanitized 7=3+4 qualification evidence and exact run artifacts
 ├── evidence/phase2_gate_b_ce2/      # Sanitized two-repetition P2-CE-003 bundle; no stored approval or historical data
+├── evidence/phase2_feature_assurance_ce2/ # Sanitized two-repetition P2-CE-004 bundle; synthetic and SELF-reviewed
 ├── local/gate_b/                    # Ignored restricted package location; never commit real controls
 ├── outputs/baseline/               # Reproducible decisions, metrics, audit, and report
 ├── scripts/                        # Confined fixture generation/checks and claim-evidence validation
@@ -472,7 +496,7 @@ The current baseline has not established:
 - suitability for safety-critical, operational-technology, or critical-infrastructure control environments;
 - agentic alignment, scheming, sabotage resistance, or monitor effectiveness; the evaluated path is deterministic and contains no autonomous generative agent.
 
-The typed contract does not prove that an authorized source assertion is truthful, authentic, complete, or semantically equivalent to a vendor record. The reference projector is separately implemented but not externally or organizationally independent, and its metadata hashes do not create independent custody. `P2-CE-004` is a corrected freeze and plan, not evidence: no valid published campaign package, repeatability result, CE-2 record, historical/live evaluation, or feature-assurance failure-rate estimate exists.
+The typed contract does not prove that an authorized source assertion is truthful, authentic, complete, or semantically equivalent to a vendor record. The reference projector is separately implemented but not externally or organizationally independent, and its metadata hashes do not create independent custody. `P2-CE-004` supplies only the exact SELF-reviewed synthetic CE-2 result above. It provides no historical/live evaluation, independent replication, external custody, exhaustive coverage, or feature-assurance failure-rate estimate.
 
 `P2-CE-003` adds no exception to these limitations. Its 32/32 observations are two repetitions of the same 16 project-selected synthetic scenarios under SELF automated project-controlled review. They do not establish a complete mutation space, a bounded failure rate, independent replication, real Gate B authority, effective de-identification, historical efficacy, live-shadow readiness, target-side effect absence, or zero risk.
 
@@ -480,9 +504,9 @@ The policy engine and verifier also share configuration and may share design def
 
 ## Roadmap
 
-The **Phase 2 starter, Phase 2.1 qualification increment, Phase 2.2 Gate B machine preflight, Phase 2.3 audit/campaign increment, and Phase 2.4 typed-feature/reference-projection implementation are now present**, with live actions remaining disabled. Phase 2.4 closes one bounded implementation gap: exact source/type validation and a separate in-process recomputation of the serialized 20-feature projection. It does not close the broader independent source-to-decision, evidence-custody, model, policy, verifier, or operational-validity gaps. `P2-CE-003` remains the latest executed CE-2 campaign; `P2-CE-004` is planned and not evaluated.
+The **Phase 2 starter, Phase 2.1 qualification increment, Phase 2.2 Gate B machine preflight, Phase 2.3 audit/campaign increment, and Phase 2.4 typed-feature/reference-projection implementation and controlled campaign are now present**, with live actions remaining disabled. Phase 2.4 closes one bounded implementation gap and records one narrow synthetic CE-2 campaign result. It does not close the broader independent source-to-decision, evidence-custody, model, policy, verifier, or operational-validity gaps.
 
-The next internal evidence step is to bind the Phase 2.4 implementation to a committed source freeze, execute the fixed `P2-CE-004` synthetic campaign without changing its denominator, and publish a validated evidence record only if the observed artifacts support its narrow wording. The next data-bearing step is external: accountable owners must assemble and authenticate a restricted Gate B approval, custody, privacy, mapping, adjudication, and pilot package for a small de-identified historical corpus. Only then may an isolated offline pilot measure source availability, schema gaps, temporal fidelity, analyst disagreement, contextual assumptions, and calibration while keeping the complete intake denominator visible. No Gate B approval, historical run, live feed, or shadow-feed progression has occurred; `shadow_read_only` remains unconnected until a separately approved Phase 3 architecture and safety case exist.
+The next internal evidence work is broader independent reconstruction of the evidence-quality, model, policy, verifier, and source-to-decision path plus stronger custody and evaluation-environment controls. The next data-bearing step is external: accountable owners must assemble and authenticate a restricted Gate B approval, custody, privacy, mapping, adjudication, and pilot package for a small de-identified historical corpus. Only then may an isolated offline pilot measure source availability, schema gaps, temporal fidelity, analyst disagreement, contextual assumptions, and calibration while keeping the complete intake denominator visible. No Gate B approval, historical run, live feed, or shadow-feed progression has occurred; `shadow_read_only` remains unconnected until a separately approved Phase 3 architecture and safety case exist.
 
 Later phases, each requiring separate evidence and authorization, are:
 
@@ -504,7 +528,7 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`docs/TEST_AND_EVALUATION_PLAN.md`](docs/TEST_AND_EVALUATION_PLAN.md) — acceptance criteria and required next-phase tests
 - [`docs/phase2/README.md`](docs/phase2/README.md) — Phase 2 scope and documentation map
 - [`docs/phase2/CLAIM_EVIDENCE_STANDARD.md`](docs/phase2/CLAIM_EVIDENCE_STANDARD.md) — claim classes, proof requirements, statistical rules, and adversarial evaluations
-- [`docs/phase2/FEATURE_ASSURANCE.md`](docs/phase2/FEATURE_ASSURANCE.md) — typed/source-authorized signals, exact inventory binding, reference projection, planned campaign, and nonclaims
+- [`docs/phase2/FEATURE_ASSURANCE.md`](docs/phase2/FEATURE_ASSURANCE.md) — typed/source-authorized signals, exact inventory binding, reference projection, controlled campaign evidence, and nonclaims
 - [`docs/phase2/RESEARCH_INFORMED_VALIDATION.md`](docs/phase2/RESEARCH_INFORMED_VALIDATION.md) — dated research lessons mapped to the bounded Phase 2.4 design; research is not project evidence
 - [`docs/phase2/RESEARCH_COVERAGE_REGISTER.md`](docs/phase2/RESEARCH_COVERAGE_REGISTER.md) — dated Anthropic and OpenAI research screen, dispositions, gaps, and refresh triggers
 - [`docs/phase2/RECORD_QUALIFICATION.md`](docs/phase2/RECORD_QUALIFICATION.md) — fatal/quarantine taxonomy, metadata contract, accounting invariants, privacy rules, synthetic gate, and historical-pilot prerequisites
@@ -514,7 +538,7 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`contracts/v0.2.0/gate-b-authorization.schema.json`](contracts/v0.2.0/gate-b-authorization.schema.json) — closed Gate B authorization-package contract
 - [`contracts/v0.2.0/gate-b-ce2-campaign.schema.json`](contracts/v0.2.0/gate-b-ce2-campaign.schema.json) — closed profile, result-row, and summary contract for `P2-CE-003`
 - [`contracts/v0.2.0/reference-feature-assurance.schema.json`](contracts/v0.2.0/reference-feature-assurance.schema.json) — closed metadata-only matched-projection record
-- [`contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json`](contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json) — closed planned profile/result contract for the not-yet-evaluated `P2-CE-004` campaign
+- [`contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json`](contracts/v0.2.0/feature-assurance-ce2-campaign.schema.json) — closed profile/result contract for the observed `P2-CE-004` campaign
 - [`contracts/v0.2.0/examples/gate-b-authorization-draft.json`](contracts/v0.2.0/examples/gate-b-authorization-draft.json) — schema-valid but explicitly non-authorizing public example
 - [`contracts/v0.2.0/replay-qualification.schema.json`](contracts/v0.2.0/replay-qualification.schema.json) — closed per-source-record qualification ledger contract
 - [`contracts/v0.2.0/qualification-expectations.schema.json`](contracts/v0.2.0/qualification-expectations.schema.json) — closed predeclared synthetic-campaign expectation contract
@@ -522,9 +546,11 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`contracts/v0.2.0/examples/phase2-starter-evidence-record.json`](contracts/v0.2.0/examples/phase2-starter-evidence-record.json) — validated, narrowly bounded starter result
 - [`contracts/v0.2.0/examples/phase2-qualification-evidence-record.json`](contracts/v0.2.0/examples/phase2-qualification-evidence-record.json) — validated, narrowly bounded seven-record qualification result
 - [`contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json`](contracts/v0.2.0/examples/phase2-gate-b-ce2-evidence-record.json) — validated, narrowly bounded Gate B controlled-behavior record
+- [`contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json`](contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json) — validated, narrowly bounded feature-assurance controlled-behavior record
 - [`evidence/phase2_starter/README.md`](evidence/phase2_starter/README.md) — sanitized inputs, outputs, hashes, and custody limits for that result
 - [`evidence/phase2_qualification/README.md`](evidence/phase2_qualification/README.md) — exact qualification run, accounting artifacts, hashes, and custody limits
 - [`evidence/phase2_gate_b_ce2/README.md`](evidence/phase2_gate_b_ce2/README.md) — exact two-repetition Gate B campaign bundle, raw denominators, and limits
+- [`evidence/phase2_feature_assurance_ce2/README.md`](evidence/phase2_feature_assurance_ce2/README.md) — exact two-repetition feature-assurance campaign bundle, raw denominator, and limits
 - [`SECURITY.md`](SECURITY.md) — vulnerability reporting and non-production security boundaries
 - [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md) — imported-package provenance and archive-integrity limitation
 
