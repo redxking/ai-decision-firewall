@@ -17,6 +17,14 @@ from threading import Lock
 from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
+from adf_poc.stage_a import (
+    SYNTHETIC_ADAPTER_CONTRACT_SHA256,
+    SYNTHETIC_ADAPTER_CONTRACT_VERSION,
+    SYNTHETIC_ADAPTER_ID,
+    SYNTHETIC_EXECUTION_MODE,
+    SQLiteSyntheticAdapterStore,
+    SyntheticAdapterError,
+)
 from adf_poc.utils import sha256_json
 
 from .authorization import AuthorizationError, AuthorizationGate
@@ -184,6 +192,9 @@ class ActionBroker:
         policy_version: str,
         policy_sha256: str,
         decision_context_sha256: str,
+        request_sha256: str | None = None,
+        decision_authorization_sha256: str | None = None,
+        recovery_summary: dict[str, Any] | None = None,
     ) -> BrokerResult:
         return self.__authorize_and_execute(
             token=token,
@@ -195,6 +206,9 @@ class ActionBroker:
             policy_version=policy_version,
             policy_sha256=policy_sha256,
             decision_context_sha256=decision_context_sha256,
+            request_sha256=request_sha256,
+            decision_authorization_sha256=decision_authorization_sha256,
+            recovery_summary=recovery_summary,
         )
 
 
@@ -243,6 +257,7 @@ def build_simulated_execution_boundary(
     fault_modes: Mapping[str, str] | None = None,
     clock: Callable[[], datetime] | None = None,
     id_factory: Callable[[str], str] | None = None,
+    adapter_store: SQLiteSyntheticAdapterStore | None = None,
 ) -> tuple[TargetStateObserver, ActionBroker, IndependentTargetVerifier]:
     """Build one closed in-memory target, broker, and verifier boundary.
 
@@ -257,6 +272,10 @@ def build_simulated_execution_boundary(
     if type(metrics) is not Phase3Metrics:
         raise TypeError(
             "The simulation boundary requires the exact Phase3Metrics sink."
+        )
+    if adapter_store is not None and type(adapter_store) is not SQLiteSyntheticAdapterStore:
+        raise TypeError(
+            "The durable synthetic boundary requires the exact adapter store."
         )
     closed_mapping_types = (dict, type(MappingProxyType({})))
     if type(target_inventory) not in closed_mapping_types or not target_inventory:
@@ -302,6 +321,11 @@ def build_simulated_execution_boundary(
     validate_and_consume = gate.validate_and_consume
 
     def observe_state(target_id: str) -> dict[str, Any]:
+        if adapter_store is not None:
+            try:
+                return adapter_store.observe(target_id)
+            except SyntheticAdapterError as exc:
+                raise SimulationBoundaryError(exc.reason_code, str(exc)) from exc
         with state_lock:
             if target_id not in states:
                 raise SimulationBoundaryError(
@@ -321,6 +345,9 @@ def build_simulated_execution_boundary(
         policy_version: str,
         policy_sha256: str,
         decision_context_sha256: str,
+        request_sha256: str | None,
+        decision_authorization_sha256: str | None,
+        recovery_summary: dict[str, Any] | None,
     ) -> BrokerResult:
         if token is None:
             metrics.record_broker_rejection()
@@ -380,21 +407,55 @@ def build_simulated_execution_boundary(
             )
         attempted_at = attempted_at.astimezone(timezone.utc).replace(microsecond=0)
 
-        # The attempt identifier is correlation metadata allocated for this
-        # invocation.  Excluding it keeps the durable idempotency binding stable
-        # if recovery must compare the same authorized command to a later retry.
-        durable_attempt_binding = {
-            "token_id": token.token_id,
-            "request_id": request_id,
-            "decision_id": decision_id,
-            "agent_id": agent_id,
-            "command": deepcopy(normalized_command),
-            "policy_id": policy_id,
-            "policy_version": policy_version,
-            "policy_sha256": policy_sha256,
-            "decision_context_sha256": decision_context_sha256,
-            "target_state_sha256": sha256_json(state_before),
-        }
+        # attempt_id is correlation metadata, never part of the idempotency
+        # binding.  A restart therefore cannot turn a random identifier into a
+        # second synthetic effect.
+        if adapter_store is not None:
+            if (
+                type(request_sha256) is not str
+                or type(decision_authorization_sha256) is not str
+                or type(recovery_summary) is not dict
+            ):
+                raise SimulationBoundaryError(
+                    "DURABLE_ADAPTER_BINDING_MISSING",
+                    "Durable synthetic execution requires exact sanitized bindings.",
+                )
+            durable_attempt_binding = {
+                "adapter_id": SYNTHETIC_ADAPTER_ID,
+                "adapter_contract_version": SYNTHETIC_ADAPTER_CONTRACT_VERSION,
+                "adapter_contract_sha256": SYNTHETIC_ADAPTER_CONTRACT_SHA256,
+                "execution_mode": SYNTHETIC_EXECUTION_MODE,
+                "token_id": token.token_id,
+                "unsigned_token_sha256": sha256_json(token.unsigned_dict()),
+                "issuer_instance_id": token.issuer_instance_id,
+                "authorization_key_domain_id": gate.authorization_key_domain_id,
+                "principal_id": agent_id,
+                "request_id": request_id,
+                "request_sha256": request_sha256,
+                "decision_id": decision_id,
+                "decision_authorization_sha256": decision_authorization_sha256,
+                "decision_context_sha256": decision_context_sha256,
+                "agent_id": agent_id,
+                "command": deepcopy(normalized_command),
+                "policy_id": policy_id,
+                "policy_version": policy_version,
+                "policy_sha256": policy_sha256,
+                "target_state_sha256": sha256_json(state_before),
+            }
+        else:
+            durable_attempt_binding = {
+                "token_id": token.token_id,
+                "request_id": request_id,
+                "decision_id": decision_id,
+                "agent_id": agent_id,
+                "command": deepcopy(normalized_command),
+                "policy_id": policy_id,
+                "policy_version": policy_version,
+                "policy_sha256": policy_sha256,
+                "decision_context_sha256": decision_context_sha256,
+                "target_state_sha256": sha256_json(state_before),
+            }
+        idempotency_key = sha256_json(durable_attempt_binding)
 
         try:
             validate_and_consume(
@@ -412,7 +473,13 @@ def build_simulated_execution_boundary(
                 target_state_sha256=sha256_json(state_before),
                 evaluated_at=attempted_at,
                 attempt_id=attempt_id,
-                attempt_binding_sha256=sha256_json(durable_attempt_binding),
+                attempt_binding_sha256=idempotency_key,
+                idempotency_key=idempotency_key,
+                recovery_summary=(
+                    deepcopy(recovery_summary)
+                    if recovery_summary is not None
+                    else None
+                ),
             )
         except AuthorizationError:
             with attempt_lock:
@@ -420,63 +487,82 @@ def build_simulated_execution_boundary(
             metrics.record_broker_rejection()
             raise
 
-        reported_success = False
-        message = ""
-        try:
-            with state_lock:
-                if target_id not in states:
-                    raise SimulationBoundaryError(
-                        "TARGET_UNKNOWN",
-                        "Target is not present in the synthetic simulation inventory.",
-                    )
-                state = states[target_id]
-                if sha256_json(state) != token.target_state_sha256:
-                    raise SimulationBoundaryError(
-                        "TARGET_STATE_PRECONDITION_CHANGED",
-                        "Target state changed after authorization validation.",
-                    )
-                if action_type != "NETWORK_ISOLATE":
-                    raise SimulationBoundaryError(
-                        "ACTION_NOT_IMPLEMENTED",
-                        "The synthetic target implements only NETWORK_ISOLATE.",
-                    )
-
-                fault_mode = configured_faults.get(target_id, "NONE")
-                if fault_mode == "FAILED":
-                    message = "Injected synthetic downstream failure; no state changed."
-                else:
-                    duration_seconds = int(parameters["duration_seconds"])
-                    preserve_management = bool(parameters["preserve_management"])
-                    state["last_action_id"] = attempt_id
-                    state["network_state"] = "isolated"
-                    if fault_mode == "PARTIAL":
-                        state["isolation_expires_at"] = None
-                        reported_success = True
-                        message = "Injected partial transition in the synthetic target."
-                    else:
-                        state["management_channel"] = preserve_management
-                        state["isolation_expires_at"] = (
-                            (attempted_at + timedelta(seconds=duration_seconds))
-                            .replace(microsecond=0)
-                            .isoformat()
+        if adapter_store is not None:
+            try:
+                adapter_receipt = adapter_store.execute_once(
+                    idempotency_key=idempotency_key,
+                    binding=durable_attempt_binding,
+                    attempt_id=attempt_id,
+                    attempted_at=attempted_at.isoformat(),
+                )
+            except SyntheticAdapterError as exc:
+                metrics.record_broker_rejection()
+                failure = SimulationBoundaryError(exc.reason_code, str(exc))
+                failure.attempt_id = attempt_id
+                raise failure from exc
+            reported_success = adapter_receipt.reported_success
+            message = adapter_receipt.message
+            state_after = observe_state(target_id)
+        else:
+            reported_success = False
+            message = ""
+            try:
+                with state_lock:
+                    if target_id not in states:
+                        raise SimulationBoundaryError(
+                            "TARGET_UNKNOWN",
+                            "Target is not present in the synthetic simulation inventory.",
                         )
-                        reported_success = True
-                        if fault_mode == "UNEXPECTED_EFFECT":
-                            state["service_health"] = "degraded"
+                    state = states[target_id]
+                    if sha256_json(state) != token.target_state_sha256:
+                        raise SimulationBoundaryError(
+                            "TARGET_STATE_PRECONDITION_CHANGED",
+                            "Target state changed after authorization validation.",
+                        )
+                    if action_type != "NETWORK_ISOLATE":
+                        raise SimulationBoundaryError(
+                            "ACTION_NOT_IMPLEMENTED",
+                            "The synthetic target implements only NETWORK_ISOLATE.",
+                        )
+                    fault_mode = configured_faults.get(target_id, "NONE")
+                    if fault_mode == "FAILED":
+                        message = (
+                            "Injected synthetic downstream failure; no state changed."
+                        )
+                    else:
+                        duration_seconds = int(parameters["duration_seconds"])
+                        preserve_management = bool(parameters["preserve_management"])
+                        state["last_action_id"] = attempt_id
+                        state["network_state"] = "isolated"
+                        if fault_mode == "PARTIAL":
+                            state["isolation_expires_at"] = None
+                            reported_success = True
                             message = (
-                                "Synthetic action completed with an injected "
-                                "unexpected effect."
+                                "Injected partial transition in the synthetic target."
                             )
                         else:
-                            message = (
-                                "Synthetic network isolation applied to the "
-                                "in-memory target."
-                            )
-                state_after = deepcopy(state)
-        except SimulationBoundaryError as exc:
-            metrics.record_broker_rejection()
-            message = f"{exc.reason_code}: {exc}"
-            state_after = observe_state(target_id)
+                            state["management_channel"] = preserve_management
+                            state["isolation_expires_at"] = (
+                                attempted_at
+                                + timedelta(seconds=duration_seconds)
+                            ).replace(microsecond=0).isoformat()
+                            reported_success = True
+                            if fault_mode == "UNEXPECTED_EFFECT":
+                                state["service_health"] = "degraded"
+                                message = (
+                                    "Synthetic action completed with an injected "
+                                    "unexpected effect."
+                                )
+                            else:
+                                message = (
+                                    "Synthetic network isolation applied to the "
+                                    "in-memory target."
+                                )
+                    state_after = deepcopy(state)
+            except SimulationBoundaryError as exc:
+                metrics.record_broker_rejection()
+                message = f"{exc.reason_code}: {exc}"
+                state_after = observe_state(target_id)
 
         result = BrokerResult(
             attempt_id=attempt_id,
@@ -501,11 +587,21 @@ def build_simulated_execution_boundary(
         }
         with attempt_lock:
             attempt_binding_digests[attempt_id] = sha256_json(attempt_binding)
-        gate.record_attempt_outcome(
+        receipt_sha256 = (
+            adapter_receipt.receipt_sha256
+            if adapter_store is not None
+            else sha256_json(
+                {
+                    "execution_mode": "process_local_simulation",
+                    "broker_result_sha256": sha256_json(result.to_dict()),
+                }
+            )
+        )
+        gate.record_adapter_receipt(
             attempt_id=attempt_id,
-            outcome_state=("COMPLETED" if reported_success else "FAILED_NO_EFFECT"),
-            outcome_sha256=sha256_json(result.to_dict()),
-            completed_at=attempted_at.isoformat(),
+            adapter_receipt_sha256=receipt_sha256,
+            receipt_outcome_sha256=sha256_json(result.to_dict()),
+            recorded_at=attempted_at.isoformat(),
         )
         return result
 

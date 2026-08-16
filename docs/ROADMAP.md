@@ -17,10 +17,18 @@
   focused module passed 11/11 and the then-current repository suite passed
   299/299 locally and in exact-commit CI. No historical/live adapter, owner
   promotion threshold or action path exists.
-- The unreleased `0.4.0-alpha.1` Stage A production-development candidate adds
-  single-host durable request, authorization, attempt, and audit-outbox state.
-  Its machine-derived production gate is `BLOCKED`; no Stage B or C activity is
-  authorized.
+- The provisional, unreleased `0.4.0-alpha.2` Stage A
+  production-development candidate adds
+  single-host durable request, authorization, attempt, and audit-outbox state
+  plus a separate durable offline synthetic-adapter state/receipt database and
+  an authority-free terminal-result lookup. Bounded cooperative same-host
+  fencing, strict store/cross-store validation, and recovery-audit closure are
+  implemented, but the store-local transactions and JSONL audit are not
+  cross-store atomic. The local source-freeze checkout passed 43/43 focused
+  Stage A, 18/18 readiness-gate, 360/360 repository, and 46/46 corpus checks;
+  these are project-controlled mechanism observations without an exact
+  candidate commit, regenerated manifest, or CI claim. Its machine-derived
+  production gate is `BLOCKED`; no Stage B or C activity is authorized.
 - No historical organizational data, approved Gate B package, live feed,
   test-tenant/production connector, operational credential, or live action is
   authorized or present.
@@ -125,24 +133,61 @@ significance, model superiority or promotion eligibility.
 exact-commit CI and no model-promotion claim. Historical evaluation remains a
 separate authority state.
 
-## Stage A — Durable single-host authority state (`0.4.0-alpha.1` candidate)
+## Stage A — Two-store offline synthetic durability (provisional `0.4.0-alpha.2` candidate)
 
-This bounded increment corrects the verified process-restart replay path with
-an explicitly configured SQLite/WAL ledger. It serializes immutable request
-claims, one authorization per verified decision, atomic token consumption plus
-attempt reservation, terminal attempt digests, recovery to `UNKNOWN_EFFECT`,
-and digest-only authority outbox events.
+The first bounded increment corrected the verified process-restart replay path
+with an explicitly configured SQLite/WAL authority ledger. ADR-015 extends the
+candidate with a second SQLite database owned by the offline synthetic adapter.
+The adapter transaction validates the exact idempotency binding, updates only
+durable synthetic target state, and inserts one immutable receipt. After
+same-project read-only observation, the authority ledger can atomically close
+the attempt/request and persist one sanitized `RequestLookupResult` that
+contains no token, nonce, signature, credential, raw audit rows, or executable
+authority.
 
-**Exit condition for this increment:** restart, process-race, storage-failure,
-and post-effect recovery regressions pass; the full suite remains green; the
-18-domain production gate derives `BLOCKED`; exact local commit and manifest are
-verified. This is not exit from Stage A as a whole.
+The normal path has three distinct database transactions: T1 authority
+reservation, T2 adapter state plus receipt, and T3 terminal authority/result
+closure. T3 follows successful readback of the valid normal JSONL lifecycle.
+The control database, adapter database, and JSONL audit are three authoritative
+artifacts; the audit is an additional commit boundary, not a fourth artifact.
+No transaction spans them. Exact receipt or terminal-result repeats are
+idempotent; changed bindings conflict. Cross-store correlation binds
+overlapping principal, request, decision/context, authority, policy, receipt,
+and terminal target facts and rejects missing required or orphan receipts and
+recomputed substitutions.
 
-**Next safe gate:** durable synthetic adapter receipts and terminal request
-result lookup with process-termination injection at every transition boundary.
-Process isolation follows that receipt contract. External identity, connectors,
-targets, representative data, and deployment remain separately authorized
-activities.
+Startup and durable request, lookup, approval, and recovery operations use
+bounded cooperative same-host fencing. Explicit quiesced recovery never invokes
+the adapter command or reopens/replaces authorization. It writes and reads back
+the exact contiguous `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, and
+`RECOVERY_FINALIZED` trio before T3; audit failure suppresses T3, a partial
+prefix resumes exactly, and the pending recovery owner fences other durable
+writers until terminal commit. The trio records the original lifecycle as
+`COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`. Receipt evidence remains
+adapter-reported and never equals independent verification.
+
+**Current source-freeze evidence for this increment:** exact duplicate lookup
+returns only an authority-free replay result and never a second effect;
+receipt/result binding, conflict, corruption, recovery, audit ambiguity,
+startup concurrency, and independent-process races passed their focused local
+checks; the full suite remained green; and the 18-domain production gate
+derived `BLOCKED`. The recorded observations are 43/43 focused Stage A, 18/18
+readiness-gate, 360/360 repository, and 46/46 corpus with
+`live_actions_possible=false`; direct first-creation stress passed 10/10
+sequential plus 5/5 parallel repetitions and the integrated exact-once race
+passed 5/5 parallel repetitions. An exact candidate commit, regenerated
+manifest, CI result, release, owner acceptance, and operational effectiveness
+remain unrecorded. This is not exit from Stage A as a whole.
+
+**Next safe gate:** expand the local campaign beyond the selected process-kill,
+audit-failure, corruption, and concurrency cases to cover power loss,
+filesystem/disk exhaustion, backup/restore, retention/compaction, bounded load,
+and cross-store recovery at every boundary. Then design distributed execution
+ownership with leases/epochs/fencing and process-isolated authenticated IPC.
+The current cooperative fence is same-host only. The adapter receipt remains
+same-project evidence, not independent target verification. External identity,
+connectors, targets, representative data, and deployment remain separately
+authorized activities.
 
 ## Phase 3.1B — Approved read-only evidence realism
 

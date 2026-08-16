@@ -6,24 +6,31 @@ Run from the repository root:
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` passed the **222/222** technical suite and exact-commit CI/Dependency Graph after publication. The separate public-site module passed **9/9**, yielding a then-current aggregate of **231/231**. Site tests are not Phase 2.5 or `P2-CE-005` evidence, and `P2-CE-005` remains CE-0 `NOT_EVALUATED`. Published Phase 3 `0.3.0-alpha.1` at exact Commit `423685d105be813056617db738297eba83d3d9d0` passed **57/57** focused tests and the then-current **288/288** repository suite in exact-commit CI. Published Phase 3.1 `0.3.1-alpha.1` at exact Commit `bb6b8f28afba0961bb97b24e6050fccaa94d5702` passed **11/11** focused tests and the then-current **299/299** repository suite in exact-commit CI. The unreleased Stage A candidate passed **16/16** durable-ledger tests, **18/18** production-gate tests, and the complete **333/333** local repository suite before its local commit freeze. No exact-commit CI result is claimed for the unpushed Stage A branch.
+The suite focuses on safety and evidence invariants rather than synthetic classifier accuracy. Exact Phase 2.5 Commit `854b15c56397a81de6326b719d3d7d1dc847608f` passed the **222/222** technical suite and exact-commit CI/Dependency Graph after publication. The separate public-site module passed **9/9**, yielding a then-current aggregate of **231/231**. Site tests are not Phase 2.5 or `P2-CE-005` evidence, and `P2-CE-005` remains CE-0 `NOT_EVALUATED`. Published Phase 3 `0.3.0-alpha.1` at exact Commit `423685d105be813056617db738297eba83d3d9d0` passed **57/57** focused tests and the then-current **288/288** repository suite in exact-commit CI. Published Phase 3.1 `0.3.1-alpha.1` at exact Commit `bb6b8f28afba0961bb97b24e6050fccaa94d5702` passed **11/11** focused tests and the then-current **299/299** repository suite in exact-commit CI. The predecessor Stage A authority-ledger checkpoint passed **16/16** durable-ledger tests, **18/18** production-gate tests, and the then-current **333/333** local repository suite. At the later `0.4.0-alpha.2` source freeze, the two Stage A modules passed **43/43**, the production-gate module passed **18/18**, and the complete suite passed **360/360** locally with warnings treated as errors. These are mutable pre-commit observations until the candidate is integrity-bound and rerun at an exact commit; no exact-commit CI result is claimed here.
 
 ## Stage A focused suites
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src PYTHONWARNINGS=error::ResourceWarning \
-  python3 -m unittest tests.test_stage_a_durable_control_ledger -v
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. PYTHONWARNINGS=error \
+  python3 -m unittest \
+    tests.test_stage_a_receipt_recovery \
+    tests.test_stage_a_durable_control_ledger -v
 
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src \
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. PYTHONWARNINGS=error \
   python3 -m unittest tests.test_production_readiness_gate -v
 ```
 
-These tests exercise single-host durable request claims, authorization and
-attempt uniqueness, restart replay, process concurrency, fail-closed SQLite
-storage, conservative recovery, and strict derivation of the 18-domain
-production gate. They do not establish a durable external adapter receipt,
-distributed linearizability, process isolation, HA/DR, production deployment,
-owner acceptance, or operational effectiveness.
+The Stage A modules exercise the separate control and offline synthetic-adapter
+SQLite stores, strict schema and cross-store correlation, restart-safe claims,
+single-use authorization and attempt reservation, atomic synthetic
+state-plus-receipt writes, sanitized terminal lookup, exact duplicate handling,
+recovery-audit fencing, process termination, direct and integrated multiprocess
+concurrency, path/sidecar safety, corruption, chronology, and conservative
+reconciliation. The production-gate module separately verifies strict
+derivation of the 18-domain, 36-requirement `BLOCKED` gate. These tests do not
+establish cross-store atomicity, independently custodied target observation,
+distributed linearizability or fencing, process isolation, HA/DR, production
+deployment, owner acceptance, or operational effectiveness.
 
 ## Phase 3 focused suite
 

@@ -121,7 +121,7 @@ The repository now exercises schema-version mismatch, bounded parsing, delayed/o
 - authenticated, approved de-identified historical replay and temporal holdout evaluation;
 - vendor-specific adapters, source-ablation studies, mapping-loss analysis, and analyst inter-rater reliability;
 - historical calibration, uncertainty, abstention cost, survivorship-bias, and subgroup analysis;
-- durable/distributed idempotency and token replay rejection, managed HMAC key rotation/revocation, executable policy rollback, external/vendor target readback, and secure logging failure; Phase 3 covers only process-local concurrency and same-project simulated readback;
+- distributed idempotency and token replay rejection, managed HMAC key rotation/revocation, executable policy rollback, external/vendor target readback, and secure logging failure; Stage A adds only single-host control and offline synthetic-adapter databases, adapter-reported receipts, same-project readback, and cooperative same-host fencing without cross-store atomicity, distributed execution ownership, or independent custody;
 - OS-enforced isolation, egress verification, external audit custody, dependency/evaluation-environment attack testing, and production-scale availability; and
 - controlled test-tenant and operational validation under separate authority.
 
@@ -129,12 +129,48 @@ See [`phase2/VALIDATION_PLAN.md`](phase2/VALIDATION_PLAN.md) and [`phase2/CLAIM_
 
 ## Stage A production-development verification
 
-The current Stage A increment adds single-host durable-control tests for
-restart replay, conflicting duplicates, authorization/attempt persistence,
-process races, bounded lock failure, unknown schema, unsafe storage paths,
-outbox durability, post-effect outcome-write failure, and idempotent recovery
-to `UNKNOWN_EFFECT`. These tests close the reproduced restart-replay defect for
-the explicitly configured synthetic boundary only.
+The provisional, unreleased `0.4.0-alpha.2` ADR-015 candidate reached a local
+source freeze on 2026-08-16. The focused Stage A modules passed 43/43; the
+production-readiness gate passed 18/18 and derived `BLOCKED`; complete test
+discovery passed 360/360 with `ResourceWarning` treated as error; and the
+deterministic corpus passed 46/46 with `live_actions_possible=false`. Direct
+public-store simultaneous first-creation stress passed 10/10 sequential plus
+5/5 parallel outer repetitions; the integrated shared-audit exact-once race
+passed 5/5 parallel outer repetitions.
+
+The tested boundary includes all-three-path preflight before creation; exact
+store/row/receipt/result contracts; query-only existing-store validation;
+path/link/type/mode/sidecar and active-WAL safety; canonical idempotency;
+monotonic authorization/attempt/receipt/target chronology; immutable exact
+receipt replay; sanitized nondisclosing exact lookup; startup/process/lookup
+cross-store correlation; valid read-back normal JSONL lifecycle closure before
+T3; and explicit quiesced recovery. Recovery writes and reads back the exact
+contiguous `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, and
+`RECOVERY_FINALIZED` trio before T3, truthfully records the original lifecycle
+as `COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`, resumes any exact prefix, fences
+other durable writers while the recovery commit is pending, suppresses T3 on
+audit append/readback failure, and returns an identical audit-inert replay after
+T3. It never invokes a command, reopens or reissues authority, fabricates
+verification, or claims rollback; a receipt never equals verification.
+
+Named hard-gate regressions include
+`test_direct_store_first_creation_is_process_serialized`,
+`test_independent_processes_create_one_effect_receipt_and_terminal_result`,
+`test_cross_store_missing_receipt_blocks_reopen_and_live_terminal_lookup`,
+`test_cross_store_orphan_receipt_fails_closed`,
+`test_recovery_audit_prewrite_failure_suppresses_t3_until_exact_retry`,
+`test_recovery_audit_readback_failure_leaves_exact_retryable_trio`,
+`test_recovery_audit_prefix_is_restart_idempotent_at_every_record`, and
+`test_pending_recovery_fences_request_and_approval_audit_writers`. The complete
+surface and additional exact test names are recorded in the
+[`Phase 3 T&E plan`](phase3/TEST_AND_EVALUATION_PLAN.md).
+
+These are project-controlled local mechanism observations, not an exact
+candidate commit, regenerated manifest, CI, independent target verification,
+historical/live evaluation, owner acceptance, operational effectiveness, or
+production authorization. They do not establish cross-store atomicity,
+distributed idempotency/leases/epochs/fencing, process isolation, vendor
+semantics, HA/DR, or operational recovery.
 
 The repository-wide production gate remains `BLOCKED`. The exact current
 coverage and every unresolved degraded mode are recorded in

@@ -465,37 +465,95 @@ Report separately:
 - operational validation, which remains **not evaluated** in Phase 3.
 
 Do not infer a completed demonstration from code presence, fixture generation,
-test discovery, or a prior-commit result. The local observations in this plan
-are explicitly date-bound and must be replaced by exact-candidate results at
-freeze. Do not represent simulation results as live containment, production
-safety, measured operational efficacy, or external independent assurance.
+test discovery, or a prior-commit result. The Stage A observations below are
+explicitly date-bound local source-freeze results; they require a regenerated
+manifest, exact candidate commit, and CI before any release-bound claim. Do not
+represent simulation results as live containment, production safety, measured
+operational efficacy, or external independent assurance.
 
-## Stage A durable-control qualification
+## Stage A two-store durability qualification
 
-The `0.4.0-alpha.1` production-development candidate adds focused qualification
-for the optional SQLite authority ledger. The test set covers:
+The provisional, unreleased `0.4.0-alpha.2` candidate reached a local source
+freeze on 2026-08-16. The current checkout produced these project-controlled
+observations:
 
-- WAL/FULL/foreign-key/schema/permission configuration and unknown-schema or
-  unsafe-path refusal;
-- exact duplicate and request-digest conflict across newly constructed service
-  objects sharing the ledger;
-- durable authorization and terminal attempt state plus digest-only outbox;
-- monotonic recovery of an incomplete attempt to `UNKNOWN_EFFECT`;
-- unique authorization issuance for one verified decision across reopen;
-- bounded database-lock failure before effect;
-- independent operating-system processes racing for one request claim and one
-  token/attempt reservation; and
-- injected post-effect attempt-outcome failure with honest
-  `ROLLBACK_REQUIRED`, a consumed token, and restart recovery.
+| Verification surface | Local observation |
+|---|---|
+| `tests.test_stage_a_receipt_recovery` plus `tests.test_stage_a_durable_control_ledger` | 43/43 passed |
+| `tests.test_production_readiness_gate` | 18/18 passed; strict 18-domain matrix valid; derived gate `BLOCKED` |
+| Full `tests/test_*.py` discovery with `ResourceWarning` promoted to error | 360/360 passed |
+| Deterministic Phase 3 adversarial corpus | 46/46 passed; `live_actions_possible=false` |
+| Direct public-store simultaneous first creation | 10/10 sequential and 5/5 parallel outer repetitions passed |
+| Integrated shared-audit exact-once process race | 5/5 parallel outer repetitions passed |
 
-Acceptance requires no second broker invocation or effect after restart, no
-token reopening, exactly one winner in each process race, and no fabricated
-success/no-effect/rollback after an indeterminate post-effect failure. The full
-Phase 3 and repository regressions must remain green.
+These results are not an exact candidate commit, regenerated manifest, CI,
+independent evaluation, historical/live validation, owner acceptance,
+operational effectiveness, or production authorization.
 
-Not covered: a durable adapter receipt, full terminal-result lookup, abrupt
-process kill at every boundary, queue behavior, bounded load/retention,
-multi-node partitions/failover, external audit export, managed-key lifecycle,
-process isolation, eventual target readback, or executable rollback. Those
+The focused qualification now exercises:
+
+- all three authoritative paths before missing-artifact creation; query-only
+  existing-store preflight; control schema v2 and adapter schema v1; exact
+  closed schema/row/result/receipt semantics; link/type/mode/sidecar safety;
+  WAL-visible validation without preflight mutation; and refusal of legacy,
+  future, partial, aliased, corrupt, or unsafe state;
+- stable canonical adapter binding over principal, request/digest,
+  decision/context, token/issuer, exact command/target/precondition, policy,
+  fixed adapter contract, and synthetic execution mode, excluding the random
+  attempt ID;
+- one immutable adapter receipt and durable synthetic transition per exact
+  binding, exact-repeat receipt replay without a second effect, and hard
+  conflict for a changed binding, receipt, provenance, or target-state fact;
+- closed receipt dispositions (`APPLIED`, `NO_EFFECT`, `PARTIAL`,
+  `AMBIGUOUS`) without treating a receipt or adapter-reported success as
+  independent verification;
+- monotonic request, authorization (`ISSUED`, `CONSUMED`, `REVOKED`), attempt,
+  receipt, and target chronology, including rejection of token reuse, backdated
+  or unlinked transitions, and a revoked authorization closed with the wrong
+  disposition;
+- a closed canonical sanitized `RequestLookupResult`, recursive exclusion of
+  token/nonce/signature/credential/signing/raw-audit/executable authority,
+  digest verification on read, exact principal/request/digest access, and
+  nondisclosure on changed principal or digest;
+- `process_json` duplicate denial remains separate from authority-free terminal
+  lookup; response loss and exact lookup create no decision, authorization,
+  attempt, command, adapter mutation, effect, or token reissue;
+- cross-store correlation at startup, processing, and terminal lookup for
+  overlapping request, decision/context, authority, policy, receipt, provenance,
+  and terminal target facts, including missing required and orphan receipts;
+- valid read-back normal JSONL lifecycle closure before T3, and exact recovery
+  closure as a contiguous `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`,
+  `RECOVERY_FINALIZED` trio before recovery T3;
+- truthful original-lifecycle status (`COMPLETE`, `INCOMPLETE`, `UNRESOLVED`),
+  restart-idempotent recovery prefixes, append/readback-failure suppression of
+  T3, pending-owner fencing against request/approval/unrelated recovery writers,
+  and identical audit-inert replay after T3;
+- exact recovery outcomes for affirmative `NO_EFFECT`, applied/partial/
+  ambiguous, absent, mismatched, corrupt, locked, and unavailable receipts or
+  stores, with no automatic command, retry, token reopening/replacement,
+  verification fabrication, success, or rollback; and
+- bounded cooperative same-host serialization for direct store first creation,
+  shared-audit request races, approval, lookup, and recovery, plus selected real
+  process termination before/after T2 and around response/T3 recovery.
+
+Named release-blocker regressions include
+`test_direct_store_first_creation_is_process_serialized`,
+`test_independent_processes_create_one_effect_receipt_and_terminal_result`,
+`test_cross_store_missing_receipt_blocks_reopen_and_live_terminal_lookup`,
+`test_cross_store_orphan_receipt_fails_closed`,
+`test_cross_store_overlapping_provenance_substitution_fails_closed`,
+`test_cross_store_terminal_target_substitution_fails_closed`,
+`test_recovery_audit_prewrite_failure_suppresses_t3_until_exact_retry`,
+`test_recovery_audit_readback_failure_leaves_exact_retryable_trio`,
+`test_recovery_audit_prefix_is_restart_idempotent_at_every_record`, and
+`test_pending_recovery_fences_request_and_approval_audit_writers`.
+
+Even with this local qualification passing, queue behavior, bounded
+load/retention, multi-node partitions/failover, distributed execution fencing,
+external audit export,
+managed-key lifecycle, process isolation/authenticated IPC, independently
+custodied eventual target readback, vendor semantics, and executable rollback
 remain release blockers in the
-[`failure/recovery matrix`](../production/FAILURE_RECOVERY_MATRIX.md).
+[`failure/recovery matrix`](../production/FAILURE_RECOVERY_MATRIX.md). The
+machine production gate remains `BLOCKED`; passing this local plan cannot grant
+live integration or operational authority.

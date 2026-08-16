@@ -1,6 +1,7 @@
 # Production-readiness control record
 
 **Candidate label:** `PRODUCTION_DEVELOPMENT_CANDIDATE`
+**Candidate version:** `0.4.0-alpha.2` (`0.4.0a2`)
 **Production gate:** `BLOCKED`
 **Stage authority:** bounded Stage A engineering only; Stage B and Stage C are not authorized
 **Baseline:** `bb6b8f28afba0961bb97b24e6050fccaa94d5702` (`0.3.1-alpha.1`)
@@ -9,11 +10,13 @@
 
 The repository is not production-ready. The verified Phase 3.1 baseline is a
 published, synthetic-only evaluation mechanism with model promotion fixed at
-`NOT_AUTHORIZED`. Phase 3 effects remain confined to in-memory synthetic target
-state. The present Stage A increment adds a single-host durable authority-state
-mechanism and an enforceable production-readiness gate; it does not establish
-an operational service, a production trust boundary, or authorization to use
-historical data or external systems.
+`NOT_AUTHORIZED`. The present opt-in Stage A candidate adds a single-host
+durable authority database and a separate durable offline synthetic-adapter
+database, plus an enforceable production-readiness gate. The adapter remains
+same-process, same-host, same-project, and synthetic-only. Its receipt is not
+independent evidence, and the increment does not establish an operational
+service, production trust boundary, or authority to use historical data,
+external systems, credentials, connectors, or targets.
 
 The machine-readable source of truth is
 [`config/production_readiness_requirements.json`](../../config/production_readiness_requirements.json).
@@ -64,31 +67,109 @@ authority-state ledger. A valid hash chain therefore did not prevent replay.
 ## Stage A increment implemented
 
 The additive [`src/adf_poc/stage_a.py`](../../src/adf_poc/stage_a.py)
-provides a development-grade SQLite transaction spine. When an explicit
-control-ledger path is configured, it provides:
+provides a development-grade two-database SQLite transaction spine. When
+explicit, pairwise-distinct `control_ledger_path`, `synthetic_adapter_path`,
+and JSONL `audit_path` values are configured, it provides:
 
 - one immutable request claim per authenticated principal and request ID, with
   an exact canonical request digest and conflict detection;
 - durable uniqueness for verified-decision authorization issuance;
-- atomic authorization consumption and attempt reservation before synthetic
-  target invocation;
+- atomic authorization consumption and attempt reservation before invoking the
+  offline `SQLiteSyntheticAdapterStore`;
 - exact attempt-scope digest binding and monotonic attempt outcomes;
+- an adapter schema-v1 transaction that validates the trusted precondition,
+  changes durable synthetic target state, and commits one immutable,
+  exact-bound `SyntheticAdapterReceipt`; an exact repeat returns the same
+  receipt without a second state change, while a changed binding conflicts;
+- a separate read-only observation of durable adapter state. It is distinct
+  from command acknowledgement but remains same-store/project custody and is
+  not independent verification;
+- a closed, versioned, sanitized `RequestLookupResult`, atomically committed
+  with its control terminal transition and metadata-only outbox event. It is
+  not a serialized `Phase3Result` and recursively excludes authorization,
+  token, nonce, signature, credential, key, raw-audit, and executable-authority
+  material;
+- an authenticated, read-only `lookup_request_result` seam keyed by exact
+  principal, request ID, and canonical request digest. An exact duplicate can
+  retrieve the stored projection with explicit replay/no-new-work flags;
+  changed digest or principal fails closed without result disclosure, and
+  `process_json` remains duplicate-denying and returns only `Phase3Result`;
 - transactional digest-only audit-outbox events for each authority-state
   transition;
+- bounded cooperative POSIX directory locking for public-store first creation,
+  combined three-artifact startup, and each durable firewall operation, plus
+  exclusive audit-file ownership for a complete JSONL lifecycle. Contention
+  fails within the configured startup bound for cooperating processes;
 - WAL mode, `synchronous=FULL`, foreign keys, strict tables, a bounded busy
   timeout, an explicit schema version, owner-only database-file permissions,
-  and refusal of symlink, nonregular, multiply linked, corrupt, locked, or
-  unsupported-schema storage; and
-- explicit, idempotent reconciliation of incomplete `RESERVED` attempts to
-  `UNKNOWN_EFFECT` without reopening the consumed authorization or
-  automatically reissuing the command.
+  owner-private active sidecars, and refusal of symlink, nonregular, multiply
+  linked, corrupt, locked, or unsupported-schema storage;
+- a single firewall-clock creation timestamp for both new stores; closed
+  schema fingerprints and full control relationship, provenance, lifecycle,
+  result, and chronology scans; continuous adapter target/receipt state-time
+  chain validation; and startup/runtime correlation that rejects orphan,
+  missing, substituted, disposition-inconsistent, or target-inconsistent
+  cross-store histories before authoritative use; and
+- explicit `reconcile_request(operator_asserted_quiesced=True)` recovery that
+  never invokes the command, mints replacement authority, reopens a consumed
+  token, fabricates verification, or claims rollback.
+
+The control database uses schema version 2 and the adapter database uses schema
+version 1. The control-ledger constructor refuses and preserves a schema-v1
+control file; no migrator exists. The supported successor procedure is to
+preserve the v1 artifact and create a new reviewed v2 ledger at a distinct safe
+path. A future migrator would require a separate quiesced, transactional design
+and test package.
+
+T1 control reservation, T2 adapter mutation plus receipt, JSONL lifecycle
+audit, read-only observation, and T3 terminal control result are deliberately
+separate boundaries. No cross-store transaction or crash-consistent recovery
+point is claimed. Reconciliation is conservative: an exact affirmative
+`NO_EFFECT` receipt may close `FAILED_NO_EFFECT`; `APPLIED`, `PARTIAL`, or
+`AMBIGUOUS` without separately durable verification closes `UNKNOWN_EFFECT`;
+no receipt also closes `UNKNOWN_EFFECT`; corrupt, mismatched, or unavailable
+adapter evidence halts with no state change. `UNKNOWN_EFFECT` remains terminal
+and never authorizes automatic retry.
+
+Recovery writes the exact JSONL sequence `RECOVERY_STARTED`,
+`RECOVERY_EVIDENCE_ASSESSED`, and `RECOVERY_FINALIZED` before T3. Each record
+binds the recovery identity and exact request; the lifecycle records whether
+the original execution audit was `COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`
+without rewriting that history. Prefixes resume idempotently. A complete trio
+whose T3 control commit is still pending fences request and approval audit
+writers with `RECOVERY_AUDIT_PENDING`; the exact recovery retry may commit T3
+without changing the trio.
+
+The cooperative locks and correlation checks are detection and serialization
+controls for supported processes on one POSIX host. They do not create
+cross-store atomicity, independent custody, a distributed lease or fencing
+epoch, protection from a noncooperating same-user writer, failover, HA, or DR.
 
 The default Phase 3 simulation remains process-local for published-baseline
-compatibility. Durability is opt-in through an explicit Stage A ledger path.
-The correction is tested across newly constructed service objects and
-independent operating-system processes. A post-effect ledger failure produces
-`ROLLBACK_REQUIRED`; restart reconciliation preserves `UNKNOWN_EFFECT` instead
-of fabricating success, no effect, or successful rollback.
+compatibility. The two-database successor path is opt-in and offline. Its
+implementation evidence is repository-controlled synthetic conformance only;
+exact-commit evidence, complete regression, manifest regeneration, CI, and the
+real process-kill/storage-failure campaign remain separate release steps.
+
+### Current pre-commit observation
+
+On 2026-08-16, the mutable candidate worktree produced the following local
+observations. These results are useful defect-closure evidence, but they are
+not exact-commit, manifest, CI, release, or operational evidence:
+
+| Check | Observed result | Evidence boundary |
+|---|---|---|
+| Focused Stage A receipt/recovery and durable-ledger suite | 43/43 passed in 8.854 seconds with bytecode writes disabled and warnings treated as errors | Mutable pre-commit worktree; rerun after the exact candidate commit is frozen. |
+| Production-readiness validator | Structurally valid; 18 domains, 36 mandatory requirements, 36 blocking requirements; derived `BLOCKED`; expected exit 2 | Every `owner_acceptance` remains `NOT_RECORDED`; structural validity is not readiness. |
+
+The successor requirement-to-implementation map is
+[`STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv`](STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv).
+It binds exact implemented seams to named tests and the pre-commit observation
+above while deliberately deferring exact commit, manifest, complete regression,
+and CI claims until the source is frozen and rerun. It is not an evidence
+record or owner acceptance. The historical
+[`STAGE_A_EVIDENCE_RECORD.md`](STAGE_A_EVIDENCE_RECORD.md) remains unchanged and
+must not be used as evidence for this successor.
 
 ## Evidence-state interpretation
 
@@ -115,8 +196,10 @@ acceptance cannot be inferred from repository authorship or CI.
 Permitted in this increment:
 
 - repository-local code, documentation, schemas, and tests;
-- synthetic fixtures and in-memory targets already present in the repository;
-- temporary local SQLite databases created only by tests; and
+- synthetic fixtures, the compatibility in-memory target, and the offline
+  durable synthetic target state used by the opt-in Stage A harness;
+- temporary local schema-v2 control and schema-v1 adapter SQLite databases
+  created by repository-controlled tests; and
 - a local commit and exact-commit verification.
 
 Not authorized or performed:
@@ -128,23 +211,30 @@ Not authorized or performed:
 - infrastructure deployment, network access, Stage B integration, or Stage C
   pilot activity;
 - model promotion, threshold approval, policy approval, or target-owner
-  acceptance; and
-- push, merge, tag, GitHub Release, repository-setting change, or external
-  message.
+  acceptance.
+
+This pre-commit control record makes no claim that the successor was pushed,
+merged, tagged, released, deployed, or accepted. Those states require separate
+exact evidence; a later publication cannot retroactively turn this pre-commit
+observation into exact-commit evidence.
 
 ## Remaining release blockers
 
 The machine matrix is authoritative; the following are the most consequential
 open gates:
 
-- request duplicates are safely blocked, but durable terminal-result retrieval
-  and a durable adapter receipt/reconciliation seam are not yet implemented;
+- the durable receipt/result seam is deliberately split across control,
+  adapter, audit, and observation boundaries; there is no cross-store
+  transaction, shared recovery-point marker, verified backup/restore, or proof
+  against all real crash, disk, corruption, and divergence cases;
 - SQLite establishes single-host durability and interprocess serialization,
-  not distributed linearizability, fencing, failover, partition tolerance, HA,
-  or disaster recovery;
-- the broker, observer, target, and key material remain same-process and
-  project-custodied; there is no OS isolation, mutually authenticated IPC,
-  vendor adapter, managed key lifecycle, or independently controlled audit;
+  not distributed linearizability, a lease/fencing epoch, failover, partition
+  tolerance, HA, or disaster recovery; the directory/audit locks are
+  cooperative and local;
+- the broker, synthetic adapter, observer, target state, result projection, and
+  key material remain same-process and project-custodied; there is no OS
+  isolation, mutually authenticated IPC, vendor adapter, managed key lifecycle,
+  independently custodied observation, or independently controlled audit;
 - no representative or historical validation is authorized; label independence,
   owner thresholds, operational error costs, OOD/shift gates, signed promotion,
   rollback, and revocation remain open;
@@ -156,8 +246,10 @@ open gates:
 - mission, security, data, model, policy, operations, target-system, and
   authorizing-official acceptances are not recorded.
 
-The next safe engineering increment is a durable synthetic adapter receipt and
-terminal request-result seam with crash injection at every pre- and post-effect
-boundary. Process isolation should follow that transaction contract. Any move
-to representative data, external identity, a connector, or a designated target
-requires a separate, exact authorization package.
+The next safe engineering gate is exact-commit verification of this bounded
+successor followed by real process termination and storage-failure injection at
+every T1, T2, observation, audit, and T3 boundary, including receipt/result
+corruption and cross-store divergence. Process isolation should follow the
+verified transaction contract. Any move to representative data, external
+identity, a connector, or a designated target requires a separate, exact
+authorization package.

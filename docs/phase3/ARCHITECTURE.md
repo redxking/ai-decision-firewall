@@ -137,8 +137,10 @@ rejected even when the same signing key is reused. The target rechecks the
 state precondition while holding its mutation lock to close the modeled
 in-process time-of-check/time-of-use interval.
 
-This is not a distributed transaction. The ledger is not durable across
-process crashes, shared among nodes, or backed by an idempotency store.
+For the published Phase 3 baseline, this is not a distributed transaction and
+the ledger is not durable across process crashes, shared among nodes, or backed
+by an idempotency store. The optional Stage A addendum below replaces only that
+narrow local storage path; it does not create a distributed transaction.
 
 ## Verification boundary
 
@@ -153,10 +155,12 @@ return:
 - `UNEXPECTED_EFFECT` — state changed outside the expected transition; or
 - `ROLLBACK_REQUIRED` — an unexpected protected effect requires recovery.
 
-The observer and verifier are same-project, same-process components over the
-same in-memory environment. Their separation prevents success from being
-inferred from the broker return value, but it is not external target evidence
-or organizational independence.
+In the published Phase 3 baseline, the observer and verifier are same-project,
+same-process components over the same in-memory environment. Stage A changes
+the observed state source to the separate durable synthetic-adapter database,
+but retains same-project and same-store custody. In either path, functional
+separation prevents success from being inferred from the broker return value;
+it is not external target evidence or organizational independence.
 
 ## Lifecycle and observability
 
@@ -183,29 +187,107 @@ and decision latency.
 
 ## Deployment boundary
 
-There is no deployment architecture in this candidate. Construction accepts
-only the exact in-memory simulation environment type and exposes no live-mode
-flag, generic adapter, vendor client, credential path, or network call. A later
+There is no deployment architecture in this candidate. The published Phase 3
+construction accepts only the exact in-memory simulation environment. The
+optional Stage A construction accepts only the fixed offline synthetic adapter
+and separately pathed local databases. Neither exposes a live-mode flag,
+generic/vendor adapter, operational credential path, or network call. A later
 non-production integration would require a new trust model, process isolation,
-durable authorization/idempotency store, managed keys, external audit custody,
-vendor-specific independent readback, rollback orchestration, rate/circuit
-controls, and separate operational authorization.
+durable distributed authorization/idempotency, managed keys, external audit
+custody, vendor-specific independent readback, rollback orchestration,
+rate/circuit controls, and separate operational authorization.
 
 ## Stage A durability addendum
 
-The unreleased `0.4.0-alpha.1` production-development candidate adds an
-explicit, opt-in SQLite control-ledger path. When configured, the request claim,
-verified-decision issuance, token consumption, attempt reservation/outcome, and
-digest-only authority outbox survive reconstruction of every firewall object.
-Token consumption and attempt reservation commit atomically before the
-synthetic target call. No transaction is held across target I/O. A terminal
-attempt digest commits afterward; a failure in that second commit produces
-conservative `ROLLBACK_REQUIRED` handling and leaves a reservation that startup
-reconciliation moves to `UNKNOWN_EFFECT` without retry.
+The provisional, unreleased `0.4.0-alpha.2` production-development candidate
+retains the ADR-014 opt-in control ledger and adopts ADR-015's separately
+pathed offline synthetic-adapter database. The logical sequence is:
 
-This addendum corrects the verified restart-replay path on one host. It does
-not change the deployment boundary above: the broker, observer, target, and
-keys remain same-process; target state and command receipts remain in memory;
-the audit exporter is not implemented; and SQLite is not consensus,
-distributed idempotency, fencing, HA, or disaster recovery. The full decision
-and remaining gates are recorded in [ADR-014](../adr/014_stage_a_durable_transaction_spine.md).
+```text
+T1 control DB: consume authority + reserve exact-bound attempt
+                         |
+                         v
+T2 adapter DB: validate precondition/binding + update synthetic state
+               + insert immutable adapter receipt
+                         |
+                         v
+same-project read-only observation of durable adapter state
+                         |
+                         v
+valid read-back normal JSONL lifecycle closure
+                         |
+                         v
+T3 control DB: terminal attempt/request + sanitized lookup + outbox
+
+recovery alternative: exact read-back three-record JSONL closure before T3
+```
+
+No control-database transaction remains open across adapter I/O. T1, T2, T3,
+observation, and the JSONL audit are not one atomic transaction. The adapter
+owns the receipt write and returns the existing immutable receipt for an exact
+repeated idempotency binding without changing state again. Reusing the key with
+a changed principal/request/decision/token/command/target/precondition/policy/
+adapter binding is a hard conflict. The random attempt identifier is
+correlation metadata and is excluded from the stable idempotency digest.
+
+The control database, adapter database, and JSONL lifecycle audit are three
+authoritative artifacts. Before a missing artifact is created, all three paths
+are preflighted, and existing stores are opened query-only for exact closed
+schema/version, semantic, path/link/type/mode, sidecar, and integrity checks.
+Bounded cooperative same-host fencing serializes direct store initialization
+and durable processing, lookup, approval, and recovery operations. Cross-store
+validation correlates overlapping principal, request, decision/context,
+authority, policy, receipt, and terminal-target facts and rejects missing
+required or orphan receipts and recomputed substitutions.
+
+The adapter receipt distinguishes `APPLIED`, `NO_EFFECT`, `PARTIAL`, and
+`AMBIGUOUS` adapter-reported outcomes. It cannot by itself establish independent
+verification, target-side custody, successful rollback, or operational effect.
+Normal request closure follows same-project read-only observation and persists
+a closed `RequestLookupResult`, not a serialized `Phase3Result`. Authenticated
+lookup requires the exact principal, request identifier, and canonical request
+digest; the result contains no token, nonce, signature, credential, raw audit
+rows, or executable authority and states that the lookup created no decision,
+authorization, attempt, or effect. `process_json` remains fail closed for an
+exact duplicate and does not return a union type.
+
+Authorization is monotonic (`ISSUED` to `CONSUMED` with reservation or to
+`REVOKED` during explicit recovery). Attempt states distinguish reservation,
+receipt recording, verified effect, affirmative failed-no-effect, recovery
+required, and unknown effect. Reconciliation is explicit and operator-asserted
+quiescent, never automatic in a constructor. An exact `NO_EFFECT` receipt can
+close failed-no-effect; applied, partial, ambiguous, or absent receipt evidence
+without separately durable verification closes as `UNKNOWN_EFFECT` with
+`recovery_required=true`; absence is neither no-effect evidence nor retry
+authority. Corrupt, mismatched, or unavailable adapter evidence halts recovery
+without a state transition. No recovery path invokes the command, reopens or
+replaces authority, fabricates verification, or claims rollback. Before T3,
+recovery must append and read back one exact contiguous trio:
+`RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, and `RECOVERY_FINALIZED`.
+The trio records the correlated original normal lifecycle status as `COMPLETE`,
+`INCOMPLETE`, or `UNRESOLVED`, plus `command_invoked=false`, `new_effect=false`,
+and `control_commit_pending=true`. An append or readback failure suppresses T3;
+an exact partial prefix resumes without duplication; the pending recovery owner fences other
+durable writers; and a repeat after T3 returns the identical audit-inert result.
+
+This addendum narrows same-host response-loss and replay ambiguity only. The
+broker, adapter, observer, and keys remain same-process; the observer and
+receipt remain same-project/same-store custodied; cooperative same-host fencing
+and an operator quiescence assertion are not a distributed lease, epoch, or
+execution-ownership proof; the audit exporter is absent; and the two SQLite
+databases do not provide cross-store atomicity, consensus, distributed
+idempotency, HA, or disaster recovery. The decisions and remaining gates are
+recorded in [ADR-014](../adr/014_stage_a_durable_transaction_spine.md) and
+[ADR-015](../adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md).
+The machine production gate remains `BLOCKED`; this architecture grants no live
+connector, credential, target, deployment, or operational authority.
+
+At the 2026-08-16 source-freeze checkout, local project-controlled observations
+were 43/43 focused Stage A tests, 18/18 readiness-gate tests, 360/360 repository
+tests, and 46/46 deterministic corpus scenarios with
+`live_actions_possible=false`. Direct public-store first-creation stress passed
+10/10 sequential and 5/5 parallel repetitions; the integrated exact-once race
+passed 5/5 parallel repetitions. These results establish only the tested local
+mechanism. No exact candidate commit, regenerated manifest, CI, independent
+verification, owner acceptance, operational effectiveness, or production
+authorization is claimed.

@@ -13,6 +13,37 @@ logistic baseline, calibration challenger, aggregate metrics, unconditional
 `NOT_AUTHORIZED` promotion state, and the separate future Gate B authority
 boundary. The Phase 3.1 package has no historical/live adapter or action path.
 
+Diagram 10 is the unreleased `0.4.0-alpha.2` Stage A
+production-development view for a durable offline synthetic adapter receipt and
+sanitized terminal-result lookup. It deliberately shows three distinct commit
+boundaries: T1 control reservation, T2 adapter-state mutation plus immutable
+receipt, and T3 control terminal result plus outbox. JSONL audit and read-only
+observation are additional separate boundaries; no box spans both SQLite
+stores. A receipt and the observer's same-store readback remain same-project,
+same-host evidence, not independently custodied target verification.
+
+The implemented guardrails surrounding that core flow are: bounded cooperative
+POSIX ownership for public-store first creation, combined startup, and each
+durable operation; exclusive audit-file lifecycle ownership; preflight of all
+existing artifacts before creation; code-owned schema fingerprints; full
+control and adapter semantic/chronological scans; and startup/runtime
+cross-store correlation. Recovery writes the exact contiguous
+`RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, `RECOVERY_FINALIZED` JSONL
+trio before T3. A pending prefix or complete trio before T3 fences other request
+and approval audit writers until exact recovery resumes. The figure is a
+simplified transaction-flow view; ADR-015 and the Stage A runbook are
+authoritative for those guardrail details.
+
+Missing, ambiguous, partial, mismatched, or corrupt evidence never authorizes
+an automatic retry; unresolved cases remain quarantined or halt recovery. The
+mutable candidate's 16 receipt/recovery plus 27 durable-ledger tests were
+observed at 43/43 passing on 2026-08-16. That is pre-commit local evidence only:
+the exact candidate commit, manifest, complete regression, CI, and release
+record remain pending. Cooperative locking and correlation do not establish
+cross-store atomicity, protection from a noncooperating writer, distributed
+fencing, independent custody, failover, HA/DR, a live adapter, or production
+authority.
+
 The Phase 2.5 technical suite at `854b15c` passed 222/222; the separate public-site module passed 9/9; and the combined repository aggregate passed 231/231 before publication. The site module is outside the architecture and Phase 2.5 evidence claims. Presence in a diagram is not a tag, release, campaign, or evidence claim. `P2-CE-005` remains CE-0 `NOT_EVALUATED`: no campaign result, result ledger, evidence record, or evidence-only Commit B exists. It is unrelated to the Phase 3 MVP and must not be used as Phase 3 evidence.
 
 Figure 1 (`01_system_context.*`) depicts an application path designed to stop before governed payload access when the selected Gate B controls fail. It is not evidence that the operating system, mount namespace, network, or another same-user process cannot access those bytes.
@@ -32,19 +63,32 @@ The three metric charts remain historical Phase 1 `v0.1.0` synthetic-simulation 
 | `07_scenario_outcomes.*` | Historical Phase 1 v0.1 dispositions by generated scenario | Synthetic generator family; not historical or operational outcomes |
 | [`08_phase3_operational_mvp.dot`](08_phase3_operational_mvp.dot), [`PNG`](08_phase3_operational_mvp.png), [`SVG`](08_phase3_operational_mvp.svg) | Published Phase 3 credential-to-decision-to-synthetic-effect architecture, including no-action branches and functionally separate same-project readback | Exact Commit `423685d`; simulation-only CE-1; no live connectors |
 | [`09_phase31_model_evaluation.dot`](09_phase31_model_evaluation.dot), [`PNG`](09_phase31_model_evaluation.png), [`SVG`](09_phase31_model_evaluation.svg) | Phase 3.1 synthetic source binding, temporal split, baseline/challenger comparison, metrics, and no-promotion boundary | Published exact Commit `bb6b8f28`; synthetic mechanism only; no historical/live adapter or action path |
+| [`10_stage_a_durable_adapter_reconciliation.dot`](10_stage_a_durable_adapter_reconciliation.dot), [`PNG`](10_stage_a_durable_adapter_reconciliation.png), [`SVG`](10_stage_a_durable_adapter_reconciliation.svg) | Unreleased `0.4.0-alpha.2` Stage A T1/T2/T3 transaction flow, same-store observation, sanitized lookup, and fail-closed recovery branches; ADR-015/runbook carry the detailed startup, correlation, chronology, and recovery-tail controls | Pre-commit production-development view; no cross-store atomicity, independently custodied verification, hostile/distributed fencing, HA/DR, automatic retry, live adapter, or production authority |
 
 ## Reproducible rendering
 
-The DOT sources are authoritative for diagrams 01–04, 08, and 09. The checked-in renders were produced with Graphviz `dot` 15.1.1:
+The DOT sources are authoritative for diagrams 01–04 and 08–10. The declared
+renderer for the checked-in architecture views is Graphviz `dot` 15.1.1. Use
+these exact commands after any source change:
 
 ```bash
-for source in docs/architecture/0[1-4]_*.dot docs/architecture/08_phase3_operational_mvp.dot docs/architecture/09_phase31_model_evaluation.dot; do
+for source in docs/architecture/0[1-4]_*.dot docs/architecture/08_phase3_operational_mvp.dot docs/architecture/09_phase31_model_evaluation.dot docs/architecture/10_stage_a_durable_adapter_reconciliation.dot; do
   dot -Tpng -Gdpi=180 "$source" -o "${source%.dot}.png"
   dot -Tsvg "$source" -o "${source%.dot}.svg"
 done
 ```
 
-For a Phase 3/3.1-only refresh, render diagrams 08 and 09 with the same two commands and inspect both outputs. Each DOT source, PNG, and SVG must represent the same status and assurance boundaries. Use SVG for print.
+For a Diagram 10-only refresh, use:
+
+```bash
+dot -Tpng -Gdpi=180 docs/architecture/10_stage_a_durable_adapter_reconciliation.dot -o docs/architecture/10_stage_a_durable_adapter_reconciliation.png
+dot -Tsvg docs/architecture/10_stage_a_durable_adapter_reconciliation.dot -o docs/architecture/10_stage_a_durable_adapter_reconciliation.svg
+```
+
+For a Phase 3/3.1/Stage A refresh, render diagrams 08–10 with the loop above and
+inspect every output. Do not claim synchronization from timestamps or file
+presence: compare each render to its DOT source and inspect the PNG and SVG for
+clipping, overlap, status, and assurance-boundary drift. Use SVG for print.
 
 Charts 05–07 are generated by [`generate_metric_charts.py`](generate_metric_charts.py):
 

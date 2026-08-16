@@ -1,87 +1,145 @@
-# Stage A Durable-Ledger Runbook
+# Stage A Durable Ledger, Adapter Receipt, and Result Runbook
 
 **Runbook state:** bounded development procedure; not operationally accepted
-**Scope:** one host, one authoritative SQLite ledger, offline synthetic fixtures, and the in-memory synthetic target only
-**Baseline:** `bb6b8f28afba0961bb97b24e6050fccaa94d5702` plus the unfrozen local Stage A candidate
+**Scope:** one host; one schema-v2 control SQLite database; one schema-v1 offline synthetic-adapter SQLite database; one JSONL lifecycle audit
+**Baseline:** `bb6b8f28afba0961bb97b24e6050fccaa94d5702` plus the pre-commit `0.4.0-alpha.2` Stage A successor candidate
 **Production authority:** none
 
 ## Purpose and hard boundary
 
-This runbook describes how to inspect, stop, reconcile, and preserve the Stage A durable control ledger without turning an uncertain action into a retry. It is deliberately fail closed.
+This runbook describes fail-closed inspection, preservation, exact-duplicate lookup, and explicit request reconciliation for the opt-in Stage A durability path. It is not a deployment or production operating procedure.
 
-Stage A has no production connector, operational credential, durable target adapter, deployment package, service supervisor, queue, outbox exporter, external audit custodian, high-availability topology, or approved disaster-recovery system. It must not receive historical organizational data or connect to a production or non-production enterprise system. It must not be used to infer production safety, availability, replay resistance, recovery effectiveness, or operational authorization.
+Stage A has no production or test-tenant connector, operational credential, vendor adapter, network target, service supervisor, queue, outbox exporter, external audit custodian, independent target observer, high-availability topology, approved backup/restore service, or disaster-recovery system. It must not receive historical organizational data or connect to any enterprise or operational system.
 
-The repository's `run_phase3.py` demonstration does **not** pass a `control_ledger_path`; it therefore uses the in-memory compatibility ledger and is not the Stage A durable-ledger launcher. There is currently no supported Stage A CLI or service entry point. Durable behavior is available as a library integration and is exercised by the focused test harness only. Do not create an ad hoc launcher to bypass that gate.
+The durable adapter is `SQLiteSyntheticAdapterStore`: a repository-controlled, same-process, offline synthetic component. Its `SyntheticAdapterReceipt` is adapter-reported only. The separate observer reads the same durable adapter state under the same project custody and is not independent verification. A `RequestLookupResult` is a closed, sanitized replay envelope, not a serialized `Phase3Result` and not authority to execute.
+
+The repository demonstration does not constitute a supported Stage A service launcher. The opt-in path is available only through the reviewed library integration configured with pairwise-distinct `control_ledger_path`, `synthetic_adapter_path`, and `audit_path`. Do not create an ad hoc launcher or connect it to a network, credential, connector, or external target.
+
+## Transaction and recovery boundaries
+
+The lifecycle is deliberately split:
+
+1. **T1 — control reservation:** validate authority and atomically consume the token, reserve the exact-bound attempt, advance request state, and write a metadata-only control outbox event.
+2. **T2 — adapter transaction:** validate the stable canonical binding and trusted prestate, apply the offline synthetic transition, update durable synthetic state, and insert one immutable `SyntheticAdapterReceipt` in the same adapter-database transaction.
+3. **Observation:** read adapter state through the separate read-only observer. This is distinct from acknowledgement but not independently custodied.
+4. **T3 — control terminal:** after verification, atomically advance attempt/request state, insert one closed sanitized `RequestLookupResult`, and write a metadata-only control outbox event.
+5. **JSONL lifecycle audit:** remains a separate artifact and transaction boundary.
+
+No control transaction remains open across T2 or observation. T1, T2, JSONL audit, observation, and T3 do not form a cross-store transaction. Cross-store divergence is an explicit recovery condition, not an error to conceal.
+
+Supported processes take a bounded exclusive POSIX `flock` on each stable
+durable-path root, in deterministic order, before combined startup and before
+every durable firewall operation. The public control- and adapter-store
+constructors use the same bounded first-open mechanism when invoked directly.
+No lock-file artifact is created. A complete JSONL lifecycle additionally owns
+an exclusive audit-file `flock`. These are cooperative, one-host controls: they
+do not fence a noncooperating same-user process, another host, or modified code.
 
 ## Safety invariants
 
-1. Only the `synthetic_simulation` execution mode and the repository's in-memory synthetic target are permitted.
-2. No request processing begins until ledger integrity, schema, audit integrity, single-writer ownership, and startup reconciliation pass.
-3. Reconciliation is an explicit operator action under exclusive, quiesced ownership. It is not run automatically by every constructor because another live process could have a legitimate in-flight reservation.
-4. Every `RESERVED` attempt found during authorized restart recovery becomes `UNKNOWN_EFFECT`. The consumed authorization remains consumed.
-5. `UNKNOWN_EFFECT` is a terminal quarantine state. It never triggers automatic retry, token reopening, replacement authorization, success reporting, or assumed rollback.
-6. Backup availability does not authorize restoration. An older snapshot can omit a consumed token or request claim and thereby re-enable replay.
-7. Ledger, audit, WAL, shared-memory, backup, checksum, and incident evidence are preserved. Do not delete, truncate, edit, merge, or repair them in place.
-8. Any unknown or inconsistent state keeps processing disabled.
+1. Only `execution_mode=synthetic_simulation` and the offline repository-controlled synthetic target are permitted.
+2. No processing begins until both databases, the audit, exact code/configuration, path/sidecar separation, safe ownership, semantic/chronological validation, and cross-store correlation pass preflight under cooperative startup ownership.
+3. Reconciliation is never run automatically in a constructor. Use `reconcile_request(operator_asserted_quiesced=True)` only after independently establishing exclusive, quiesced ownership.
+4. Reconciliation never invokes an adapter command, creates a decision, mints a token, reopens authority, fabricates verification, or claims rollback.
+5. An exact affirmative `NO_EFFECT` receipt may close `FAILED_NO_EFFECT`. `APPLIED`, `PARTIAL`, or `AMBIGUOUS` without separately durable verification closes `UNKNOWN_EFFECT`. No receipt also closes `UNKNOWN_EFFECT`. Corrupt, mismatched, or unavailable adapter evidence halts with no state transition.
+6. `UNKNOWN_EFFECT` is terminal. It never triggers automatic retry, replacement authorization, success reporting, or assumed rollback.
+7. Exact repeated receipt/result writes are idempotent; changed binding or payload under the same key is a hard conflict and cannot overwrite history.
+8. `lookup_request_result` is authenticated and read-only. It requires exact principal, request ID, and canonical request digest and performs no new work. `process_json` remains fail closed for duplicates and returns only `Phase3Result`.
+9. Backup availability does not authorize restoration. Older or mismatched snapshots can omit consumed authority or committed target state and re-enable unsafe replay.
+10. Preserve the control DB, adapter DB, audit, WAL/SHM companions, backups, checksums, and incident evidence. Do not delete, truncate, merge, edit, or repair them in place.
+11. Existing artifacts are preflighted read-only before any missing artifact is created. A zero-byte, unsafe, unsupported, corrupt, or semantically impossible existing store is preserved and refused.
+12. The control store, adapter store, and audit are correlated at startup and before durable use. An orphan/missing receipt, overlapping provenance substitution, receipt/disposition mismatch, or terminal target-state mismatch fails closed; correlation does not make the artifacts atomic.
+13. Recovery audit is exactly `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, `RECOVERY_FINALIZED` before T3. A pending exact prefix or completed trio fences other request/approval audit writers with `RECOVERY_AUDIT_PENDING`; only exact recovery may resume it.
+14. Any unknown, inconsistent, or unverified state keeps processing disabled.
 
-## Durable states and operator meaning
+## Durable objects and operator meaning
 
-| State | Meaning | Operator action |
+| Object / state | Meaning | Operator action |
 |---|---|---|
-| `ISSUED` authorization | Token was registered but not durably consumed. | Do not reuse it after an incident or restart without a separately reviewed lifecycle; current Stage A has no approved resume flow. |
-| `CONSUMED` authorization | Token was consumed atomically with attempt reservation. | Never reopen it. |
-| `RESERVED` attempt | Execution may be active or may have crossed the effect boundary. | During live processing, stop and establish exclusive ownership. During restart recovery, reconcile to `UNKNOWN_EFFECT`. |
-| `COMPLETED` attempt | The synthetic path recorded its expected terminal outcome. | Retain as synthetic evidence only; it is not proof of a real effect. |
-| `FAILED_NO_EFFECT` attempt | The tested synthetic broker reported no state change and the terminal record committed. | Do not generalize to an external target. Do not automatically retry. |
-| `UNKNOWN_EFFECT` attempt | An effect may have occurred or terminal persistence was not supportable. | Quarantine, preserve, investigate read-only, and escalate. No automatic retry. |
+| `ISSUED` authorization | Registered but not consumed. | Do not reuse after an incident/restart without a separately reviewed lifecycle. Explicit quiesced recovery may revoke it. |
+| `CONSUMED` authorization | Consumed atomically with attempt reservation. | Never reopen it. |
+| `REVOKED` authorization | Permanently nonexecuting. | Preserve; never restore to `ISSUED`. |
+| `RESERVED` attempt | T2 may be active or may have committed. | Stop, prove quiescence, inspect exact receipt, and use the closed recovery table. Never rerun the command. |
+| `RECEIPT_RECORDED` attempt | Exact receipt reference exists, but verification-scoped terminal closure is incomplete. | Treat as nonterminal; never infer success or replay the command. Reconcile only under proven quiescence. |
+| `SyntheticAdapterReceipt` | Immutable adapter-reported record bound to the exact request/decision/token/command/policy/context/prestate/adapter contract. | Validate canonical binding, digest, version, disposition, and state-before/after digests. Do not treat it as independent verification. |
+| `VERIFIED_EFFECT` | Repository-controlled observation supported the expected synthetic state. | Retain as bounded same-store synthetic evidence only; it is not an operational-effect claim. |
+| `FAILED_NO_EFFECT` | Exact affirmative synthetic no-effect was supportable. | Preserve; no automatic retry. |
+| `RECOVERY_REQUIRED` | The terminal synthetic disposition requires separately authorized handling. | Preserve and escalate; do not claim rollback or issue compensation. |
+| `UNKNOWN_EFFECT` | Effect may have occurred or terminal proof is unavailable. | Quarantine, preserve, investigate read-only, and escalate. No automatic retry. |
+| `RequestLookupResult` | Closed versioned terminal projection with bounded IDs/digests/timestamps, original decision/verification summary, disposition, and replay flags. | Return only through exact authenticated lookup. Never use it as executable authority or claim it is full verification. |
+| recovery JSONL prefix/trio | Exact contiguous recovery lifecycle bound to the recovery/request/result and the observed original audit status. | Preserve byte-for-byte. If T3 is pending, keep other audit writers fenced and rerun only the exact recovery. Never append around it or treat it as cross-store commit proof. |
 
 ## Required roles and records
 
-Use named people in the exercise or incident record before following this runbook. Role labels below are not assignments.
+Role labels are not assignments. Name each person in the exercise or incident record before using this procedure.
 
 | Role | Required authority |
 |---|---|
-| `RELEASE_OWNER` | Approves the exact code/worktree and synthetic exercise boundary. |
-| `STAGE_A_OPERATOR` | Holds exclusive control of the one local caller and executes this runbook. |
-| `SECURITY_OWNER` | Directs response to integrity, replay, bypass, credential, or insider concerns. |
-| `EVIDENCE_CUSTODIAN` | Receives checksums and preserves ledger, audit, and incident evidence outside the active directory. |
-| `DATA_OWNER` / `MISSION_OWNER` / `AUTHORIZING_OFFICIAL` | No authority is granted by Stage A; explicit approvals remain prerequisites for any later data access, integration, or operational effect. |
+| `RELEASE_OWNER` | Approves exact code/worktree and the offline synthetic exercise boundary. |
+| `STAGE_A_OPERATOR` | Controls the sole local caller and executes inspection/reconciliation. |
+| `SECURITY_OWNER` | Directs integrity, replay, bypass, credential, insider, or cross-store-divergence response. |
+| `EVIDENCE_CUSTODIAN` | Preserves checksums and copies of both databases, audit, and incident evidence outside the active directory. |
+| mission/data/target/authorizing owners | No authority is granted here; their explicit approvals remain prerequisites for later data, integration, or effect. |
 
-The operator record must contain: date/time in UTC, host identifier, operator, branch, exact commit, worktree status, Python and SQLite versions, ledger and audit paths, `ledger_id`, schema version, pre/post state counts, reconciliation count, audit result, outbox count, commands run, checksums, exceptions, and disposition. Do not place secrets or raw credentials in the record.
+Record UTC date/time, host, operator, branch, exact commit, worktree state, Python/SQLite versions, three authoritative paths, database identities and schema versions, pre/post state counts, exact request key, receipt/result digests and dispositions, reconciliation result, audit validation, outbox count, commands, checksums, exceptions, and final disposition. Do not record raw credentials, tokens, nonces, signatures, keys, or bearer material.
 
 ## Path and host preparation
 
-Use a dedicated owner-only local directory outside the repository and outside any synchronized folder. Replace the example path with an approved absolute path. Do not use symlinks, hard links, removable media, shared network filesystems, or a path inside a Git worktree.
+Use a dedicated owner-only local directory outside the repository and synchronized folders. Do not use symlinks, hard links, removable media, shared/network filesystems, or a Git worktree path.
 
 ```sh
 export ADF_STAGE_A_ROOT="/absolute/approved/local/path/adf-stage-a"
-export ADF_STAGE_A_LEDGER="$ADF_STAGE_A_ROOT/control.sqlite3"
-export ADF_STAGE_A_AUDIT="$ADF_STAGE_A_ROOT/phase3_audit.jsonl"
+export ADF_STAGE_A_CONTROL="$ADF_STAGE_A_ROOT/control-v2.sqlite3"
+export ADF_STAGE_A_ADAPTER="$ADF_STAGE_A_ROOT/synthetic-adapter-v1.sqlite3"
+export ADF_STAGE_A_AUDIT="$ADF_STAGE_A_ROOT/phase3-audit.jsonl"
 export ADF_STAGE_A_BACKUP_DIR="$ADF_STAGE_A_ROOT/backups"
 umask 077
 mkdir -p "$ADF_STAGE_A_BACKUP_DIR"
 chmod 700 "$ADF_STAGE_A_ROOT" "$ADF_STAGE_A_BACKUP_DIR"
 ```
 
-Fail the procedure if any variable is empty or non-absolute:
+Fail if any value is empty/nonabsolute, any two resolved paths or existing
+inodes alias, or a main path enters another SQLite path's reserved `-wal` or
+`-shm` namespace:
 
 ```sh
 : "${ADF_STAGE_A_ROOT:?Set the approved absolute Stage A root}"
-: "${ADF_STAGE_A_LEDGER:?Set the authoritative ledger path}"
-: "${ADF_STAGE_A_AUDIT:?Set the authoritative audit path}"
-case "$ADF_STAGE_A_ROOT:$ADF_STAGE_A_LEDGER:$ADF_STAGE_A_AUDIT" in
+: "${ADF_STAGE_A_CONTROL:?Set the schema-v2 control path}"
+: "${ADF_STAGE_A_ADAPTER:?Set the schema-v1 adapter path}"
+: "${ADF_STAGE_A_AUDIT:?Set the JSONL audit path}"
+case "$ADF_STAGE_A_CONTROL:$ADF_STAGE_A_ADAPTER:$ADF_STAGE_A_AUDIT" in
   /*:/*:/*) ;;
-  *) echo "FAIL: all Stage A paths must be absolute" >&2; exit 2 ;;
+  *) echo "FAIL: all three paths must be absolute" >&2; exit 2 ;;
 esac
+python3 -c 'import os; p=[os.environ["ADF_STAGE_A_CONTROL"],os.environ["ADF_STAGE_A_ADAPTER"],os.environ["ADF_STAGE_A_AUDIT"]]; r=[os.path.realpath(x) for x in p]; bad=len(set(r))!=3 or any(os.path.exists(p[i]) and os.path.exists(p[j]) and os.path.samefile(p[i],p[j]) for i in range(3) for j in range(i+1,3)); print(f"pairwise_distinct={not bad}"); raise SystemExit(2 if bad else 0)'
 ```
 
-Initial creation is owned by the reviewed library integration. Recovery operators must not instantiate `SQLiteControlLedger` against an absent or empty file: its constructor initializes a new ledger. An unexpectedly missing or empty authoritative ledger is an integrity incident, not a clean start.
+The reviewed integration enforces the stronger path/sidecar-namespace checks
+before opening any sink. Recovery operators must not instantiate a store
+against an unexpectedly missing or empty authoritative path: constructors can
+initialize new development stores. Missing authoritative state is an integrity
+incident, not a clean start.
+
+## Schema-v1 control preservation and new-v2 procedure
+
+The control schema is version 2. The adapter schema is version 1. The v2 control constructor refuses and preserves a schema-v1 control database; there is no migrator.
+
+If a v1 control file exists:
+
+1. Keep processing disabled and establish exclusive ownership.
+2. Preserve the v1 database and every extant `-wal`/`-shm` companion, paired audit, exact source/configuration identity, metadata, and checksums as evidence.
+3. Do not open it with write tools, alter its schema marker, copy rows, run SQL migration, reuse its `ledger_id`, or replace it in place.
+4. Select a new, empty, reviewed absolute path for a v2 control database and a distinct new adapter-v1 path. Re-run all safety and alias checks.
+5. Allow only the reviewed library integration to initialize the new empty stores. Initialization creates a new lifecycle; it does not continue, migrate, or prove closure of v1 work.
+6. Keep v1 artifacts retained and separately labeled. Any unresolved v1 reservation remains governed by the earlier runbook/evidence and cannot be translated into v2 authority.
+
+A future v1-to-v2 migrator would require a separate architecture decision, explicit quiescence, transactional copy/verification, rollback protection, compatibility tests, owner approval, and exact-commit evidence. None exists now.
 
 ## Preflight: keep processing disabled
 
-Run these checks before a synthetic exercise and again before recovery. Any failure is a stop condition.
+Run the full procedure before a synthetic exercise and before operator recovery. A normal authenticated `lookup_request_result` call is read-only and does not itself require quiescence; do not run this filesystem/operator procedure concurrently with the caller. If lookup reports missing, corrupt, mismatched, or unavailable state, disable intake, establish quiescence, and then run this preflight. Any failure is a stop condition.
 
-1. Record exact source and runtime state:
+1. Record source/runtime state:
 
    ```sh
    git rev-parse --verify HEAD
@@ -90,208 +148,298 @@ Run these checks before a synthetic exercise and again before recovery. Any fail
    sqlite3 --version
    ```
 
-2. For restart or recovery, require an existing nonempty ledger and an existing audit file before constructing either object:
+2. For restart/recovery, require all three authoritative artifacts and reject links or empty databases:
 
    ```sh
-   test -s "$ADF_STAGE_A_LEDGER" || { echo "FAIL: ledger missing or empty" >&2; exit 2; }
+   test -s "$ADF_STAGE_A_CONTROL" || { echo "FAIL: control DB missing or empty" >&2; exit 2; }
+   test -s "$ADF_STAGE_A_ADAPTER" || { echo "FAIL: adapter DB missing or empty" >&2; exit 2; }
    test -f "$ADF_STAGE_A_AUDIT" || { echo "FAIL: audit missing" >&2; exit 2; }
-   test ! -L "$ADF_STAGE_A_LEDGER" || { echo "FAIL: ledger is a symlink" >&2; exit 2; }
+   test ! -L "$ADF_STAGE_A_CONTROL" || { echo "FAIL: control DB is a symlink" >&2; exit 2; }
+   test ! -L "$ADF_STAGE_A_ADAPTER" || { echo "FAIL: adapter DB is a symlink" >&2; exit 2; }
    test ! -L "$ADF_STAGE_A_AUDIT" || { echo "FAIL: audit is a symlink" >&2; exit 2; }
-   stat -f 'path=%N mode=%Sp links=%l owner=%Su group=%Sg size=%z' "$ADF_STAGE_A_LEDGER" "$ADF_STAGE_A_AUDIT"
+   stat -f 'path=%N mode=%Sp links=%l owner=%Su group=%Sg size=%z' "$ADF_STAGE_A_CONTROL" "$ADF_STAGE_A_ADAPTER" "$ADF_STAGE_A_AUDIT"
    ```
 
-   Both files must be singly linked regular files owned by the designated local account. The ledger should be mode `0600`; the containing directory should be `0700`. Stop if ownership, link count, type, or path provenance is unexpected.
+   Each file must be a singly linked regular file owned by the designated local
+   account. Database files and every extant `-wal`/`-shm` sidecar must be
+   owner-private (`0600` or stricter); the directory should be `0700`. No
+   ancestor or sidecar may be a symbolic link. Re-run the pairwise alias and
+   sidecar-namespace checks above.
 
-   Prove that the ledger and audit do not resolve to the same path or existing inode. The library also enforces this before either sink opens:
-
-   ```sh
-   python3 -c 'import os, sys; ledger=os.environ["ADF_STAGE_A_LEDGER"]; audit=os.environ["ADF_STAGE_A_AUDIT"]; alias=os.path.realpath(ledger)==os.path.realpath(audit) or (os.path.exists(ledger) and os.path.exists(audit) and os.path.samefile(ledger, audit)); print(f"ledger_audit_alias={alias}"); raise SystemExit(2 if alias else 0)'
-   ```
-
-3. Establish exclusive, quiesced ownership. Stop the recorded Stage A caller through its supervisor or recorded PID. Inspect the database and every extant `-wal` and `-shm` companion with `lsof`. Any open handle is a stop condition. Do not reconcile merely because a second process appears idle.
+3. Establish exclusive, quiesced ownership. Stop the recorded caller and inspect both databases and all WAL/SHM companions. Any open handle is a stop condition:
 
    ```sh
-   for candidate in "$ADF_STAGE_A_LEDGER" "${ADF_STAGE_A_LEDGER}-wal" "${ADF_STAGE_A_LEDGER}-shm"; do
+   for candidate in "$ADF_STAGE_A_CONTROL" "${ADF_STAGE_A_CONTROL}-wal" "${ADF_STAGE_A_CONTROL}-shm" "$ADF_STAGE_A_ADAPTER" "${ADF_STAGE_A_ADAPTER}-wal" "${ADF_STAGE_A_ADAPTER}-shm"; do
      if test -e "$candidate"; then lsof -- "$candidate"; fi
    done
    ```
 
-4. Validate the SQLite file without enabling a caller:
+4. Validate each SQLite artifact read-only:
 
    ```sh
-   sqlite3 -readonly -header -column "$ADF_STAGE_A_LEDGER" \
-     "PRAGMA integrity_check; SELECT key,value FROM metadata ORDER BY key; SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name; SELECT state,COUNT(*) AS count FROM authorizations GROUP BY state ORDER BY state; SELECT state,COUNT(*) AS count FROM attempts GROUP BY state ORDER BY state;"
+   sqlite3 -readonly -header -column "$ADF_STAGE_A_CONTROL" "PRAGMA integrity_check; SELECT key,value FROM metadata ORDER BY key; SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
+   sqlite3 -readonly -header -column "$ADF_STAGE_A_ADAPTER" "PRAGMA integrity_check; SELECT key,value FROM metadata ORDER BY key; SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
    ```
 
-   Required results are `integrity_check = ok`, `schema_version = 1`, one stable nonempty `ledger_id`, and exactly these application tables: `audit_outbox`, `attempts`, `authorizations`, `metadata`, and `requests`. A mismatch is an incident. Do not run schema migration or repair.
+   Require exactly `integrity_check = ok`, control `schema_version = 2`, adapter `schema_version = 1`, a stable nonempty control `ledger_id`, a stable nonempty adapter `adapter_store_id`, and these application-table sets:
 
-5. Validate the JSONL audit chain. This command is allowed only after the audit existence/type checks above:
+   - control: `metadata`, `requests`, `request_results`, `authorizations`, `attempts`, and `audit_outbox`;
+   - adapter: `metadata`, `target_states`, and `command_receipts`.
+
+   Any unsupported schema, identity change, extra/missing table, or integrity error is an incident. Do not run migration or repair.
+
+   These shell checks are triage only. The reviewed implementation additionally
+   verifies code-owned schema fingerprints, immutable metadata, canonical JSON
+   digests and shapes, row cardinalities, legal request/authorization/attempt/
+   result relations, terminal-result provenance, and monotonic timestamps. The
+   adapter must prove a continuous per-target receipt state/time chain from its
+   initialized state to the current target row. A foreign-key-clean database can
+   still fail these semantic checks.
+
+5. Validate the JSONL chain only after path/type checks:
 
    ```sh
    PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -c 'import os; from adf_poc.audit import AuditLogger; from adf_poc.phase3.audit import validate_phase3_audit_chain; rows=AuditLogger(os.environ["ADF_STAGE_A_AUDIT"]).read_all(); ok, errors=validate_phase3_audit_chain(rows); print(f"rows={len(rows)} valid={ok} errors={errors}"); raise SystemExit(0 if ok else 2)'
    ```
 
-   An empty audit may be valid for a newly initialized, never-used fixture, but an absent or unexpectedly empty audit during recovery is not proof that no activity occurred. Stop and escalate.
+6. Under disabled intake, allow the reviewed combined constructor to perform
+   its bounded cooperative preflight/open. It preflights every existing store
+   before creating a missing one, uses one firewall-clock sample if both stores
+   are new, revalidates after open, and correlates the control and adapter
+   projections. Require refusal on any orphan adapter receipt, missing required
+   receipt, overlapping provenance substitution, receipt digest/disposition
+   mismatch, or terminal target-state mismatch. `DURABLE_STARTUP_BUSY` means
+   cooperative ownership was not obtained within the configured bound; do not
+   increase the timeout as an incident workaround.
 
-## Explicit startup reconciliation
+An unexpectedly empty audit or missing receipt/result is not proof that no
+activity occurred. Stop and escalate. Successful correlation is only a defined
+consistency check; it is not a shared recovery point or independent custody.
 
-Do not put this call in a general constructor or run it while any caller may still be active. Under documented exclusive, quiesced ownership:
+## Exact-duplicate result lookup after response loss
 
-1. Record the pre-reconciliation attempts:
+Use the library's `lookup_request_result` only after authenticating the same principal and recomputing the exact canonical request digest from the original request. It is a read-only seam separate from `process_json`.
 
-   ```sh
-   sqlite3 -readonly -header -column "$ADF_STAGE_A_LEDGER" \
-     "SELECT attempt_id,token_id,state,reserved_at,completed_at FROM attempts WHERE state IN ('RESERVED','UNKNOWN_EFFECT') ORDER BY reserved_at,attempt_id;"
-   ```
+The lookup runs under cooperative durable/audit ownership. When it finds a
+terminal result, it performs full store validation and runtime cross-store
+correlation before returning that result. A recovery prefix/trio does not let
+lookup invent a result: before T3 it returns no stored projection; after exact
+T3 it may return the correlated terminal projection. Lookup never appends to or
+repairs the recovery tail.
 
-2. Reconcile all remaining `RESERVED` rows in one ledger transaction:
+Expected exact-duplicate projection flags are:
 
-   ```sh
-   PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -c 'import os; from adf_poc.stage_a import SQLiteControlLedger; ledger=SQLiteControlLedger(os.environ["ADF_STAGE_A_LEDGER"]); print(f"recovered_to_UNKNOWN_EFFECT={ledger.recover_incomplete_attempts()}"); print(f"pending_outbox={len(ledger.pending_outbox())}")'
-   ```
+- `replayed=true`;
+- `execution_attempted_this_call=false`;
+- `new_decision=false`;
+- `new_authorization=false`; and
+- `new_effect=false`.
 
-3. Prove there are no remaining reservations and record every uncertain attempt:
+The returned `RequestLookupResult` must retain its original bounded disposition, digests, timestamps, and decision/verification summaries. It must recursively exclude authorization, token, nonce, signature, credential, signing/key material, raw audit rows, executable commands, and bearer authority.
 
-   ```sh
-   sqlite3 -readonly -header -column "$ADF_STAGE_A_LEDGER" \
-     "SELECT state,COUNT(*) AS count FROM attempts GROUP BY state ORDER BY state; SELECT attempt_id,token_id,binding_sha256,reserved_at,completed_at FROM attempts WHERE state='UNKNOWN_EFFECT' ORDER BY reserved_at,attempt_id; SELECT COUNT(*) AS reserved_must_be_zero FROM attempts WHERE state='RESERVED';"
-   ```
+If principal, request ID, or canonical request digest differs, fail closed without disclosing whether or what the prior result was. If the stored projection/version/digest is missing, malformed, or conflicting, stop; do not call `process_json`, recreate the decision, mint authority, execute the adapter, or synthesize a response.
 
-4. Re-run integrity and audit-chain validation. Inspect the new `ATTEMPT_RECOVERED_UNKNOWN` outbox rows. If any `RESERVED` row remains, any check fails, or ownership is not still exclusive, keep processing disabled.
+## Explicit startup/request reconciliation
 
-Reconciliation is monotonic. It does not prove whether an effect happened, reopen a token, repair the JSONL audit, export the outbox, or authorize a retry. Every listed `UNKNOWN_EFFECT` requires case-specific review; because Stage A has no external target, that review is limited to the synthetic evidence and must not assert a production outcome.
+Do not reconcile from a general constructor, while intake is enabled, or while any caller may still be active. `operator_asserted_quiesced=True` is an administrative interlock, not proof of a lease, epoch, fence, or absent second host.
+
+For each request requiring recovery:
+
+1. Preserve pre-reconciliation control request/authorization/attempt/result rows, adapter state/receipt rows, audit status, outbox state, and checksums using read-only inspection.
+2. Validate exact principal/request digest, attempt binding, adapter identity/version/digest, receipt contract/digest, and state-before/after digests.
+3. Inspect the audit tail. If it contains a recovery record, require the exact
+   contiguous prefix `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`,
+   `RECOVERY_FINALIZED` for one recovery ID and exact principal/request/digest.
+   Any malformed, interleaved, excess, or differently bound tail is a hard
+   conflict. Do not append around it.
+4. Invoke only `reconcile_request(operator_asserted_quiesced=True)` through the reviewed library integration for the exact request.
+5. Apply and verify the closed outcome:
+
+   | Recovered condition | Required control result |
+   |---|---|
+   | exact affirmative `NO_EFFECT` receipt | Close `FAILED_NO_EFFECT`; write a recovered sanitized `RequestLookupResult`; do not issue a command. |
+   | `APPLIED`, `PARTIAL`, or `AMBIGUOUS` without separately durable verification | Close `UNKNOWN_EFFECT` with recovery-required sanitized result; do not issue a command. |
+   | no receipt | Close `UNKNOWN_EFFECT`; absence does not prove no effect or permit retry. |
+   | receipt or adapter store corrupt, mismatched, or unavailable | Halt with no control-state transition; processing remains disabled. |
+   | existing `UNKNOWN_EFFECT` | Remain terminal and unchanged. |
+
+6. Confirm the recovery audit records the observed original execution-audit
+   state exactly as `COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`, then closes the
+   exact trio before T3. If the process stops after any prefix, rerun only this
+   exact recovery. If the trio is complete but T3 is absent, request and
+   approval writers must remain fenced with `RECOVERY_AUDIT_PENDING`; exact
+   recovery commits T3 without changing the trio.
+7. Re-run both integrity/schema checks, semantic/chronology scans, cross-store
+   correlation, and audit validation. Confirm no illegal state transition,
+   reopened authorization, new adapter receipt, or new command/effect. Inspect
+   metadata-only recovery/result outbox entries without marking them exported.
+8. An exact repeat must return the same result without mutation. Any changed binding/payload conflict, remaining unexplained `RESERVED` state, integrity failure, or loss of quiescence keeps processing disabled.
+
+Reconciliation may create a distinct recovered projection from an exact receipt. It must not claim full original verification. In particular, an `APPLIED` receipt alone cannot produce a verified-success result.
 
 ## Permitted exercise and normal shutdown
 
-There is no approved long-running service to start. The only presently supported exercise of the durable path is the repository's focused Stage A test suite:
+There is no approved long-running service to start. The only supported exercise
+is the repository-controlled focused Stage A harness using isolated temporary
+control and adapter databases plus synthetic fixtures. On 2026-08-16, the
+mutable `0.4.0-alpha.2` worktree's focused receipt/recovery and durable-ledger
+suite was observed at 43/43 passing in 8.854 seconds. This is local pre-commit
+evidence only, not exact-commit, manifest, complete-regression, CI, or runbook-
+exercise evidence.
 
-```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest tests.test_stage_a_durable_control_ledger -v
-```
-
-The tests create isolated temporary ledgers and synthetic in-memory targets. They do not use the operator paths above and do not validate deployment, backup, restoration, live connectors, real credentials, or real target behavior.
-
-For any later reviewed offline caller, the release owner must verify that it passes the same approved absolute `control_ledger_path` and `audit_path`, retains `execution_mode == "synthetic_simulation"`, and has no network or operational adapter. Normal shutdown means: stop intake, wait only for already executing synthetic calls to return, stop the one caller, confirm no open ledger/WAL/SHM handles, inspect attempt states, and reconcile any remaining `RESERVED` row to `UNKNOWN_EFFECT`. Never wait indefinitely and never restart the call as a shutdown tactic.
+For any later reviewed offline callers, verify the exact approved
+`control_ledger_path`, `synthetic_adapter_path`, and `audit_path`, retain
+`synthetic_simulation`, and prove no network or operational adapter exists.
+Cooperating processes serialize locally; they do not form an HA service.
+Normal shutdown means: stop intake; allow only known active synthetic calls a
+bounded completion interval; stop every recorded caller; prove no open handles;
+inspect both stores and audit; and reconcile any incomplete exact request under
+exclusive ownership. Never restart a call as a shutdown tactic.
 
 ## Monitoring and alert conditions
 
-Stage A has no dashboard, alert transport, or outbox exporter. The following are manual observations and required future signals, not implemented production monitoring:
+Stage A has no dashboard, alert transport, or outbox exporter. These are manual observations and future signal requirements, not implemented production monitoring:
 
 | Observation | Safe expectation | Alert / response |
 |---|---|---|
-| SQLite `integrity_check` | Exactly `ok`. | Disable and preserve on any other result. |
-| Schema and `ledger_id` | Version `1`; stable recorded identity. | Disable on absence or change. |
-| `RESERVED` attempts | May exist only during a known active synthetic call; zero after quiescence/reconciliation. | Establish exclusive ownership, then reconcile to `UNKNOWN_EFFECT`. |
-| `UNKNOWN_EFFECT` attempts | Zero is preferred; any row is unresolved. | Quarantine the request/target context; no retry; security/release review. |
-| Authorization state | Only `ISSUED` or `CONSUMED`; consumed never reopens. | Disable on any impossible state or ledger/audit disagreement. |
-| Audit-chain validation | Valid, with expected lifecycle records. | Disable; preserve; never rewrite history. |
-| Pending outbox | Count and oldest age must be recorded. | There is no exporter, so rows remain pending; this is an open release blocker, not proof of audit delivery. |
-| Disk, inode, and WAL growth | Sufficient owner-defined reserve; no approved threshold exists. | Stop intake before exhaustion; do not delete WAL or ledger files. |
-| Duplicate/conflict/lock errors | Individually attributable to the synthetic exercise. | Stop on unexplained increase or repeated contention; investigate request poisoning or a second writer. |
-
-Read-only ledger review:
-
-```sh
-sqlite3 -readonly -header -column "$ADF_STAGE_A_LEDGER" \
-  "SELECT event_id,event_type,subject_id,payload_sha256,created_at,exported_at FROM audit_outbox WHERE exported_at IS NULL ORDER BY event_id;"
-```
-
-The outbox stores event digests, not the complete Phase 3 audit record. It is co-committed with ledger transitions, but there is no implemented acknowledgement or external-custody workflow. Never set `exported_at` manually.
+| Control/adapter integrity | Both exactly `ok`; expected identities and schema versions 2/1. | Disable and preserve on any mismatch. |
+| Path separation | Three pairwise-distinct safe artifacts. | Disable before opening any store. |
+| `RESERVED` attempts | Only during a known active synthetic call; none unexplained after reconciliation. | Prove quiescence; apply exact request recovery. |
+| Receipt/result consistency | Exact versions, bindings, digests, legal transitions, and immutable repeats. | Disable on orphan, mismatch, corruption, or overwrite attempt. |
+| Store correlation | Control and adapter projections agree on exact provenance, receipt, terminal disposition, and terminal target digest. | Disable on `DURABLE_STORE_CORRELATION_INVALID`; preserve all artifacts; never repair one store to match the other. |
+| Receipt disposition | `NO_EFFECT`, `APPLIED`, `PARTIAL`, or `AMBIGUOUS` only. | Never infer verification; apply closed recovery table. |
+| `UNKNOWN_EFFECT` | Any row is unresolved and terminal. | Quarantine; no retry; security/release review. |
+| Authorization state | Legal monotonic `ISSUED`, `CONSUMED`, or `REVOKED` only. | Disable on impossible/reopened state. |
+| Lookup behavior | Exact authenticated lookup only; `replayed=true` and all four activity flags are `false`. | Disable on disclosure, mutation, or new lifecycle work. |
+| Audit/outbox | Valid chain; explainable metadata-only events; backlog recorded. | Preserve on loss/gap; never claim export/custody. |
+| Recovery tail | No unexplained prefix/trio; if T3 is pending, only the exact recovery may write. | Keep request/approval writers fenced; preserve the tail; rerun exact recovery or escalate on conflict. |
+| Disk/inode/WAL/result growth | Within an owner-defined reserve; no approved threshold exists. | Stop before exhaustion; never delete authoritative rows/files ad hoc. |
+| Lock/conflict/divergence | Individually attributable to the exercise. | Stop on unexplained contention, conflict, orphan, or second writer. |
 
 ## Emergency disable
 
-Trigger emergency disable for any unauthorized path, unexpected connector or credential, loss of exclusive ownership, ledger/audit integrity failure, ambiguous effect, repeated lock/collision anomaly, key compromise, unexplained code/config drift, or safety-owner direction.
+Trigger disable for an unauthorized path, connector, credential, network route, or target; loss of exclusive ownership; either database or audit failing integrity; receipt/result mismatch; ambiguous possible effect; repeated collision/lock anomaly; key compromise; code/config drift; or owner direction.
 
-1. Stop intake and stop the sole caller through its recorded supervisor or PID. There is no repository-supplied Stage A daemon or remote kill switch.
-2. Confirm no process holds the ledger, WAL, or shared-memory files. If a process will not stop, escalate to the host owner; do not reconcile concurrently.
-3. Preserve source state, process/supervisor evidence, ledger, WAL/SHM companions, audit, stdout/stderr, and checksums. Do not run cleanup or rerun the request.
-4. Under release/security-owner direction, an optional local defense-in-depth interlock is to remove all permission bits from the ledger and any extant WAL/SHM files **after** the caller is stopped:
-
-   ```sh
-   chmod 000 "$ADF_STAGE_A_LEDGER"
-   test ! -e "${ADF_STAGE_A_LEDGER}-wal" || chmod 000 "${ADF_STAGE_A_LEDGER}-wal"
-   test ! -e "${ADF_STAGE_A_LEDGER}-shm" || chmod 000 "${ADF_STAGE_A_LEDGER}-shm"
-   ```
-
-   Record the prior modes. This is not a security boundary against the file owner, an administrator, malware, or a modified process. Do not restore permissions or processing until the incident owner authorizes a reviewed recovery.
-
-5. Classify every possible effect as `UNKNOWN_EFFECT`; use read-only observation only where separately authorized. Stage A's declared boundary makes external effects prohibited, but that prohibition is not evidence of a broader operational kill capability.
+1. Stop intake and every recorded caller through its recorded supervisor/PID. There is no repository-supplied daemon or remote kill switch.
+2. Confirm no process holds either database or any WAL/SHM file. If a process will not stop, escalate to the host owner; do not reconcile concurrently.
+3. Preserve exact source/configuration, process evidence, both databases and companions, audit, logs, and checksums. Do not clean, repair, rerun, or overwrite.
+4. Under release/security-owner direction, after the caller stops, permissions may be removed from both database families as a local defense-in-depth interlock. Record prior modes. This is not protection against the file owner, administrator, malware, or modified code.
+5. Classify each possible effect conservatively. Use only separately authorized read-only observation; do not infer an operational kill capability from this synthetic procedure.
 
 ## Backup guidance — not implemented or validated
 
-No backup job, retention policy, encryption/key-custody process, restore test, RPO, RTO, or failover mechanism is implemented. The following is conservative design guidance for a future controlled exercise; its existence is not disaster-recovery evidence.
+No backup job, retention/encryption/key-custody process, coherent three-artifact recovery marker, restore test, RPO, RTO, or failover exists. The following is design guidance for a future controlled synthetic exercise, not DR evidence.
 
-Prerequisites: emergency disable or normal quiescence, exclusive ownership, passing integrity/schema/audit checks, an approved owner-only backup destination on the same synthetic host, and an evidence record. Do not copy a live SQLite database file while ignoring its WAL/SHM state.
+Prerequisites are disable/quiescence, exclusive ownership, passing checks for both databases and audit, an approved owner-only destination, and an evidence record. Do not raw-copy a live SQLite file while ignoring WAL/SHM.
 
-For a future exercise, prefer SQLite's backup API after quiescence and a successful full checkpoint. Use controlled paths without newline or quote characters:
+For each database, use SQLite's backup API only after a successful full checkpoint, then separately preserve the audit:
 
 ```sh
-export ADF_STAGE_A_BACKUP="$ADF_STAGE_A_BACKUP_DIR/control-$(date -u +%Y%m%dT%H%M%SZ).sqlite3"
-sqlite3 "$ADF_STAGE_A_LEDGER" "PRAGMA wal_checkpoint(FULL);"
-sqlite3 "$ADF_STAGE_A_LEDGER" ".backup '$ADF_STAGE_A_BACKUP'"
-chmod 600 "$ADF_STAGE_A_BACKUP"
-sqlite3 -readonly -header -column "$ADF_STAGE_A_BACKUP" \
-  "PRAGMA integrity_check; SELECT key,value FROM metadata ORDER BY key; SELECT state,COUNT(*) FROM attempts GROUP BY state ORDER BY state;"
-cp -p "$ADF_STAGE_A_AUDIT" "${ADF_STAGE_A_BACKUP}.phase3_audit.jsonl"
-shasum -a 256 "$ADF_STAGE_A_BACKUP" "${ADF_STAGE_A_BACKUP}.phase3_audit.jsonl"
+export ADF_STAGE_A_CONTROL_BACKUP="$ADF_STAGE_A_BACKUP_DIR/control-v2-review.sqlite3"
+export ADF_STAGE_A_ADAPTER_BACKUP="$ADF_STAGE_A_BACKUP_DIR/adapter-v1-review.sqlite3"
+sqlite3 "$ADF_STAGE_A_CONTROL" "PRAGMA wal_checkpoint(FULL);"
+sqlite3 "$ADF_STAGE_A_ADAPTER" "PRAGMA wal_checkpoint(FULL);"
+sqlite3 "$ADF_STAGE_A_CONTROL" ".backup '$ADF_STAGE_A_CONTROL_BACKUP'"
+sqlite3 "$ADF_STAGE_A_ADAPTER" ".backup '$ADF_STAGE_A_ADAPTER_BACKUP'"
+chmod 600 "$ADF_STAGE_A_CONTROL_BACKUP" "$ADF_STAGE_A_ADAPTER_BACKUP"
+cp -p "$ADF_STAGE_A_AUDIT" "$ADF_STAGE_A_BACKUP_DIR/phase3-audit-review.jsonl"
+shasum -a 256 "$ADF_STAGE_A_CONTROL_BACKUP" "$ADF_STAGE_A_ADAPTER_BACKUP" "$ADF_STAGE_A_BACKUP_DIR/phase3-audit-review.jsonl"
 ```
 
-The first value returned by `wal_checkpoint(FULL)` must be `0` (not busy). Record the database and audit checksums in an independently retained exercise record. Preserve the authoritative `ledger_id`; separately preserve the exact source commit, configuration/policy digests, and deployment signing-key continuity. Stage A has no managed key backup, so this last property is not satisfied.
+Each checkpoint's first returned value must be `0` (not busy). Validate both backups read-only, preserve store identities and exact source/configuration/key continuity, and record lifecycle timestamps/counts and checksums independently. The backups are not one atomic recovery point. Even a quiesced set requires divergence review and cannot be called crash-consistent without a validated protocol.
 
-Do not treat a raw file copy of an active database, a checksum alone, or a successful `.backup` as a validated recovery point. The database and JSONL audit have no cross-store transaction or shared recovery-point marker, so even a quiesced pair requires lifecycle reconciliation and cannot be claimed crash-consistent without a separate exercise. Do not co-mingle ledgers, reuse one `ledger_id` for independent histories, or delete the source after backup.
+Never merge independent stores, reuse a store identity for a new lifecycle, delete the sources, or claim an older snapshot is authoritative.
 
-## Restore guidance — review-only by default
+## Restore guidance — review-only
 
-An older ledger can lack newer request claims, consumed tokens, attempts, and outbox events. Making it authoritative without rollback protection can permit replay. Consequently, Stage A restoration stops at an isolated **review-only candidate** unless a future design supplies fencing/epoch control, authoritative rollback approval, key continuity, and accepted replay analysis.
+An older control snapshot may omit a consumed token/result; an older adapter snapshot may omit a target change/receipt; a mismatched audit may omit lifecycle evidence. Any combination can re-enable replay or conceal uncertainty.
 
-1. Keep the caller disabled and establish exclusive ownership.
-2. Verify the backup and paired audit checksums against the independently retained record.
-3. Copy the backup to a new, owner-only candidate path. Never overwrite or rename the current authoritative ledger and never merge rows from two ledgers.
-4. Validate the candidate with `PRAGMA integrity_check`, the exact table set, `schema_version = 1`, and the recorded `ledger_id`. Validate the paired JSONL audit independently. A valid database with the wrong identity is not the ledger.
-5. Compare counts and latest timestamps for requests, authorizations, attempts, and outbox against the incident record and the preserved authoritative files. Any unexplained regression is a stop condition.
-6. Under exclusive ownership, explicitly reconcile candidate `RESERVED` attempts to `UNKNOWN_EFFECT`; then prove the reserved count is zero. Never reissue their commands.
-7. Preserve both candidate and original as distinct evidence. Mark the candidate `review-only` in the incident/change record.
-8. Do not resume effects from the candidate. Promotion to authoritative service state requires a separately implemented and tested rollback/fencing design, owner approvals, RPO/RTO, and a controlled restore exercise in the intended environment.
+1. Keep the caller disabled and prove exclusive ownership.
+2. Verify checksums against an independently retained record.
+3. Copy each artifact to a new owner-only candidate path; never overwrite/rename the current authoritative files or merge rows.
+4. Validate both SQLite candidates, identities, schema versions 2/1, table sets, and the paired audit.
+5. Compare request/authorization/attempt/result, target/receipt, and audit/outbox chronology. Any regression, orphan, or mismatch stops the procedure.
+6. Reconcile exact requests only under quiesced review and the closed table. Never reissue a command.
+7. Preserve original and candidate sets as distinct evidence and label the candidate `review-only`.
+8. Do not resume effects. Promotion requires a separately implemented rollback/fencing design, coherent backup protocol, RPO/RTO, controlled restore exercise, and owner acceptance.
 
-There is no supported multi-host restore, replication, hot standby, or failover. Copying a ledger to a second active host creates split-brain risk and is prohibited.
+There is no supported multi-host restore, replication, standby, or failover. Copying either database to another active host creates split-brain risk and is prohibited.
 
 ## Failure handling and escalation
 
 | Symptom | Immediate disposition | Next action |
 |---|---|---|
-| Ledger missing, empty, unsafe link, wrong owner/mode, wrong schema, or corrupt | Keep caller disabled; do not initialize or repair. | Preserve filesystem evidence and escalate to `SECURITY_OWNER` and `RELEASE_OWNER`. |
-| Audit missing, invalid, truncated, replaced, or inconsistent with ledger | Keep caller disabled; audit closure is unsupported. | Preserve both stores and checksums; external evidence review is required. |
-| Database locked or second process detected | Deny/stop; do not increase timeout as a workaround. | Identify and stop the unapproved writer; re-establish quiescence. |
-| Reconciliation raises or leaves `RESERVED` | Treat all affected attempts as unresolved without editing rows manually. | Preserve and escalate; no restart. |
-| `UNKNOWN_EFFECT` exists | Quarantine; no auto retry or replacement token. | Review synthetic state and lifecycle evidence; record unresolved disposition. |
-| `FAILED_NO_EFFECT` exists after broker rejection | Preserve terminal evidence; no auto retry. | New work, if justified, requires a new request and authorization lifecycle. |
-| Outbox backlog grows | Do not mark rows exported. | Record backlog; exporter/external custody remain unimplemented release blockers. |
-| Disk/WAL growth or I/O error | Stop intake before capacity loss; do not remove ledger/WAL. | Quiesce, preserve, check host storage, then rerun integrity and reconciliation. |
-| Unexpected network, credential, adapter, or non-synthetic target | Emergency-disable immediately. | Treat as scope breach and security incident; this runbook does not authorize investigation against that target. |
+| Missing/empty/unsafe/aliased file; wrong ownership/mode/schema/identity; corrupt database | Keep disabled; do not initialize, migrate, or repair the purported authoritative store. | Preserve evidence and escalate to security/release owners. |
+| Schema-v1 control DB | Refuse and preserve; no migrator exists. | Create a distinct empty reviewed v2 lifecycle only under the procedure above. |
+| Audit missing/invalid or inconsistent | Keep disabled; audit closure unsupported. | Preserve all artifacts; external evidence review required. |
+| `DURABLE_STARTUP_BUSY` or unexplained local lock owner | Fail closed; no startup/effect. | Identify every cooperating and noncooperating holder; do not lengthen timeouts as a workaround. |
+| `DURABLE_STORE_CORRELATION_INVALID` | Keep disabled; the stores tell incompatible histories. | Preserve both databases, sidecars, audit, and source; do not copy, delete, or edit rows to force agreement. |
+| Recovery prefix/trio exists before T3 | Other request and approval audit writes remain fenced. | Resume only the exact quiesced recovery; require byte-stable trio and correlated T3 result. |
+| Adapter receipt missing | Not proof of no effect. | Under exact quiesced reconciliation, close `UNKNOWN_EFFECT`; no retry. |
+| Exact valid `NO_EFFECT` receipt | May support `FAILED_NO_EFFECT`. | Reconcile without command; store recovered sanitized result. |
+| `APPLIED`/`PARTIAL`/`AMBIGUOUS` without separately durable verification | `UNKNOWN_EFFECT` and recovery required. | Reconcile without command; quarantine. |
+| Receipt/store corrupt, mismatched, or unavailable | Halt with no state transition. | Preserve and escalate; do not guess or repair. |
+| Result missing with exact valid receipt | Recovery may write only the closed recovered projection allowed by the table. | Never fabricate original/full verification. |
+| Result or lookup conflict/disclosure anomaly | Keep disabled. | Preserve exact request/binding evidence; security review. |
+| Database locked or second process | Deny/stop; do not increase timeout as workaround. | Identify writer; re-establish quiescence. |
+| Outbox backlog | Never mark exported manually. | Record backlog; exporter/external custody remain blockers. |
+| Disk/WAL/result growth or I/O error | Stop before capacity loss; never delete authoritative files/rows. | Quiesce, preserve, inspect storage, revalidate, reconcile. |
+| Unexpected connector/credential/network/target | Emergency-disable. | Treat as scope breach/security incident; this runbook grants no investigative authority against that target. |
 
-Escalation order is `STAGE_A_OPERATOR` to `RELEASE_OWNER` and `SECURITY_OWNER`, with `EVIDENCE_CUSTODIAN` preserving artifacts. Any request to use historical data, enterprise identity, external storage, a test tenant, a real adapter, or an operational target stops here and requires the exact approval specified by the production-completion program.
+Escalation is `STAGE_A_OPERATOR` to `RELEASE_OWNER` and `SECURITY_OWNER`, with `EVIDENCE_CUSTODIAN` preserving artifacts. Historical data, enterprise identity, external storage, a test tenant, real adapter, or designated target requires a separate exact authorization package.
 
 ## Verification and runbook exercise record
 
-Before calling a Stage A increment complete, run the focused suite and the complete repository suite from the isolated worktree:
+Before claiming this successor increment, freeze an exact commit and then rerun
+the focused and complete repository suites plus integrity validation from the
+isolated worktree. The 43/43 focused pre-commit observation above is not a
+substitute. Record exact runtime, environment, tests, results, limitations,
+manifest state, and CI only after the freeze.
 
-```sh
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest tests.test_stage_a_durable_control_ledger -v
-PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests -v
-```
+The current focused suite names the following implemented controls directly:
 
-An exercised runbook requires a disposable synthetic ledger—not the authoritative candidate—and recorded proof of: safe-path rejection; schema/integrity rejection; one winner under request and authorization races; restart replay denial; durable attempt/outbox reopen; `FAILED_NO_EFFECT`; post-effect terminal-write failure; explicit `RESERVED` to `UNKNOWN_EFFECT` recovery; zero remaining reservations; audit validation; backup-candidate integrity; and restore-candidate review-only disposition.
+- public-store first-open and independent-process execution:
+  `test_direct_store_first_creation_is_process_serialized` and
+  `test_independent_processes_create_one_effect_receipt_and_terminal_result`;
+- exact lookup and nondisclosure:
+  `test_restart_lookup_is_sanitized_and_duplicate_does_no_new_work` and
+  `test_lookup_conflict_and_wrong_principal_disclose_no_prior_result`;
+- semantic/chronology validation:
+  `test_fk_clean_impossible_control_history_fails_closed_on_reopen`,
+  `test_unlinked_transition_chronology_rejects_past_writes`, and
+  `test_synthetic_adapter_rejects_backdated_effect_without_mutation`;
+- startup/runtime correlation:
+  `test_cross_store_missing_receipt_blocks_reopen_and_live_terminal_lookup`,
+  `test_cross_store_orphan_receipt_fails_closed`,
+  `test_cross_store_overlapping_provenance_substitution_fails_closed`, and
+  `test_cross_store_terminal_target_substitution_fails_closed`; and
+- recovery audit ownership: `test_recovery_audit_prefix_is_restart_idempotent_at_every_record`,
+  `test_recovery_audit_prewrite_failure_suppresses_t3_until_exact_retry`,
+  `test_recovery_audit_readback_failure_leaves_exact_retryable_trio`,
+  `test_closed_original_audit_before_lost_t3_recovers_without_reinvocation`,
+  and `test_pending_recovery_fences_request_and_approval_audit_writers`.
 
-The current focused tests exercise the ledger behaviors but do **not** exercise the shell procedures, backup, restore, external custody, operator roles, process supervisor, crash-at-every-fsync boundary, storage loss, or deployment environment. Until those are executed and version-bound, record this runbook as `DOCUMENTED / NOT OPERATIONALLY VALIDATED`.
+An exercised procedure additionally requires disposable synthetic stores and
+recorded proof of: three-path safety; v1 control refusal/preservation and new-v2
+creation; control/adapter schema and integrity rejection; one winner under
+request/token/adapter/result races; restart replay denial; exact authenticated
+lookup with no-new-work flags; recursive result sanitization; receipt binding/
+immutability; every recovery disposition; corruption/mismatch halt without
+transition; zero illegal authority reopening; JSONL/outbox validation; backup-
+candidate integrity; and restore-candidate review-only disposition.
+
+Repository-controlled tests do not exercise this complete operator procedure, a production supervisor, external custody, independent observation, real power loss at every fsync, storage loss, coherent DR, or a deployment environment. Until the critical runbook is executed and version-bound, its state is `DOCUMENTED / NOT OPERATIONALLY VALIDATED`.
 
 ## Evidence limits and prohibited inferences
 
-The Stage A ledger provides development-grade local durability, uniqueness, and transaction boundaries for a synthetic path. It does not establish distributed idempotency, consensus, split-brain prevention, high availability, nonrepudiation, independent audit custody, trusted time, managed secrets, a safe rollback, a recoverable production deployment, or operational effectiveness.
+This Stage A increment provides bounded development evidence for local durability, canonical idempotency, cooperative first-open/operation serialization, semantic/chronology and cross-store consistency checks, separate adapter-reported receipts, sanitized terminal lookup, and conservative same-host reconciliation. It does not establish process isolation, authenticated IPC, independently custodied observation, vendor equivalence, hostile-writer fencing, cross-store atomicity, distributed linearizability, consensus, split-brain prevention, HA, coherent backup/restore, DR, nonrepudiation, trusted time, managed secrets, successful rollback, production safety, or operational effectiveness.
 
-No result from this runbook authorizes Stage B or Stage C, model promotion, historical-data access, external communication, deployment, or an operational effect. Those remain separate owner and authorizing-official decisions.
+No outcome authorizes Stage B or C, model promotion, historical-data access, external communication, deployment, or operational effect. Every production-readiness owner acceptance remains unrecorded.
 
 ## Revision history
 
 | Date | Change | Evidence state |
 |---|---|---|
-| 2026-08-15 | Initial Stage A durable-ledger inspection, reconciliation, emergency-disable, and preservation guidance. | Documented against the unfrozen local Stage A candidate; not operationally validated. |
+| 2026-08-15 | Initial control-ledger inspection, reconciliation, emergency-disable, and preservation guidance. | Documented against unfrozen local Stage A; not operationally validated. |
+| 2026-08-15 | Added separate offline adapter receipt/store, closed terminal lookup, exact recovery table, schema-v1 refusal/preservation and new-v2 procedure, and three-artifact backup boundary. | Documentation candidate only; exact source/test/evidence freeze remains pending. |
+| 2026-08-16 | Aligned `0.4.0-alpha.2` with bounded cooperative first-open/operation ownership, preflight-before-create, full semantic/chronology scans, runtime cross-store correlation, and exact recovery-audit trio/writer fence. | 43/43 focused tests observed on mutable worktree; exact commit, full regression, manifest, CI, and operational exercise remain pending. |

@@ -11,7 +11,16 @@
 > tests, two demo acceptance checks PASS, 46/46 corpus scenarios, and the
 > then-current 288/288 repository suite. No
 > Gate B package, historical-data approval, live feed, production/test-tenant
-> integration, operational credential, or live-action authority exists.
+> integration, operational credential, or live-action authority exists. The
+> unreleased Stage A candidate adds only opt-in local durability through
+> separate control and offline synthetic-adapter SQLite databases plus a
+> sanitized result lookup. The provisional version is `0.4.0-alpha.2`. At its
+> 2026-08-16 local source freeze, 43/43 focused Stage A, 18/18 readiness-gate,
+> 360/360 repository, and 46/46 corpus checks passed; the corpus reported
+> `live_actions_possible=false`. These are project-controlled mechanism
+> observations without an exact candidate commit, regenerated manifest, CI,
+> owner acceptance, operational validation, or production authority. Its
+> production gate remains `BLOCKED`.
 
 ## Mission objective
 
@@ -40,6 +49,16 @@ opaque credential and may approve an exact escalation scope for a signed
 reevaluation-only receipt. Approval cannot execute, mint an authorization, or
 itself cause reevaluation.
 
+When the optional Stage A path is explicitly configured, the broker remains
+offline and synthetic but routes the exact-bound command to a separate durable
+synthetic-adapter database instead of process-local target state. The adapter
+updates its synthetic target state and inserts an immutable receipt in one
+store-local transaction. A same-project read-only observer reads that adapter
+store, after which the control ledger may persist one sanitized terminal
+lookup result. The receipt and observer are not independent target evidence,
+and no transaction spans the control database, adapter database, or JSONL
+audit.
+
 ## Operational modes
 
 | Mode | Current status | Data and action boundary |
@@ -50,7 +69,7 @@ itself cause reevaluation.
 | `shadow_read_only` semantics | Implemented as a code-owned read-only mode | No live feed or deployed service exists; the name describes execution semantics only |
 | Phase 3 simulation-only operational MVP | Published `0.3.0-alpha.1` at exact Commit `423685d`; 57/57 focused tests, then-current 288/288 repository tests, demo acceptance PASS, corpus 46/46; exact-commit CI/Dependency Graph passed | Raw synthetic requests; opaque synthetic invocation credentials; in-memory `NETWORK_ISOLATE`; exact-scope token; separate same-project readback; no live connector or operational credential |
 | Phase 3.1 synthetic model evaluation | Published `0.3.1-alpha.1` exact Commit `bb6b8f28`; synthetic temporal baseline/challenger mechanism only | Digest-bound repository fixtures; no historical/live adapter, action path, owner threshold, promotion authority, or operational claim |
-| Stage A durable authority state | Unreleased `0.4.0-alpha.1` production-development candidate; optional single-host SQLite ledger | Offline synthetic execution only; no external identity, connector, target, deployment, distributed replay claim, or operational authority; production gate `BLOCKED` |
+| Stage A two-store offline durability | Provisional unreleased `0.4.0-alpha.2`; optional single-host control database, separately pathed synthetic-adapter database, JSONL lifecycle audit, and sanitized terminal lookup; local source-freeze mechanism checks passed | Offline synthetic execution only; receipt/readback remain same-project and cross-store non-atomic; no external identity, connector, target, deployment, distributed replay claim, exact candidate commit/CI, or operational authority; production gate `BLOCKED` |
 | Controlled test-tenant mode | Planned | Requires separately approved non-production architecture, process isolation, managed credentials, durable idempotency, vendor-independent readback, rollback, stop conditions, and change control |
 | Limited pilot mode | Planned | Would require a bounded approved population, human authorization, operational evidence, and an authorizing-official decision |
 
@@ -139,6 +158,36 @@ SOC procedure. The private capability is an application-level control, the
 token ledger is process local, evidence keys are synthetic runtime HMAC keys,
 and the verifiers are same-project rather than externally independent.
 
+## Optional Stage A offline sequence
+
+1. Resolve the authenticated principal, parse the exact request, and claim the
+   `(principal, request_id, request digest)` binding in the control database.
+2. For an allowed, verified decision, register one exact-bound authorization.
+   Atomically consume it, reserve the attempt, and advance the request before
+   invoking the adapter.
+3. Invoke only the offline synthetic adapter with a stable idempotency key. In
+   its separate database transaction, validate the precondition and binding,
+   update durable synthetic target state, and insert one immutable receipt.
+4. Read target state through the separate read-only interface and classify the
+   transition. This is functional separation inside the same project/store
+   custody, not independent verification.
+5. Close and read back the valid normal JSONL lifecycle. Only then atomically
+   close the attempt/request, insert the sanitized terminal lookup result, and
+   add its metadata-only outbox event in the control database (T3).
+6. After response loss, an authenticated read-only lookup may return the
+   authority-free stored projection. It creates no new decision, authorization,
+   broker invocation, or effect and never returns a signed token.
+
+The control database, adapter database, and JSONL audit are three authoritative
+artifacts. T1, T2, observation, audit closure, and T3 are deliberately not one
+transaction. A store-local commit does not prove that another store or the
+audit reached the corresponding point. Before a missing artifact is created,
+the three paths and every existing store are preflighted without mutating
+existing main/WAL/SHM artifacts. Bounded cooperative same-host fencing covers
+startup and durable processing, lookup, approval, and recovery. Cross-store
+checks correlate overlapping request, authority, decision/context, policy,
+receipt, and terminal-target facts.
+
 ## Off-nominal behavior
 
 Prompt-injection strings, missing provenance, failed integrity, conflicting sensors, multiple missing expected sources, break-glass identities, and critical assets force abstention or human escalation. In v0.1, an action-command failure does not produce a false success; post-action verification fails and the audit record preserves the failed outcome for operator recovery. Automated escalation after execution failure is not implemented.
@@ -154,3 +203,21 @@ Post-attempt observation failure cannot undo the attempt and must never become
 `VERIFIED`; partial or protected unexpected effects select the applicable
 failure or rollback-required state. See [`phase3/README.md`](phase3/README.md)
 and [`phase3/SECURITY_AND_SAFETY_CASE.md`](phase3/SECURITY_AND_SAFETY_CASE.md).
+
+In Stage A, an exact receipt or terminal-result repeat is idempotent and a
+changed binding is a conflict. Recovery is an explicit quiesced operation: an
+affirmative exact `NO_EFFECT` receipt may close `FAILED_NO_EFFECT`; an applied,
+partial, ambiguous, or absent receipt without separately durable verification
+closes `UNKNOWN_EFFECT` with `recovery_required=true`. Absence does not prove no
+effect and does not permit retry. Corrupt, mismatched, or
+unavailable adapter evidence halts reconciliation without a state change.
+Recovery never invokes the command, reopens or replaces a token, fabricates
+verification, or declares rollback. Before T3, it writes and reads back the
+exact contiguous `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, and
+`RECOVERY_FINALIZED` records, including the original lifecycle status
+`COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`. Audit append/readback failure
+suppresses T3, an existing exact prefix resumes without duplicate rows, a
+pending recovery fences other durable writers, and a repeat after T3 returns
+the identical audit-inert result. Operator-asserted quiescence plus the
+cooperative same-host fence is not a distributed lease, epoch, or execution-
+ownership mechanism.

@@ -12,7 +12,14 @@
 > 46/46 corpus scenarios. These are simulation-only CE-1 observations; no
 > Gate B package, historical dataset, live feed, production/test-tenant
 > connector, operational action, production safety, or external assurance is
-> approved.
+> approved. The provisional, unreleased `0.4.0-alpha.2` Stage A candidate adds a
+> bounded two-database offline synthetic receipt/result mechanism under ADR-015.
+> Its 2026-08-16 local source-freeze observations are 43/43 focused Stage A,
+> 18/18 readiness-gate, 360/360 repository, and 46/46 corpus checks, with
+> `live_actions_possible=false`. They are project-controlled mechanism evidence,
+> not an exact candidate commit/CI, independent verification, owner acceptance,
+> operational validation, or production authorization. The gate remains
+> `BLOCKED`.
 
 ## Top-level claim
 
@@ -26,6 +33,12 @@ trusted identity/evidence/policy/consequence context, an allowed and separately
 verified decision, an exact-scope single-use authorization, the mandatory
 in-memory broker, and a private target capability. Success requires separate
 read-only state observation rather than a broker report.
+
+In the optional Stage A path, the same authorization rule precedes a durable
+authority reservation and a separate offline synthetic-adapter transaction.
+An adapter-owned receipt may support recovery and a sanitized terminal lookup,
+but it cannot establish independent observation, production effect, or
+operational success.
 
 ## Argument structure
 
@@ -139,11 +152,14 @@ action authorization, cause reevaluation, or invoke the broker.
 Policy and verifiers share requirements, project governance, runtime, and
 configuration and may contain correlated defects. Phase 3 source attestations
 use runtime synthetic HMAC keys rather than enterprise device identity,
-PKI/HSM custody, or independent provenance. Its request and authorization
-ledgers are in memory and are not durable, distributed, crash consistent, or
-multi-node. Private attributes/capabilities and exact-type construction do not
-create OS/process isolation. Human approval is an in-process fixture, not a
-production separation-of-duties workflow.
+PKI/HSM custody, or independent provenance. The published Phase 3 request and
+authorization ledgers are in memory. Stage A adds local durable authority state
+and a separate durable synthetic-adapter database, but it remains single-host,
+non-distributed, cooperatively fenced only within the same-host application
+boundary, and non-atomic across stores. Private
+attributes/capabilities and exact-type construction do not create OS/process
+isolation. Human approval is an in-process fixture, not a production
+separation-of-duties workflow.
 
 The self-custodied audit lacks an external anchor, WORM storage, trusted time,
 and whole-chain replacement/truncation protection. The in-memory simulator does
@@ -161,10 +177,60 @@ See [`phase2/SHADOW_MODE_SAFETY.md`](phase2/SHADOW_MODE_SAFETY.md),
 
 ## Stage A boundary
 
-The optional Stage A SQLite ledger closes the verified single-host restart
-replay for request claims, verified-decision issuance, authorization
-consumption, and attempt reservation/outcome. It does not remove the residual
-risks above: target receipts are not durable, the broker and observer are not
-isolated, keys and audit remain project-custodied, and no distributed recovery
-or external system has been evaluated. The machine production gate is
-`BLOCKED`; see [`production/PRODUCTION_READINESS.md`](production/PRODUCTION_READINESS.md).
+The optional Stage A candidate uses two separately pathed SQLite databases. The
+control database durably binds request claims, verified-decision issuance,
+authorization consumption/revocation, attempt state, sanitized terminal lookup
+results, and metadata-only outbox events. The offline synthetic-adapter database
+durably holds only synthetic target state and one immutable receipt per stable
+idempotency binding. The adapter transaction completes before its result is
+returned; an exact repeat returns the same receipt without another state
+change, while a changed binding fails closed.
+
+Before any missing artifact is created, all three authoritative paths are
+preflighted and existing databases are opened query-only for exact schema,
+semantic, path/link/type/mode, sidecar, and integrity checks. Cross-store
+validation correlates the overlapping request, authority, decision/context,
+policy, receipt, and terminal-target facts and rejects a missing required or
+orphan receipt and recomputed substitutions. Bounded cooperative same-host
+fencing serializes startup and durable processing, lookup, approval, and
+recovery, including direct public-store first creation. It is not a distributed
+lease, fencing epoch, consensus mechanism, or OS/process boundary.
+
+The lookup result is a closed authority-free projection, not a serialized
+`Phase3Result`. Authenticated retrieval requires the exact principal, request
+identifier, and canonical request digest. It explicitly records that the
+lookup created no decision, authorization, execution attempt, or effect and
+cannot contain a token, nonce, signature, credential, signing material, raw
+audit rows, or executable command authority. The existing `process_json` path
+continues to fail closed on duplicates and does not turn lookup into a new
+decision.
+
+This narrows response-loss and same-host replay risk but does not remove the
+residual risks above. Authority reservation, adapter state/receipt, observation,
+normal or recovery audit closure, and terminal result are not one atomic
+transaction. T3 follows successful readback of the valid normal lifecycle; a
+recovery T3 follows the exact read-back three-record recovery closure. The
+adapter receipt and read-only observer remain same-project and same-store
+custodied, not independently authenticated target evidence. The broker,
+adapter, observer, and keys are not process isolated; recovery quiescence is
+operator asserted and the fence is cooperative/same-host only; audit remains
+self-custodied; and no distributed recovery, HA, failover, vendor system, or
+external target has been evaluated.
+
+Explicit quiesced reconciliation may close only an exact affirmative
+`NO_EFFECT` receipt as `FAILED_NO_EFFECT`. Applied, partial, ambiguous, or
+absent receipts without separately durable verification remain
+`UNKNOWN_EFFECT` with `recovery_required=true`; absence proves neither no effect
+nor retry safety. Corrupt, unavailable, or mismatched
+adapter evidence halts reconciliation with no transition. Recovery never
+reissues the command, reopens authority, fabricates verification, or claims
+rollback. It must write and read back the contiguous `RECOVERY_STARTED`,
+`RECOVERY_EVIDENCE_ASSESSED`, and `RECOVERY_FINALIZED` records, truthfully
+classify the original lifecycle as `COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`,
+and resume an exact prefix without duplicate records. Append/readback failure
+suppresses T3; the pending recovery owner fences request/approval/recovery
+writers until T3; a repeat after T3 is an identical audit-inert replay. A
+receipt never becomes verification. The machine production gate remains
+`BLOCKED`; see
+[`adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md`](adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md)
+and [`production/PRODUCTION_READINESS.md`](production/PRODUCTION_READINESS.md).

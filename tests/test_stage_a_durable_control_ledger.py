@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from contextlib import closing
+from datetime import datetime
+import hashlib
+import json
 import multiprocessing
 import os
 import sqlite3
@@ -9,12 +12,18 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from adf_poc.audit import AuditLogger
 from adf_poc.phase3.scenarios import request_json
 from adf_poc.stage_a import (
+    REQUEST_LOOKUP_SCHEMA_VERSION,
     ControlLedgerError,
+    RequestLookupResult,
     SQLiteControlLedger,
+    SQLiteSyntheticAdapterStore,
+    SyntheticAdapterError,
+    terminal_attempt_outcome_sha256,
 )
-from adf_poc.utils import sha256_json
+from adf_poc.utils import canonical_json, sha256_json
 
 from tests.phase3_support import new_harness, workstation_case
 
@@ -59,7 +68,101 @@ def _consume_worker(
         results.put(("ERROR", type(exc).__name__, getattr(exc, "reason_code", "")))
 
 
+def _crash_before_adapter_worker(
+    root_text: str, raw_request: str, now_text: str
+) -> None:
+    root = Path(root_text)
+    harness = new_harness(
+        now=datetime.fromisoformat(now_text),
+        audit_path=root / "audit.jsonl",
+        control_ledger_path=root / "control.sqlite3",
+        synthetic_adapter_path=root / "adapter.sqlite3",
+    )
+
+    def crash_before_adapter(*args, **kwargs):
+        os._exit(91)
+
+    with patch.object(
+        SQLiteSyntheticAdapterStore,
+        "execute_once",
+        new=crash_before_adapter,
+    ):
+        harness.firewall.process_json(
+            raw_request, credential=harness.soc_credential
+        )
+    os._exit(92)
+
+
+def _control_first_create_worker(
+    path: str,
+    barrier: multiprocessing.synchronize.Barrier,
+    results: multiprocessing.queues.Queue,
+) -> None:
+    try:
+        barrier.wait(timeout=10)
+        ledger = SQLiteControlLedger(path, busy_timeout_ms=5000)
+        results.put(("OK", ledger.issuer_instance_id))
+    except Exception as exc:  # pragma: no cover - child diagnostic surface
+        results.put(("ERROR", type(exc).__name__, getattr(exc, "reason_code", "")))
+
+
+def _adapter_first_create_worker(
+    path: str,
+    barrier: multiprocessing.synchronize.Barrier,
+    results: multiprocessing.queues.Queue,
+) -> None:
+    try:
+        target_inventory = new_harness().policy.target_inventory
+        barrier.wait(timeout=10)
+        store = SQLiteSyntheticAdapterStore(
+            path,
+            target_inventory=target_inventory,
+            busy_timeout_ms=5000,
+        )
+        results.put(("OK", store.adapter_store_id))
+    except Exception as exc:  # pragma: no cover - child diagnostic surface
+        results.put(("ERROR", type(exc).__name__, getattr(exc, "reason_code", "")))
+
+
 class StageADurableControlLedgerTests(unittest.TestCase):
+    def _completed_durable_case(
+        self, root: Path, *, request_id: str
+    ) -> tuple[object, str]:
+        harness = new_harness(
+            audit_path=root / "audit.jsonl",
+            control_ledger_path=root / "control.sqlite3",
+            synthetic_adapter_path=root / "adapter.sqlite3",
+        )
+        raw = request_json(workstation_case(harness, request_id=request_id))
+        result = harness.firewall.process_json(
+            raw, credential=harness.soc_credential
+        )
+        self.assertEqual(result.decision.outcome, "ALLOW")
+        self.assertIsNotNone(result.verification)
+        return harness, raw
+
+    def _crashed_reserved_case(
+        self, root: Path, *, request_id: str
+    ) -> tuple[object, str]:
+        seed = new_harness()
+        now = seed.clock()
+        raw = request_json(workstation_case(seed, request_id=request_id))
+        context = multiprocessing.get_context("spawn")
+        process = context.Process(
+            target=_crash_before_adapter_worker,
+            args=(str(root), raw, now.isoformat()),
+        )
+        process.start()
+        process.join(timeout=20)
+        self.assertEqual(process.exitcode, 91)
+        reopened = new_harness(
+            now=now,
+            audit_path=root / "audit.jsonl",
+            control_ledger_path=root / "control.sqlite3",
+            synthetic_adapter_path=root / "adapter.sqlite3",
+        )
+        return reopened, raw
+
     def test_schema_durability_permissions_and_unknown_version_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory).resolve() / "control.sqlite3"
@@ -103,6 +206,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     "CREATE TABLE unrelated_record(id INTEGER PRIMARY KEY)"
                 )
                 connection.commit()
+            path.chmod(0o600)
 
             with self.assertRaises(ControlLedgerError) as raised:
                 SQLiteControlLedger(path)
@@ -209,7 +313,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             attempt = reopened.attempt_snapshot(result.broker_result.attempt_id)
             self.assertIsNotNone(attempt)
             assert attempt is not None
-            self.assertEqual(attempt["state"], "COMPLETED")
+            self.assertEqual(attempt["state"], "VERIFIED_EFFECT")
             self.assertEqual(attempt["token_id"], result.authorization.token_id)
             self.assertEqual(
                 reopened.state(result.authorization.token_id), "CONSUMED"
@@ -222,7 +326,9 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     "AUTHORIZATION_ISSUED",
                     "ATTEMPT_RESERVED",
                     "AUTHORIZATION_CONSUMED",
+                    "ADAPTER_RECEIPT_RECORDED",
                     "ATTEMPT_TERMINAL",
+                    "REQUEST_TERMINAL",
                 ],
             )
             for row in reopened.pending_outbox():
@@ -295,6 +401,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                 "AUTH-STABLE-IDEMPOTENCY-RETRY",
                 verification_id="VERIFY-STABLE-IDEMPOTENCY-RETRY",
                 decision_id="DECISION-STABLE-IDEMPOTENCY-RETRY",
+                issued_at="2026-08-15T22:29:00+00:00",
             )
             with self.assertRaises(ControlLedgerError) as conflict:
                 reopened.consume_once(
@@ -352,6 +459,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                 "AUTH-RECOVERY",
                 verification_id="VERIFY-RECOVERY",
                 decision_id="DECISION-RECOVERY",
+                issued_at="2026-08-15T22:29:00+00:00",
             )
             ledger.consume_once(
                 "AUTH-RECOVERY",
@@ -361,8 +469,18 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             )
 
             reopened = SQLiteControlLedger(path)
-            self.assertEqual(reopened.recover_incomplete_attempts(), 1)
-            self.assertEqual(reopened.recover_incomplete_attempts(), 0)
+            self.assertEqual(
+                reopened.recover_incomplete_attempts(
+                    operator_asserted_quiesced=True
+                ),
+                1,
+            )
+            self.assertEqual(
+                reopened.recover_incomplete_attempts(
+                    operator_asserted_quiesced=True
+                ),
+                0,
+            )
             attempt = reopened.attempt_snapshot("ATTEMPT-RECOVERY")
             assert attempt is not None
             self.assertEqual(attempt["state"], "UNKNOWN_EFFECT")
@@ -373,10 +491,22 @@ class StageADurableControlLedgerTests(unittest.TestCase):
 
     def test_post_effect_ledger_failure_is_honest_and_recovers_unknown(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory).resolve() / "control.sqlite3"
-            harness = new_harness(control_ledger_path=path)
+            root = Path(directory).resolve()
+            path = root / "control.sqlite3"
+            adapter_path = root / "adapter.sqlite3"
+            audit_path = root / "audit.jsonl"
+            harness = new_harness(
+                control_ledger_path=path,
+                synthetic_adapter_path=adapter_path,
+                audit_path=audit_path,
+            )
             before = harness.firewall.observer.observe("WORKSTATION_042")
-            original = SQLiteControlLedger.record_attempt_outcome
+            original = SQLiteControlLedger.record_adapter_receipt
+            raw = request_json(
+                workstation_case(
+                    harness, request_id="P3-STAGE-A-POST-EFFECT-LEDGER-FAIL"
+                )
+            )
 
             def fail_outcome_commit(*args, **kwargs):
                 raise ControlLedgerError(
@@ -385,15 +515,11 @@ class StageADurableControlLedgerTests(unittest.TestCase):
 
             with patch.object(
                 SQLiteControlLedger,
-                "record_attempt_outcome",
+                "record_adapter_receipt",
                 new=fail_outcome_commit,
             ):
                 result = harness.firewall.process_json(
-                    request_json(
-                        workstation_case(
-                            harness, request_id="P3-STAGE-A-POST-EFFECT-LEDGER-FAIL"
-                        )
-                    ),
+                    raw,
                     credential=harness.soc_credential,
                 )
 
@@ -414,7 +540,20 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             assert attempt is not None
             self.assertEqual(attempt["state"], "RESERVED")
             self.assertEqual(reopened.state(result.authorization.token_id), "CONSUMED")
-            self.assertEqual(reopened.recover_incomplete_attempts(), 1)
+            recovery_harness = new_harness(
+                now=harness.clock(),
+                control_ledger_path=path,
+                synthetic_adapter_path=adapter_path,
+                audit_path=audit_path,
+            )
+            recovered = recovery_harness.firewall.reconcile_request(
+                raw,
+                credential=recovery_harness.soc_credential,
+                operator_asserted_quiesced=True,
+            )
+            self.assertIsNotNone(recovered)
+            assert recovered is not None
+            self.assertEqual(recovered.disposition, "UNKNOWN_EFFECT")
             self.assertEqual(
                 reopened.attempt_snapshot(result.verification.attempt_id)["state"],
                 "UNKNOWN_EFFECT",
@@ -495,6 +634,47 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             self.assertEqual(observed.count(("OK", "NEW")), 1)
             self.assertEqual(observed.count(("OK", "DUPLICATE")), worker_count - 1)
 
+    def test_direct_store_first_creation_is_process_serialized(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            context = multiprocessing.get_context("spawn")
+            cases = (
+                (
+                    "control",
+                    _control_first_create_worker,
+                    (str(root / "control-first.sqlite3"),),
+                ),
+                (
+                    "adapter",
+                    _adapter_first_create_worker,
+                    (str(root / "adapter-first.sqlite3"),),
+                ),
+            )
+            for label, worker, fixed_args in cases:
+                with self.subTest(store=label):
+                    worker_count = 4
+                    barrier = context.Barrier(worker_count)
+                    results = context.Queue()
+                    processes = [
+                        context.Process(
+                            target=worker,
+                            args=(*fixed_args, barrier, results),
+                        )
+                        for _index in range(worker_count)
+                    ]
+                    for process in processes:
+                        process.start()
+                    observed = [results.get(timeout=15) for _ in processes]
+                    for process in processes:
+                        process.join(timeout=15)
+                        self.assertEqual(process.exitcode, 0)
+                    self.assertTrue(
+                        all(row[0] == "OK" for row in observed), observed
+                    )
+                    self.assertEqual(
+                        len({row[1] for row in observed}), 1, observed
+                    )
+
     def test_process_concurrency_reserves_one_attempt_and_consumes_once(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = str(Path(directory).resolve() / "control.sqlite3")
@@ -503,6 +683,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                 "AUTH-CONCURRENT",
                 verification_id="VERIFY-CONCURRENT",
                 decision_id="DECISION-CONCURRENT",
+                issued_at="2026-08-15T22:29:00+00:00",
             )
             context = multiprocessing.get_context("spawn")
             worker_count = 4
@@ -585,8 +766,445 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     audit_path=audit_path,
                     control_ledger_path=control_path,
                 )
-            self.assertIn("distinct files", str(ancestor_collision.exception))
+            self.assertIn("symbolic links", str(ancestor_collision.exception))
             self.assertFalse(audit_path.exists())
+
+    def test_cross_store_missing_receipt_blocks_reopen_and_live_terminal_lookup(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness = new_harness(
+                audit_path=root / "audit.jsonl",
+                control_ledger_path=root / "control.sqlite3",
+                synthetic_adapter_path=root / "adapter.sqlite3",
+            )
+            with closing(sqlite3.connect(root / "adapter.sqlite3")) as connection:
+                initial = connection.execute(
+                    """
+                    SELECT state_json, state_sha256, updated_at
+                    FROM target_states WHERE target_id='WORKSTATION_042'
+                    """
+                ).fetchone()
+            raw = request_json(
+                workstation_case(harness, request_id="P3-STAGE-A-MISSING-RECEIPT")
+            )
+            harness.firewall.process_json(raw, credential=harness.soc_credential)
+            with closing(sqlite3.connect(root / "adapter.sqlite3")) as connection:
+                connection.execute("DELETE FROM command_receipts")
+                connection.execute(
+                    """
+                    UPDATE target_states
+                    SET state_json=?, state_sha256=?, updated_at=?
+                    WHERE target_id='WORKSTATION_042'
+                    """,
+                    initial,
+                )
+                connection.commit()
+
+            with self.assertRaises(ControlLedgerError) as live:
+                harness.firewall.lookup_request_result(
+                    raw, credential=harness.soc_credential
+                )
+            self.assertEqual(
+                live.exception.reason_code, "DURABLE_STORE_CORRELATION_INVALID"
+            )
+            with self.assertRaises(ControlLedgerError) as reopened:
+                new_harness(
+                    audit_path=root / "audit.jsonl",
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+            self.assertEqual(
+                reopened.exception.reason_code,
+                "DURABLE_STORE_CORRELATION_INVALID",
+            )
+
+    def test_cross_store_overlapping_provenance_substitution_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self._completed_durable_case(
+                root, request_id="P3-STAGE-A-PROVENANCE-SUBSTITUTION"
+            )
+            replacement = "c" * 64
+            with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
+                attempt = connection.execute(
+                    """
+                    SELECT attempt_id, recovery_summary_json
+                    FROM attempts
+                    """
+                ).fetchone()
+                result_row = connection.execute(
+                    "SELECT result_json FROM request_results"
+                ).fetchone()
+                summary = json.loads(attempt[1])
+                summary["decision_context_sha256"] = replacement
+                summary_json = canonical_json(summary)
+                result_value = json.loads(result_row[0])
+                result_value["decision_context_sha256"] = replacement
+                result = RequestLookupResult.from_dict(result_value)
+                result_json = canonical_json(result.to_dict())
+                result_sha256 = hashlib.sha256(result_json.encode()).hexdigest()
+                connection.execute(
+                    """
+                    UPDATE attempts
+                    SET recovery_summary_json=?, recovery_summary_sha256=?,
+                        outcome_sha256=?
+                    WHERE attempt_id=?
+                    """,
+                    (
+                        summary_json,
+                        hashlib.sha256(summary_json.encode()).hexdigest(),
+                        terminal_attempt_outcome_sha256(
+                            result, "VERIFIED_EFFECT"
+                        ),
+                        attempt[0],
+                    ),
+                )
+                connection.execute(
+                    """
+                    UPDATE request_results SET result_json=?, result_sha256=?
+                    """,
+                    (result_json, result_sha256),
+                )
+                connection.commit()
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    audit_path=root / "audit.jsonl",
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+            self.assertEqual(
+                raised.exception.reason_code, "DURABLE_STORE_CORRELATION_INVALID"
+            )
+
+    def test_cross_store_terminal_target_substitution_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self._completed_durable_case(
+                root, request_id="P3-STAGE-A-TARGET-SUBSTITUTION"
+            )
+            with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
+                attempt_id, result_json = connection.execute(
+                    """
+                    SELECT a.attempt_id, x.result_json
+                    FROM attempts a CROSS JOIN request_results x
+                    """
+                ).fetchone()
+                result_value = json.loads(result_json)
+                result_value["target_state_sha256"] = "d" * 64
+                result = RequestLookupResult.from_dict(result_value)
+                changed_json = canonical_json(result.to_dict())
+                connection.execute(
+                    "UPDATE request_results SET result_json=?, result_sha256=?",
+                    (
+                        changed_json,
+                        hashlib.sha256(changed_json.encode()).hexdigest(),
+                    ),
+                )
+                connection.execute(
+                    "UPDATE attempts SET outcome_sha256=? WHERE attempt_id=?",
+                    (
+                        terminal_attempt_outcome_sha256(
+                            result, "VERIFIED_EFFECT"
+                        ),
+                        attempt_id,
+                    ),
+                )
+                connection.commit()
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    audit_path=root / "audit.jsonl",
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+            self.assertEqual(
+                raised.exception.reason_code, "DURABLE_STORE_CORRELATION_INVALID"
+            )
+
+    def test_cross_store_orphan_receipt_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self._completed_durable_case(
+                root, request_id="P3-STAGE-A-ORPHAN-RECEIPT"
+            )
+            with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
+                connection.execute("PRAGMA foreign_keys=OFF")
+                for table in (
+                    "request_results",
+                    "attempts",
+                    "authorizations",
+                    "requests",
+                ):
+                    connection.execute(f"DELETE FROM {table}")
+                connection.commit()
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    audit_path=root / "audit.jsonl",
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+            self.assertEqual(
+                raised.exception.reason_code, "DURABLE_STORE_CORRELATION_INVALID"
+            )
+
+    def test_recovery_audit_prewrite_failure_suppresses_t3_until_exact_retry(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness, raw = self._crashed_reserved_case(
+                root, request_id="P3-STAGE-A-RECOVERY-PREWRITE"
+            )
+            audit_path = root / "audit.jsonl"
+            before = audit_path.read_bytes()
+            original_append = AuditLogger.append
+
+            def fail_before_write(logger, record_type, payload):
+                if record_type == "RECOVERY_STARTED":
+                    raise RuntimeError("injected recovery prewrite failure")
+                return original_append(logger, record_type, payload)
+
+            with patch.object(AuditLogger, "append", new=fail_before_write):
+                with self.assertRaises(RuntimeError):
+                    harness.firewall.reconcile_request(
+                        raw,
+                        credential=harness.soc_credential,
+                        operator_asserted_quiesced=True,
+                    )
+            self.assertEqual(audit_path.read_bytes(), before)
+            self.assertIsNone(
+                harness.firewall.lookup_request_result(
+                    raw, credential=harness.soc_credential
+                )
+            )
+            recovered = harness.firewall.reconcile_request(
+                raw,
+                credential=harness.soc_credential,
+                operator_asserted_quiesced=True,
+            )
+            self.assertIsNotNone(recovered)
+
+    def test_recovery_audit_readback_failure_leaves_exact_retryable_trio(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness, raw = self._crashed_reserved_case(
+                root, request_id="P3-STAGE-A-RECOVERY-READBACK"
+            )
+            original_append = AuditLogger.append
+            original_read = AuditLogger.read_all
+            state = {"final_appended": False, "failed": False}
+
+            def observe_final_append(logger, record_type, payload):
+                row = original_append(logger, record_type, payload)
+                if record_type == "RECOVERY_FINALIZED":
+                    state["final_appended"] = True
+                return row
+
+            def fail_first_final_readback(logger):
+                if state["final_appended"] and not state["failed"]:
+                    state["failed"] = True
+                    raise RuntimeError("injected recovery readback failure")
+                return original_read(logger)
+
+            with patch.object(
+                AuditLogger, "append", new=observe_final_append
+            ), patch.object(AuditLogger, "read_all", new=fail_first_final_readback):
+                with self.assertRaises(RuntimeError):
+                    harness.firewall.reconcile_request(
+                        raw,
+                        credential=harness.soc_credential,
+                        operator_asserted_quiesced=True,
+                    )
+            with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
+                self.assertEqual(
+                    connection.execute("SELECT count(*) FROM request_results").fetchone()[0],
+                    0,
+                )
+            audit_path = root / "audit.jsonl"
+            before_retry = audit_path.read_bytes()
+            recovered = harness.firewall.reconcile_request(
+                raw,
+                credential=harness.soc_credential,
+                operator_asserted_quiesced=True,
+            )
+            self.assertIsNotNone(recovered)
+            self.assertEqual(audit_path.read_bytes(), before_retry)
+
+    def test_unlinked_transition_chronology_rejects_past_writes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory).resolve() / "control.sqlite3"
+            ledger = SQLiteControlLedger(path)
+            ledger.register(
+                "AUTH-FUTURE",
+                verification_id="VERIFY-FUTURE",
+                decision_id="DECISION-FUTURE",
+                issued_at="2030-01-01T00:00:00+00:00",
+            )
+            with self.assertRaises(ControlLedgerError) as consume:
+                ledger.consume_once(
+                    "AUTH-FUTURE",
+                    attempt_id="ATTEMPT-PAST",
+                    attempt_binding_sha256="a" * 64,
+                    consumed_at="2029-01-01T00:00:00+00:00",
+                )
+            self.assertEqual(consume.exception.reason_code, "AUTHORIZATION_TIME_INVALID")
+            self.assertEqual(SQLiteControlLedger(path).state("AUTH-FUTURE"), "ISSUED")
+
+            ledger.consume_once(
+                "AUTH-FUTURE",
+                attempt_id="ATTEMPT-FUTURE",
+                attempt_binding_sha256="b" * 64,
+                consumed_at="2031-01-01T00:00:00+00:00",
+            )
+            with self.assertRaises(ControlLedgerError) as terminal:
+                ledger.record_attempt_outcome(
+                    "ATTEMPT-FUTURE",
+                    outcome_state="UNKNOWN_EFFECT",
+                    outcome_sha256="c" * 64,
+                    completed_at="2030-06-01T00:00:00+00:00",
+                )
+            self.assertEqual(terminal.exception.reason_code, "ATTEMPT_TIME_INVALID")
+            with self.assertRaises(ControlLedgerError) as recovery:
+                ledger.recover_incomplete_attempts(
+                    operator_asserted_quiesced=True
+                )
+            self.assertEqual(recovery.exception.reason_code, "RECOVERY_TIME_INVALID")
+            self.assertEqual(
+                SQLiteControlLedger(path).attempt_snapshot("ATTEMPT-FUTURE")[
+                    "state"
+                ],
+                "RESERVED",
+            )
+
+    def test_active_sqlite_sidecars_must_remain_owner_private(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory).resolve() / "control.sqlite3"
+            SQLiteControlLedger(path)
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute("PRAGMA wal_autocheckpoint=0")
+                connection.execute(
+                    """
+                    INSERT INTO audit_outbox(
+                        event_type, subject_id, payload_sha256, created_at
+                    ) VALUES('TEST_EVENT', 'TEST_SUBJECT', ?, ?)
+                    """,
+                    ("e" * 64, "2030-01-01T00:00:00+00:00"),
+                )
+                connection.commit()
+                wal = Path(str(path) + "-wal")
+                shm = Path(str(path) + "-shm")
+                self.assertTrue(wal.exists())
+                self.assertTrue(shm.exists())
+                wal.chmod(0o644)
+                shm.chmod(0o644)
+                try:
+                    with self.assertRaises(ControlLedgerError) as raised:
+                        SQLiteControlLedger.preflight_existing(path)
+                    self.assertEqual(
+                        raised.exception.reason_code, "CONTROL_LEDGER_PATH_UNSAFE"
+                    )
+                finally:
+                    wal.chmod(0o600)
+                    shm.chmod(0o600)
+
+    def test_synthetic_adapter_rejects_backdated_effect_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness, _raw = self._completed_durable_case(
+                root, request_id="P3-STAGE-A-ADAPTER-TIME"
+            )
+            store = harness.firewall._adapter_store
+            assert store is not None
+            with closing(sqlite3.connect(root / "adapter.sqlite3")) as connection:
+                binding_json = connection.execute(
+                    "SELECT binding_json FROM command_receipts"
+                ).fetchone()[0]
+            binding = json.loads(binding_json)
+            binding["request_id"] = "P3-STAGE-A-ADAPTER-TIME-BACKDATED"
+            binding["target_state_sha256"] = sha256_json(
+                store.observe("WORKSTATION_042")
+            )
+            idempotency_key = sha256_json(binding)
+            before_count = store.receipt_count()
+            before_state = store.observe("WORKSTATION_042")
+            with self.assertRaises(SyntheticAdapterError) as raised:
+                store.execute_once(
+                    idempotency_key=idempotency_key,
+                    binding=binding,
+                    attempt_id="ATTEMPT-BACKDATED",
+                    attempted_at="2020-01-01T00:00:00+00:00",
+                )
+            self.assertEqual(
+                raised.exception.reason_code, "SYNTHETIC_ADAPTER_TIME_INVALID"
+            )
+            self.assertEqual(store.receipt_count(), before_count)
+            self.assertEqual(store.observe("WORKSTATION_042"), before_state)
+
+    def test_revoked_authorization_cannot_be_laundered_as_denied(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = SQLiteControlLedger(Path(directory).resolve() / "control.sqlite3")
+            principal_id = "SOC_AGENT_01"
+            request_id = "P3-STAGE-A-REVOKED-MATRIX"
+            request_sha256 = "1" * 64
+            ledger.claim_request(
+                principal_id,
+                request_id,
+                request_sha256,
+                claimed_at="2030-01-01T00:00:00+00:00",
+            )
+            ledger.register(
+                "AUTH-REVOKED-MATRIX",
+                verification_id="VERIFY-REVOKED-MATRIX",
+                decision_id="DECISION-REVOKED-MATRIX",
+                principal_id=principal_id,
+                request_id=request_id,
+                request_sha256=request_sha256,
+                unsigned_token_sha256="2" * 64,
+                issuer_instance_id="ISSUER-REVOKED-MATRIX",
+                key_domain_id="KEY-DOMAIN-REVOKED-MATRIX",
+                decision_authorization_sha256="3" * 64,
+                issued_at="2030-01-01T00:01:00+00:00",
+            )
+            ledger.revoke_issued_for_request(
+                principal_id,
+                request_id,
+                request_sha256,
+                operator_asserted_quiesced=True,
+                revoked_at="2030-01-01T00:02:00+00:00",
+            )
+            denied = RequestLookupResult(
+                schema_version=REQUEST_LOOKUP_SCHEMA_VERSION,
+                principal_id=principal_id,
+                request_id=request_id,
+                request_sha256=request_sha256,
+                disposition="DENIED_NO_EFFECT",
+                decision_id="DECISION-DENIED-MATRIX",
+                decision_outcome="DENY",
+                decision_sha256="4" * 64,
+                decision_context_sha256="5" * 64,
+                policy_sha256="6" * 64,
+                verification_status="NOT_APPLICABLE",
+                verification_sha256=None,
+                attempt_id=None,
+                adapter_receipt_sha256=None,
+                target_state_sha256=None,
+                decided_at="2030-01-01T00:01:00+00:00",
+                terminal_at="2030-01-01T00:03:00+00:00",
+                recovery_required=False,
+                reason_codes=("DENIED",),
+                replayed=False,
+                execution_attempted_this_call=False,
+                new_decision=False,
+                new_authorization=False,
+                new_effect=False,
+                authorization=None,
+            )
+            with self.assertRaises(ControlLedgerError) as raised:
+                ledger.complete_request(denied)
+            self.assertEqual(
+                raised.exception.reason_code, "REQUEST_RESULT_BINDING_INVALID"
+            )
 
 
 if __name__ == "__main__":

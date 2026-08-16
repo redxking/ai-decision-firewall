@@ -2,19 +2,28 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import os
+import stat
 import uuid
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any, Callable
 
 from adf_poc.audit import AuditLogger
 from adf_poc.stage_a import (
+    REQUEST_LOOKUP_SCHEMA_VERSION,
     ControlLedgerError,
     InMemoryControlLedger,
+    RequestLookupResult,
     SQLiteControlLedger,
+    SQLiteSyntheticAdapterStore,
+    SyntheticAdapterError,
+    _store_startup_lock_scope,
+    terminal_attempt_outcome_sha256,
 )
 from adf_poc.utils import canonical_json, sha256_json
 
@@ -54,6 +63,11 @@ from .simulation import (
 )
 from .verifier import IndependentDecisionVerifier
 
+try:  # pragma: no cover - exercised on non-POSIX import targets
+    import fcntl as _fcntl
+except ImportError:  # pragma: no cover - exercised on Windows
+    _fcntl = None
+
 
 MAX_REQUEST_AGE_SECONDS = 300
 
@@ -67,10 +81,411 @@ def _fallback_utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
 
 
+@contextmanager
+def _exclusive_durable_startup(paths: tuple[Path, ...], *, timeout_ms: int):
+    """Serialize cooperative Stage A startup without creating lock artifacts."""
+
+    if not paths:
+        yield
+        return
+    if _fcntl is None:
+        raise ValueError(
+            "Durable startup interprocess serialization is unavailable on this platform."
+        )
+    lock_roots: dict[str, Path] = {}
+    for path in paths:
+        absolute = path.absolute()
+        parts = absolute.parts
+        root = Path(absolute.anchor)
+        stable_root = root / parts[1] if len(parts) > 1 else root
+        try:
+            metadata = stable_root.lstat()
+        except OSError as exc:
+            raise ValueError("Durable startup lock root is unavailable.") from exc
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+            raise ValueError("Durable startup lock root is unsafe.")
+        lock_roots[str(stable_root)] = stable_root
+    handles: list[int] = []
+    deadline = perf_counter() + (timeout_ms / 1000.0)
+    flags = os.O_RDONLY
+    flags |= getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_DIRECTORY", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
+    try:
+        for stable_root in (lock_roots[key] for key in sorted(lock_roots)):
+            handle = os.open(stable_root, flags)
+            handles.append(handle)
+            opened = os.fstat(handle)
+            current = stable_root.lstat()
+            if (
+                not stat.S_ISDIR(opened.st_mode)
+                or opened.st_dev != current.st_dev
+                or opened.st_ino != current.st_ino
+            ):
+                raise ValueError("Durable startup lock root changed during open.")
+            while True:
+                try:
+                    _fcntl.flock(handle, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    remaining = deadline - perf_counter()
+                    if remaining <= 0:
+                        raise ControlLedgerError(
+                            "DURABLE_STARTUP_BUSY",
+                            "Durable startup ownership could not be acquired within the configured bound.",
+                        ) from None
+                    sleep(min(0.01, remaining))
+        yield
+    finally:
+        for handle in reversed(handles):
+            try:
+                _fcntl.flock(handle, _fcntl.LOCK_UN)
+            finally:
+                os.close(handle)
+
+
+def _validate_durable_store_correlation(
+    control_rows: tuple[dict[str, str | None], ...],
+    adapter_rows: tuple[dict[str, str], ...],
+) -> None:
+    """Fail closed when the independently owned stores tell different histories."""
+
+    controls = {str(row["idempotency_key"]): row for row in control_rows}
+    adapters = {str(row["idempotency_key"]): row for row in adapter_rows}
+    if len(controls) != len(control_rows) or len(adapters) != len(adapter_rows):
+        raise ControlLedgerError(
+            "DURABLE_STORE_CORRELATION_INVALID",
+            "Durable store correlation identities are not unique.",
+        )
+    if set(adapters) - set(controls):
+        raise ControlLedgerError(
+            "DURABLE_STORE_CORRELATION_INVALID",
+            "Synthetic adapter contains an orphan command receipt.",
+        )
+    terminal_statuses = {
+        "VERIFIED_EFFECT": {"APPLIED"},
+        "FAILED_NO_EFFECT": {"NO_EFFECT"},
+        "RECOVERY_REQUIRED": {"APPLIED", "PARTIAL", "AMBIGUOUS"},
+        "UNKNOWN_EFFECT": {"APPLIED", "PARTIAL", "AMBIGUOUS"},
+    }
+    for key, control in controls.items():
+        adapter = adapters.get(key)
+        state = str(control["state"])
+        receipt_sha256 = control["adapter_receipt_sha256"]
+        receipt_optional = state == "RESERVED"
+        receipt_absent_allowed = state == "UNKNOWN_EFFECT" and receipt_sha256 is None
+        if adapter is None:
+            if receipt_optional or receipt_absent_allowed:
+                continue
+            raise ControlLedgerError(
+                "DURABLE_STORE_CORRELATION_INVALID",
+                "Control history references a missing synthetic adapter receipt.",
+            )
+        if (
+            adapter["principal_id"] != control["principal_id"]
+            or adapter["request_id"] != control["request_id"]
+            or adapter["request_sha256"] != control["request_sha256"]
+            or adapter["attempt_id"] != control["attempt_id"]
+            or any(
+                adapter[name] != control[name]
+                for name in (
+                    "token_id",
+                    "unsigned_token_sha256",
+                    "issuer_instance_id",
+                    "authorization_key_domain_id",
+                    "decision_id",
+                    "decision_authorization_sha256",
+                    "decision_context_sha256",
+                    "policy_sha256",
+                )
+            )
+            or adapter["binding_sha256"] != control["binding_sha256"]
+            or adapter["idempotency_key"] != control["idempotency_key"]
+            or (
+                state != "RESERVED"
+                and adapter["receipt_sha256"] != receipt_sha256
+            )
+            or (
+                state in terminal_statuses
+                and adapter["status"] not in terminal_statuses[state]
+            )
+            or (
+                state in terminal_statuses
+                and adapter["state_after_sha256"]
+                != control["target_state_sha256"]
+            )
+        ):
+            raise ControlLedgerError(
+                "DURABLE_STORE_CORRELATION_INVALID",
+                "Control and synthetic-adapter receipt bindings differ.",
+            )
+
+
 class Phase3DecisionFirewall:
     """Simulation-only Phase 3 request-to-decision-to-verification path."""
 
     execution_mode = "synthetic_simulation"
+
+    def _assert_durable_store_correlation(self) -> None:
+        if self._adapter_store is None:
+            return
+        if type(self._control_ledger) is not SQLiteControlLedger:
+            raise ControlLedgerError(
+                "DURABLE_STORE_CORRELATION_INVALID",
+                "Synthetic adapter is not paired with a SQLite control ledger.",
+            )
+        _validate_durable_store_correlation(
+            self._control_ledger.correlation_snapshot(),
+            self._adapter_store.correlation_snapshot(),
+        )
+
+    def _pending_recovery_tail(
+        self, rows: list[dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        """Return an uncommitted exact recovery tail, or fail on malformed recovery rows."""
+
+        if not rows or not str(rows[-1].get("record_type", "")).startswith(
+            "RECOVERY_"
+        ):
+            return None
+        end = len(rows)
+        start = end - 1
+        while start > 0 and str(rows[start - 1].get("record_type", "")).startswith(
+            "RECOVERY_"
+        ):
+            start -= 1
+        recovery_rows = rows[start:end]
+        expected_types = (
+            "RECOVERY_STARTED",
+            "RECOVERY_EVIDENCE_ASSESSED",
+            "RECOVERY_FINALIZED",
+        )
+        types = tuple(str(row.get("record_type", "")) for row in recovery_rows)
+        payloads = [row.get("payload") for row in recovery_rows]
+        if (
+            not 1 <= len(recovery_rows) <= len(expected_types)
+            or types != expected_types[: len(recovery_rows)]
+            or any(type(payload) is not dict for payload in payloads)
+        ):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT",
+                "Audit tail contains a malformed recovery lifecycle.",
+            )
+        recovery_ids = {payload.get("recovery_id") for payload in payloads}
+        if len(recovery_ids) != 1 or not next(iter(recovery_ids), None):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT",
+                "Audit recovery tail has inconsistent identity.",
+            )
+        first = payloads[0]
+        descriptor = {
+            "recovery_id": first.get("recovery_id"),
+            "principal_id": first.get("principal_id"),
+            "request_id": first.get("request_id"),
+            "request_sha256": first.get("request_sha256"),
+            "row_count": len(recovery_rows),
+        }
+        if len(recovery_rows) == len(expected_types):
+            final = payloads[-1]
+            if final.get("control_commit_pending") is not True:
+                raise ControlLedgerError(
+                    "RECOVERY_AUDIT_CONFLICT",
+                    "Recovery finalization does not preserve the pending control commit.",
+                )
+            if (
+                type(descriptor["principal_id"]) is str
+                and type(descriptor["request_id"]) is str
+                and type(descriptor["request_sha256"]) is str
+                and type(final.get("result_sha256")) is str
+                and type(self._control_ledger) is SQLiteControlLedger
+            ):
+                existing = self._control_ledger.lookup_request_result(
+                    descriptor["principal_id"],
+                    descriptor["request_id"],
+                    descriptor["request_sha256"],
+                )
+                if existing is not None:
+                    stored = replace(
+                        existing,
+                        replayed=False,
+                        execution_attempted_this_call=False,
+                        new_decision=False,
+                        new_authorization=False,
+                        new_effect=False,
+                        authorization=None,
+                    )
+                    if sha256_json(stored.to_dict()) != final["result_sha256"]:
+                        raise ControlLedgerError(
+                            "RECOVERY_AUDIT_CONFLICT",
+                            "Recovery audit and committed terminal result differ.",
+                        )
+                    return None
+        return descriptor
+
+    @contextmanager
+    def _exclusive_audit_file_execution(
+        self,
+        *,
+        allow_pending_recovery: bool = False,
+        validate_store_correlation: bool = True,
+    ):
+        """Serialize a complete audit lifecycle across local processes."""
+
+        if self._audit.path is None:
+            yield
+            return
+        if _fcntl is None:
+            raise RuntimeError(
+                "Durable audit interprocess serialization is unavailable."
+            )
+        audit_path = self._audit.path.absolute()
+        for ancestor in reversed(audit_path.parents):
+            metadata = ancestor.lstat()
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+                raise RuntimeError("Audit ownership parent path is unsafe.")
+        flags = os.O_RDWR | os.O_APPEND | os.O_CREAT
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            descriptor = os.open(audit_path, flags, 0o600)
+        except OSError as exc:
+            raise RuntimeError("Audit ownership path could not be opened safely.") from exc
+        with os.fdopen(descriptor, "a+b") as ownership:
+            descriptor_metadata = os.fstat(ownership.fileno())
+            path_metadata = audit_path.lstat()
+            if (
+                stat.S_ISLNK(path_metadata.st_mode)
+                or not stat.S_ISREG(path_metadata.st_mode)
+                or path_metadata.st_nlink != 1
+                or descriptor_metadata.st_dev != path_metadata.st_dev
+                or descriptor_metadata.st_ino != path_metadata.st_ino
+            ):
+                raise RuntimeError("Audit ownership path identity is unsafe.")
+            _fcntl.flock(ownership.fileno(), _fcntl.LOCK_EX)
+            try:
+                rows = self._audit.read_all()
+                valid, errors = validate_phase3_audit_chain(rows)
+                if not valid:
+                    raise RuntimeError(
+                        "Existing Phase 3 audit chain is invalid: "
+                        + "; ".join(errors)
+                    )
+                if validate_store_correlation:
+                    self._assert_durable_store_correlation()
+                if rows:
+                    self._audit.previous_hash = str(rows[-1]["record_hash"])
+                    self._audit.sequence = int(rows[-1]["sequence"]) + 1
+                else:
+                    self._audit.previous_hash = "0" * 64
+                    self._audit.sequence = 0
+                pending = self._pending_recovery_tail(rows)
+                if pending is not None and not allow_pending_recovery:
+                    raise ControlLedgerError(
+                        "RECOVERY_AUDIT_PENDING",
+                        "An exact recovery lifecycle must reach its control commit "
+                        "before another audit writer may proceed.",
+                    )
+                yield
+            finally:
+                _fcntl.flock(ownership.fileno(), _fcntl.LOCK_UN)
+
+    @contextmanager
+    def _exclusive_audit_execution(
+        self,
+        *,
+        allow_pending_recovery: bool = False,
+        validate_store_correlation: bool = True,
+    ):
+        """Serialize startup/preflight and every durable audit/store operation."""
+
+        with _exclusive_durable_startup(
+            self._durable_paths, timeout_ms=self._startup_timeout_ms
+        ):
+            with self._exclusive_audit_file_execution(
+                allow_pending_recovery=allow_pending_recovery,
+                validate_store_correlation=validate_store_correlation,
+            ):
+                yield
+
+    def _open_durable_state(
+        self,
+        *,
+        audit_path: str | Path | None,
+        control_ledger_path: str | Path | None,
+        control_ledger_busy_timeout_ms: int,
+        synthetic_adapter_path: str | Path | None,
+        synthetic_adapter_busy_timeout_ms: int,
+        fault_modes: dict[str, str] | None,
+        startup_at: str,
+    ) -> tuple[AuditLogger, SQLiteControlLedger | InMemoryControlLedger, SQLiteSyntheticAdapterStore | None]:
+        """Preflight all existing artifacts, then open them as one startup unit."""
+
+        control_preflight: tuple[dict[str, str | None], ...] = ()
+        adapter_preflight: tuple[dict[str, str], ...] = ()
+        if control_ledger_path is not None and Path(control_ledger_path).exists():
+            control_preflight = SQLiteControlLedger.preflight_existing(
+                control_ledger_path,
+                busy_timeout_ms=control_ledger_busy_timeout_ms,
+            )
+        if synthetic_adapter_path is not None and Path(
+            synthetic_adapter_path
+        ).exists():
+            adapter_preflight = SQLiteSyntheticAdapterStore.preflight_existing(
+                synthetic_adapter_path,
+                target_inventory=self._policy.target_inventory,
+                fault_modes=fault_modes,
+                busy_timeout_ms=synthetic_adapter_busy_timeout_ms,
+            )
+        if synthetic_adapter_path is not None:
+            _validate_durable_store_correlation(
+                control_preflight, adapter_preflight
+            )
+
+        preflight_audit = (
+            AuditLogger(audit_path)
+            if audit_path is not None and Path(audit_path).exists()
+            else None
+        )
+        audit = preflight_audit or AuditLogger(audit_path)
+        existing_audit_valid, existing_audit_errors = validate_phase3_audit_chain(
+            audit.read_all()
+        )
+        if not existing_audit_valid:
+            raise ValueError(
+                "Existing Phase 3 audit chain is invalid: "
+                + "; ".join(existing_audit_errors)
+            )
+        control_ledger: SQLiteControlLedger | InMemoryControlLedger = (
+            SQLiteControlLedger(
+                control_ledger_path,
+                busy_timeout_ms=control_ledger_busy_timeout_ms,
+                created_at=startup_at,
+            )
+            if control_ledger_path is not None
+            else InMemoryControlLedger()
+        )
+        adapter_store = (
+            SQLiteSyntheticAdapterStore(
+                synthetic_adapter_path,
+                target_inventory=self._policy.target_inventory,
+                fault_modes=fault_modes,
+                busy_timeout_ms=synthetic_adapter_busy_timeout_ms,
+                created_at=startup_at,
+            )
+            if synthetic_adapter_path is not None
+            else None
+        )
+        if adapter_store is not None:
+            if type(control_ledger) is not SQLiteControlLedger:
+                raise ControlLedgerError(
+                    "DURABLE_STORE_CORRELATION_INVALID",
+                    "Synthetic adapter requires a SQLite control ledger.",
+                )
+            _validate_durable_store_correlation(
+                control_ledger.correlation_snapshot(),
+                adapter_store.correlation_snapshot(),
+            )
+        return audit, control_ledger, adapter_store
 
     def __init__(
         self,
@@ -82,6 +497,8 @@ class Phase3DecisionFirewall:
         audit_path: str | Path | None = None,
         control_ledger_path: str | Path | None = None,
         control_ledger_busy_timeout_ms: int = 1000,
+        synthetic_adapter_path: str | Path | None = None,
+        synthetic_adapter_busy_timeout_ms: int = 1000,
         clock: Callable[[], datetime] | None = None,
         id_factory: Callable[[str], str] | None = None,
         fault_modes: dict[str, str] | None = None,
@@ -113,46 +530,129 @@ class Phase3DecisionFirewall:
         self.__principal_resolver = principal_resolver.immutable_snapshot()
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.id_factory = id_factory or (lambda prefix: f"{prefix}-{uuid.uuid4()}")
-        if audit_path is not None and control_ledger_path is not None:
+        if audit_path is not None and _fcntl is None:
+            raise ValueError(
+                "Durable audit interprocess serialization is unavailable on this platform."
+            )
+        if synthetic_adapter_path is not None and (
+            control_ledger_path is None or audit_path is None
+        ):
+            raise ValueError(
+                "Durable synthetic adapter requires separate durable audit and control stores."
+            )
+        configured_paths = {
+            "audit": audit_path,
+            "control-ledger": control_ledger_path,
+            "synthetic-adapter": synthetic_adapter_path,
+        }
+        resolved_paths: dict[str, tuple[Path, Path]] = {}
+        for label, configured in configured_paths.items():
+            if configured is None:
+                continue
             try:
-                audit_candidate = Path(audit_path)
-                control_candidate = Path(control_ledger_path)
-                paths_collide = audit_candidate.resolve(
-                    strict=False
-                ) == control_candidate.resolve(strict=False)
-                if (
-                    not paths_collide
-                    and audit_candidate.exists()
-                    and control_candidate.exists()
-                ):
-                    paths_collide = audit_candidate.samefile(control_candidate)
+                candidate = Path(configured)
+                resolved_paths[label] = (
+                    candidate,
+                    candidate.resolve(strict=False),
+                )
             except (OSError, RuntimeError) as exc:
                 raise ValueError(
-                    "Audit and control-ledger paths could not be resolved safely."
+                    "Durable state paths could not be resolved safely."
                 ) from exc
-            if paths_collide:
-                raise ValueError(
-                    "Audit and control-ledger paths must identify distinct files."
-                )
-        self._audit = AuditLogger(audit_path)
-        existing_audit_valid, existing_audit_errors = validate_phase3_audit_chain(
-            self._audit.read_all()
+            absolute_candidate = candidate.absolute()
+            for ancestor in reversed(absolute_candidate.parents):
+                try:
+                    metadata = ancestor.lstat()
+                except FileNotFoundError:
+                    continue
+                if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(
+                    metadata.st_mode
+                ):
+                    raise ValueError(
+                        "Durable state parent chains cannot contain symbolic "
+                        "links or non-directories."
+                    )
+            if absolute_candidate.exists() or absolute_candidate.is_symlink():
+                metadata = absolute_candidate.lstat()
+                if (
+                    stat.S_ISLNK(metadata.st_mode)
+                    or not stat.S_ISREG(metadata.st_mode)
+                    or metadata.st_nlink != 1
+                ):
+                    raise ValueError(
+                        "Durable state paths must be singly linked regular files."
+                    )
+        labels = tuple(resolved_paths)
+        for index, left_label in enumerate(labels):
+            left, left_resolved = resolved_paths[left_label]
+            for right_label in labels[index + 1 :]:
+                right, right_resolved = resolved_paths[right_label]
+                try:
+                    paths_collide = left_resolved == right_resolved
+                    if not paths_collide and left.exists() and right.exists():
+                        paths_collide = left.samefile(right)
+                    if not paths_collide:
+                        paths_collide = (
+                            left_resolved in right_resolved.parents
+                            or right_resolved in left_resolved.parents
+                        )
+                    if not paths_collide:
+                        left_names = {
+                            Path(str(left_resolved) + suffix)
+                            for suffix in ("-wal", "-shm", "-journal")
+                        }
+                        right_names = {
+                            Path(str(right_resolved) + suffix)
+                            for suffix in ("-wal", "-shm", "-journal")
+                        }
+                        paths_collide = (
+                            right_resolved in left_names
+                            or left_resolved in right_names
+                        )
+                except (OSError, RuntimeError) as exc:
+                    raise ValueError(
+                        "Durable state paths could not be resolved safely."
+                    ) from exc
+                if paths_collide:
+                    raise ValueError(
+                        "Audit, control-ledger, and synthetic-adapter paths must "
+                        "identify distinct files with disjoint SQLite sidecar namespaces."
+                    )
+        durable_paths = tuple(
+            Path(path)
+            for path in (audit_path, control_ledger_path, synthetic_adapter_path)
+            if path is not None
         )
-        if not existing_audit_valid:
-            raise ValueError(
-                "Existing Phase 3 audit chain is invalid: "
-                + "; ".join(existing_audit_errors)
-            )
+        self._durable_paths = durable_paths
+        self._startup_timeout_ms = max(
+            control_ledger_busy_timeout_ms,
+            synthetic_adapter_busy_timeout_ms,
+        )
+        startup_at = (
+            self.clock().astimezone(timezone.utc).replace(microsecond=0).isoformat()
+            if durable_paths
+            else _fallback_utc_now().isoformat()
+        )
+        with _exclusive_durable_startup(
+            durable_paths,
+            timeout_ms=self._startup_timeout_ms,
+        ):
+            with _store_startup_lock_scope():
+                (
+                    self._audit,
+                    self._control_ledger,
+                    self._adapter_store,
+                ) = self._open_durable_state(
+                    audit_path=audit_path,
+                    control_ledger_path=control_ledger_path,
+                    control_ledger_busy_timeout_ms=control_ledger_busy_timeout_ms,
+                    synthetic_adapter_path=synthetic_adapter_path,
+                    synthetic_adapter_busy_timeout_ms=synthetic_adapter_busy_timeout_ms,
+                    fault_modes=fault_modes,
+                    startup_at=startup_at,
+                )
         self._metrics = Phase3Metrics()
         self._process_lock = Lock()
-        self._control_ledger = (
-            SQLiteControlLedger(
-                control_ledger_path,
-                busy_timeout_ms=control_ledger_busy_timeout_ms,
-            )
-            if control_ledger_path is not None
-            else InMemoryControlLedger()
-        )
         self.__evidence_attestation_verifier = EvidenceAttestationVerifier(
             evidence_attestation_keys,
             required_source_instances=set(self._policy.evidence.trusted_sources),
@@ -197,6 +697,7 @@ class Phase3DecisionFirewall:
                 fault_modes=fault_modes,
                 clock=self.clock,
                 id_factory=self.id_factory,
+                adapter_store=self._adapter_store,
             )
         )
 
@@ -221,6 +722,180 @@ class Phase3DecisionFirewall:
                 + "; ".join(chain_errors + lifecycle_errors)
             )
         return result
+
+    def _terminal_lookup_from_result(
+        self,
+        result: Phase3Result,
+        *,
+        principal_id: str,
+        adapter_receipt_sha256: str | None,
+        disposition: str,
+        recovery_required: bool,
+        terminal_at: str,
+    ) -> RequestLookupResult:
+        verification = result.verification
+        broker_result = result.broker_result
+        attempt_id = (
+            broker_result.attempt_id
+            if broker_result is not None
+            else (verification.attempt_id if verification is not None else None)
+        )
+        return RequestLookupResult(
+            schema_version=REQUEST_LOOKUP_SCHEMA_VERSION,
+            principal_id=principal_id,
+            request_id=result.decision.request_id,
+            request_sha256=result.decision.request_sha256,
+            disposition=disposition,
+            decision_id=result.decision.decision_id,
+            decision_outcome=result.decision.outcome,
+            decision_sha256=result.decision.authorization_sha256(),
+            decision_context_sha256=result.decision.decision_context_sha256,
+            policy_sha256=result.decision.policy_sha256,
+            verification_status=(
+                verification.status if verification is not None else "NOT_APPLICABLE"
+            ),
+            verification_sha256=(
+                sha256_json(verification.to_dict())
+                if verification is not None
+                else None
+            ),
+            attempt_id=attempt_id,
+            adapter_receipt_sha256=adapter_receipt_sha256,
+            target_state_sha256=(
+                sha256_json(result.final_state)
+                if attempt_id is not None and result.final_state is not None
+                else None
+            ),
+            decided_at=result.decision.decided_at,
+            terminal_at=terminal_at,
+            recovery_required=recovery_required,
+            reason_codes=tuple(
+                dict.fromkeys(
+                    [
+                        *result.decision.reason_codes,
+                        *(verification.reason_codes if verification is not None else ()),
+                    ]
+                )
+            ),
+            replayed=False,
+            execution_attempted_this_call=False,
+            new_decision=False,
+            new_authorization=False,
+            new_effect=False,
+            authorization=None,
+        )
+
+    def _persist_durable_terminal_result(
+        self, result: Phase3Result, *, principal_id: str
+    ) -> None:
+        if type(self._control_ledger) is not SQLiteControlLedger:
+            return
+        if any(
+            reason in result.decision.reason_codes
+            for reason in (
+                "DUPLICATE_REQUEST",
+                "REQUEST_ID_CONFLICT",
+                "CONTROL_LEDGER_UNAVAILABLE",
+            )
+        ):
+            return
+        snapshot = self._control_ledger.request_snapshot(
+            principal_id,
+            result.decision.request_id,
+            result.decision.request_sha256,
+        )
+        if snapshot is None or snapshot["state"] == "TERMINAL":
+            return
+        terminal_at = self.clock().astimezone(timezone.utc).replace(microsecond=0).isoformat()
+        attempt_id = snapshot.get("attempt_id")
+        if attempt_id is None:
+            if snapshot["state"] == "CLAIMED":
+                lookup = self._terminal_lookup_from_result(
+                    result,
+                    principal_id=principal_id,
+                    adapter_receipt_sha256=None,
+                    disposition="DENIED_NO_EFFECT",
+                    recovery_required=False,
+                    terminal_at=terminal_at,
+                )
+                self._control_ledger.complete_request(lookup)
+            return
+        if snapshot.get("attempt_state") != "RECEIPT_RECORDED":
+            # Normal execution never repairs a missing T2 control write. A
+            # RESERVED attempt with an adapter receipt requires explicit,
+            # quiesced receipt-informed reconciliation.
+            return
+        receipt = None
+        receipt_sha256 = snapshot.get("adapter_receipt_sha256")
+        if self._adapter_store is not None:
+            idempotency_key = snapshot.get("idempotency_key")
+            receipt = (
+                self._adapter_store.receipt(idempotency_key)
+                if type(idempotency_key) is str
+                else None
+            )
+            if receipt is None:
+                # A missing receipt remains open for explicit quiesced recovery.
+                return
+            if (
+                receipt.attempt_id != attempt_id
+                or receipt.binding_sha256 != snapshot["binding_sha256"]
+            ):
+                raise ControlLedgerError(
+                    "REQUEST_RESULT_BINDING_INVALID",
+                    "Adapter receipt does not bind to the reserved control attempt.",
+                )
+            receipt_sha256 = receipt.receipt_sha256
+        if type(receipt_sha256) is not str:
+            return
+        final_state_sha256 = (
+            sha256_json(result.final_state) if result.final_state is not None else None
+        )
+        durably_verified = (
+            result.verification is not None
+            and result.verification.status == "VERIFIED"
+            and (
+                receipt is None
+                or (
+                    receipt.status == "APPLIED"
+                    and final_state_sha256 == receipt.state_after_sha256
+                )
+            )
+        )
+        if durably_verified:
+            disposition = "COMPLETED_VERIFIED"
+            attempt_state = "VERIFIED_EFFECT"
+            recovery_required = False
+        elif (
+            (receipt is not None and receipt.status == "NO_EFFECT")
+            or (
+                receipt is None
+                and result.broker_result is not None
+                and not result.broker_result.reported_success
+            )
+        ):
+            disposition = "FAILED_NO_EFFECT"
+            attempt_state = "FAILED_NO_EFFECT"
+            recovery_required = False
+        else:
+            disposition = "RECOVERY_REQUIRED"
+            attempt_state = "RECOVERY_REQUIRED"
+            recovery_required = True
+        lookup = self._terminal_lookup_from_result(
+            result,
+            principal_id=principal_id,
+            adapter_receipt_sha256=receipt_sha256,
+            disposition=disposition,
+            recovery_required=recovery_required,
+            terminal_at=terminal_at,
+        )
+        outcome_sha256 = terminal_attempt_outcome_sha256(lookup, attempt_state)
+        self._control_ledger.complete_request(
+            lookup,
+            attempt_state=attempt_state,
+            attempt_outcome_sha256=outcome_sha256,
+            adapter_receipt_sha256=receipt_sha256,
+        )
 
     def _append(
         self,
@@ -639,7 +1314,7 @@ class Phase3DecisionFirewall:
                 }
             )
 
-        with self._process_lock:
+        with self._exclusive_audit_execution(), self._process_lock:
             if (
                 sha256_json(Phase3PolicyConfig.to_dict(self._policy))
                 != self._policy_sha256
@@ -659,7 +1334,601 @@ class Phase3DecisionFirewall:
                 != metrics_before["decision_counts"].get(result.decision.outcome, 0) + 1
             ):
                 raise RuntimeError("Phase 3 decision metrics did not reconcile.")
+            if (
+                type(self._control_ledger) is InMemoryControlLedger
+                and result.broker_result is not None
+            ):
+                if result.verification is not None and result.verification.status == "VERIFIED":
+                    process_state = "VERIFIED_EFFECT"
+                elif not result.broker_result.reported_success:
+                    process_state = "FAILED_NO_EFFECT"
+                else:
+                    process_state = "RECOVERY_REQUIRED"
+                self.__authorization_gate.record_attempt_outcome(
+                    attempt_id=result.broker_result.attempt_id,
+                    outcome_state=process_state,
+                    outcome_sha256=sha256_json(
+                        {
+                            "broker_result": result.broker_result.to_dict(),
+                            "verification": (
+                                result.verification.to_dict()
+                                if result.verification is not None
+                                else None
+                            ),
+                        }
+                    ),
+                    completed_at=self.clock()
+                    .astimezone(timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat(),
+                )
+            self._persist_durable_terminal_result(
+                result, principal_id=principal.id
+            )
             return result
+
+    def _authenticated_request_binding(
+        self, raw_request: str | bytes, *, credential: bytes
+    ) -> tuple[str, DecisionRequest, str]:
+        try:
+            resolution = self.__principal_resolver.resolve(credential)
+            principal = self.__principal_resolver.verify_resolution(resolution)
+        except PrincipalAuthenticationError as exc:
+            raise ControlLedgerError(
+                "REQUEST_LOOKUP_AUTHENTICATION_FAILED",
+                "Request-result access requires a trusted invocation identity.",
+            ) from exc
+        try:
+            request = load_decision_request_json(raw_request, now=self.clock())
+        except RequestValidationError as exc:
+            raise ControlLedgerError(
+                "REQUEST_LOOKUP_BINDING_INVALID",
+                "Request-result access requires the exact valid request.",
+            ) from exc
+        if request.agent.id != principal.id:
+            raise ControlLedgerError(
+                "REQUEST_LOOKUP_AUTHENTICATION_FAILED",
+                "Request-result identity does not match the authenticated principal.",
+            )
+        return principal.id, request, request.request_sha256()
+
+    def lookup_request_result(
+        self, raw_request: str | bytes, *, credential: bytes
+    ) -> RequestLookupResult | None:
+        """Authenticated read-only lookup; it makes no decision or execution attempt."""
+
+        if self._adapter_store is None or type(self._control_ledger) is not SQLiteControlLedger:
+            raise ControlLedgerError(
+                "REQUEST_LOOKUP_DURABILITY_NOT_CONFIGURED",
+                "Stable request-result lookup requires both durable Stage A stores.",
+            )
+        principal_id, request, request_sha256 = self._authenticated_request_binding(
+            raw_request, credential=credential
+        )
+        with self._exclusive_audit_execution(
+            allow_pending_recovery=True,
+            validate_store_correlation=False,
+        ):
+            result = self._control_ledger.lookup_request_result(
+                principal_id, request.request_id, request_sha256
+            )
+            if result is not None:
+                self._assert_durable_store_correlation()
+            return result
+
+    def _recovery_terminal_at(self, recovery_id: str) -> str:
+        rows = self._audit.read_all()
+        matches = [
+            (index, row)
+            for index, row in enumerate(rows)
+            if row.get("payload", {}).get("recovery_id") == recovery_id
+        ]
+        if not matches:
+            return self.clock().astimezone(timezone.utc).replace(microsecond=0).isoformat()
+        expected_types = (
+            "RECOVERY_STARTED",
+            "RECOVERY_EVIDENCE_ASSESSED",
+            "RECOVERY_FINALIZED",
+        )
+        if (
+            [index for index, _row in matches]
+            != list(range(matches[0][0], len(rows)))
+            or len(matches) > len(expected_types)
+            or tuple(row.get("record_type") for _index, row in matches)
+            != expected_types[: len(matches)]
+        ):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT",
+                "Existing recovery audit rows are not an exact tail prefix.",
+            )
+        terminal_at = matches[0][1].get("payload", {}).get("recovery_terminal_at")
+        try:
+            parsed = datetime.fromisoformat(terminal_at)
+            if parsed.tzinfo is None or parsed.utcoffset() is None:
+                raise ValueError("timestamp has no offset")
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT",
+                "Recovery audit terminal timestamp is invalid.",
+            ) from exc
+        return str(terminal_at)
+
+    @staticmethod
+    def _correlated_original_audit_status(
+        rows: list[dict[str, Any]],
+        *,
+        request_id: str,
+        decision_id: str | None,
+        attempt_id: str | None,
+    ) -> str:
+        """Classify the one correlated normal lifecycle without conflating others."""
+
+        groups: list[list[dict[str, Any]]] = []
+        current: list[dict[str, Any]] | None = None
+        for row in rows:
+            record_type = str(row.get("record_type", ""))
+            if record_type == "REQUEST_RECEIVED":
+                if current:
+                    groups.append(current)
+                current = [row]
+            elif record_type.startswith("RECOVERY_"):
+                if current:
+                    groups.append(current)
+                    current = None
+            elif current is not None:
+                current.append(row)
+        if current:
+            groups.append(current)
+
+        def payloads(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return [
+                row["payload"]
+                for row in group
+                if type(row.get("payload")) is dict
+            ]
+
+        candidates = [
+            group
+            for group in groups
+            if any(payload.get("request_id") == request_id for payload in payloads(group))
+            and (
+                decision_id is None
+                or any(
+                    payload.get("decision_id") == decision_id
+                    for payload in payloads(group)
+                )
+            )
+        ]
+        if attempt_id is not None:
+            exact_attempt = [
+                group
+                for group in candidates
+                if any(
+                    payload.get("attempt_id") == attempt_id
+                    for payload in payloads(group)
+                )
+            ]
+            if exact_attempt:
+                candidates = exact_attempt
+            else:
+                invoked = [
+                    group
+                    for group in candidates
+                    if any(row.get("record_type") == "BROKER_INVOKED" for row in group)
+                ]
+                if invoked:
+                    candidates = invoked
+        if len(candidates) != 1:
+            return "UNRESOLVED"
+        valid, _errors = validate_phase3_lifecycle(candidates[0])
+        return "COMPLETE" if valid else "INCOMPLETE"
+
+    def _original_audit_status(
+        self,
+        *,
+        recovery_id: str,
+        request_id: str,
+        decision_id: str | None,
+        attempt_id: str | None,
+    ) -> str:
+        rows = self._audit.read_all()
+        matches = [
+            (index, row)
+            for index, row in enumerate(rows)
+            if row.get("payload", {}).get("recovery_id") == recovery_id
+        ]
+        if matches and [index for index, _row in matches] != list(
+            range(matches[0][0], len(rows))
+        ):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT",
+                "Existing recovery audit rows are not an exact tail.",
+            )
+        original = rows[: matches[0][0]] if matches else rows
+        return self._correlated_original_audit_status(
+            original,
+            request_id=request_id,
+            decision_id=decision_id,
+            attempt_id=attempt_id,
+        )
+
+    def _close_recovery_audit(
+        self,
+        *,
+        recovery_id: str,
+        result: RequestLookupResult,
+        receipt_status: str | None,
+        original_audit_status: str,
+        original_decision_id: str | None,
+    ) -> None:
+        rows = self._audit.read_all()
+        matches = [
+            (index, row)
+            for index, row in enumerate(rows)
+            if row.get("payload", {}).get("recovery_id") == recovery_id
+        ]
+        if matches and [index for index, _row in matches] != list(
+            range(matches[0][0], len(rows))
+        ):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT",
+                "Recovery audit rows are not a contiguous tail.",
+            )
+        original = rows[: matches[0][0]] if matches else rows
+        observed_audit_status = self._correlated_original_audit_status(
+            original,
+            request_id=result.request_id,
+            decision_id=original_decision_id,
+            attempt_id=result.attempt_id,
+        )
+        if (
+            original_audit_status not in {"COMPLETE", "INCOMPLETE", "UNRESOLVED"}
+            or observed_audit_status != original_audit_status
+        ):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT",
+                "Original execution audit status changed during recovery.",
+            )
+        prior_tip = str(original[-1]["record_hash"]) if original else "0" * 64
+        result_sha256 = sha256_json(result.to_dict())
+        common = {
+            "recovery_id": recovery_id,
+            "recovery_terminal_at": result.terminal_at,
+            "prior_audit_tip": prior_tip,
+            "principal_id": result.principal_id,
+            "request_sha256": result.request_sha256,
+            "original_execution_audit_status": original_audit_status,
+            "original_execution_lifecycle_valid": original_audit_status == "COMPLETE",
+            "operator_asserted_quiesced": True,
+            "command_invoked": False,
+            "new_effect": False,
+        }
+        expected = (
+            (
+                "RECOVERY_STARTED",
+                {
+                    **common,
+                    "attempt_id": result.attempt_id,
+                    "adapter_receipt_sha256": result.adapter_receipt_sha256,
+                },
+            ),
+            (
+                "RECOVERY_EVIDENCE_ASSESSED",
+                {
+                    **common,
+                    "receipt_status": receipt_status,
+                    "disposition": result.disposition,
+                    "recovery_required": result.recovery_required,
+                },
+            ),
+            (
+                "RECOVERY_FINALIZED",
+                {
+                    **common,
+                    "result_sha256": result_sha256,
+                    "disposition": result.disposition,
+                    "control_commit_pending": True,
+                },
+            ),
+        )
+        if len(matches) > len(expected):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_CONFLICT", "Recovery audit has excess rows."
+            )
+        for offset, (_index, row) in enumerate(matches):
+            record_type, extra = expected[offset]
+            expected_payload = {
+                "intake_id": recovery_id,
+                "request_id": result.request_id,
+                "decision_id": result.decision_id,
+                **extra,
+            }
+            if (
+                row.get("record_type") != record_type
+                or canonical_json(row.get("payload"))
+                != canonical_json(expected_payload)
+            ):
+                raise ControlLedgerError(
+                    "RECOVERY_AUDIT_CONFLICT",
+                    "Recovery audit prefix differs from the exact recovery result.",
+                )
+        for record_type, extra in expected[len(matches) :]:
+            self._append(
+                record_type,
+                intake_id=recovery_id,
+                request_id=result.request_id,
+                decision_id=result.decision_id,
+                payload=extra,
+            )
+        closed = self._audit.read_all()
+        chain_valid, chain_errors = validate_phase3_audit_chain(closed)
+        if not chain_valid or tuple(
+            row.get("record_type") for row in closed[-3:]
+        ) != tuple(record_type for record_type, _extra in expected):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_INCOMPLETE",
+                "Recovery audit lifecycle did not close: " + "; ".join(chain_errors),
+            )
+
+    def reconcile_request(
+        self,
+        raw_request: str | bytes,
+        *,
+        credential: bytes,
+        operator_asserted_quiesced: bool,
+    ) -> RequestLookupResult | None:
+        with self._exclusive_audit_execution(
+            allow_pending_recovery=True
+        ), self._process_lock:
+            return self._reconcile_request_owned(
+                raw_request,
+                credential=credential,
+                operator_asserted_quiesced=operator_asserted_quiesced,
+            )
+
+    def _reconcile_request_owned(
+        self,
+        raw_request: str | bytes,
+        *,
+        credential: bytes,
+        operator_asserted_quiesced: bool,
+    ) -> RequestLookupResult | None:
+        """Receipt-informed exact-request recovery under an operator quiescence assertion.
+
+        The assertion is deliberately not represented as a lease or fencing epoch.
+        Callers must externally quiesce execution before invoking this method.
+        """
+
+        if operator_asserted_quiesced is not True:
+            raise ControlLedgerError(
+                "RECOVERY_QUIESCENCE_REQUIRED",
+                "Exact-request recovery requires an operator quiescence assertion.",
+            )
+        if self._adapter_store is None or type(self._control_ledger) is not SQLiteControlLedger:
+            raise ControlLedgerError(
+                "REQUEST_LOOKUP_DURABILITY_NOT_CONFIGURED",
+                "Recovery requires both durable Stage A stores.",
+            )
+        principal_id, request, request_sha256 = self._authenticated_request_binding(
+            raw_request, credential=credential
+        )
+        existing = self._control_ledger.lookup_request_result(
+            principal_id, request.request_id, request_sha256
+        )
+        if existing is not None:
+            return existing
+        # request_snapshot closes its connection before the adapter is queried;
+        # no control-ledger transaction spans this ownership boundary.
+        snapshot = self._control_ledger.request_snapshot(
+            principal_id, request.request_id, request_sha256
+        )
+        if snapshot is None:
+            return None
+        recovery_id = _deterministic_failure_id(
+            "stage-a-recovery",
+            principal_id,
+            request.request_id,
+            request_sha256,
+            str(snapshot.get("attempt_id") or "NO_ATTEMPT"),
+        )
+        pending_recovery = self._pending_recovery_tail(self._audit.read_all())
+        if pending_recovery is not None and (
+            pending_recovery.get("recovery_id") != recovery_id
+            or pending_recovery.get("principal_id") != principal_id
+            or pending_recovery.get("request_id") != request.request_id
+            or pending_recovery.get("request_sha256") != request_sha256
+        ):
+            raise ControlLedgerError(
+                "RECOVERY_AUDIT_PENDING",
+                "A different exact recovery lifecycle owns the durable audit tail.",
+            )
+        terminal_at = self._recovery_terminal_at(recovery_id)
+        if snapshot["attempt_id"] is None:
+            original_audit_status = self._original_audit_status(
+                recovery_id=recovery_id,
+                request_id=request.request_id,
+                decision_id=None,
+                attempt_id=None,
+            )
+            original_audit_reason = (
+                f"ORIGINAL_EXECUTION_AUDIT_{original_audit_status}"
+            )
+            self._control_ledger.revoke_issued_for_request(
+                principal_id,
+                request.request_id,
+                request_sha256,
+                operator_asserted_quiesced=True,
+                revoked_at=terminal_at,
+            )
+            sentinel = {
+                "request_sha256": request_sha256,
+                "state": snapshot["state"],
+                "recovery": "aborted_before_attempt",
+            }
+            result = RequestLookupResult(
+                schema_version=REQUEST_LOOKUP_SCHEMA_VERSION,
+                principal_id=principal_id,
+                request_id=request.request_id,
+                request_sha256=request_sha256,
+                disposition="ABORTED_NO_EFFECT",
+                decision_id=_deterministic_failure_id(
+                    "recovery", principal_id, request.request_id, request_sha256
+                ),
+                decision_outcome="NOT_DURABLY_RECORDED",
+                decision_sha256=sha256_json(sentinel),
+                decision_context_sha256=sha256_json(
+                    {**sentinel, "projection": "decision_context_absent"}
+                ),
+                policy_sha256=self._policy_sha256,
+                verification_status="NOT_PERFORMED",
+                verification_sha256=None,
+                attempt_id=None,
+                adapter_receipt_sha256=None,
+                target_state_sha256=None,
+                decided_at=snapshot["updated_at"],
+                terminal_at=terminal_at,
+                recovery_required=False,
+                reason_codes=(
+                    "QUIESCED_RECOVERY_ABORTED_BEFORE_ATTEMPT",
+                    original_audit_reason,
+                ),
+                replayed=False,
+                execution_attempted_this_call=False,
+                new_decision=False,
+                new_authorization=False,
+                new_effect=False,
+                authorization=None,
+            )
+            self._close_recovery_audit(
+                recovery_id=recovery_id,
+                result=result,
+                receipt_status=None,
+                original_audit_status=original_audit_status,
+                original_decision_id=None,
+            )
+            self._control_ledger.complete_request(result)
+            return self._control_ledger.lookup_request_result(
+                principal_id, request.request_id, request_sha256
+            )
+        summary = snapshot["recovery_summary"]
+        if type(summary) is not dict or type(snapshot["idempotency_key"]) is not str:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Incomplete request lacks its sanitized recovery binding.",
+            )
+        original_audit_status = self._original_audit_status(
+            recovery_id=recovery_id,
+            request_id=request.request_id,
+            decision_id=summary["decision_id"],
+            attempt_id=snapshot["attempt_id"],
+        )
+        original_audit_reason = f"ORIGINAL_EXECUTION_AUDIT_{original_audit_status}"
+        receipt = self._adapter_store.receipt(snapshot["idempotency_key"])
+        if receipt is not None and (
+            receipt.attempt_id != snapshot["attempt_id"]
+            or receipt.binding_sha256 != snapshot["binding_sha256"]
+            or receipt.request_id != request.request_id
+            or receipt.decision_id != summary["decision_id"]
+        ):
+            raise ControlLedgerError(
+                "REQUEST_RESULT_BINDING_INVALID",
+                "Adapter receipt does not bind to the incomplete control attempt.",
+            )
+        if receipt is not None and snapshot["attempt_state"] == "RESERVED":
+            # The adapter read above completed before this independent control
+            # transaction. Recording the exact receipt is idempotent and does
+            # not invoke the command again.
+            self._control_ledger.record_adapter_receipt(
+                snapshot["attempt_id"],
+                adapter_receipt_sha256=receipt.receipt_sha256,
+                receipt_outcome_sha256=sha256_json(
+                    {
+                        "adapter_receipt_sha256": receipt.receipt_sha256,
+                        "adapter_status": receipt.status,
+                    }
+                ),
+                recorded_at=terminal_at,
+            )
+        elif receipt is not None and (
+            snapshot["attempt_state"] != "RECEIPT_RECORDED"
+            or snapshot["adapter_receipt_sha256"] != receipt.receipt_sha256
+        ):
+            raise ControlLedgerError(
+                "REQUEST_RESULT_BINDING_INVALID",
+                "Recorded control receipt does not match the durable adapter receipt.",
+            )
+        elif receipt is None and snapshot["attempt_state"] == "RECEIPT_RECORDED":
+            raise ControlLedgerError(
+                "REQUEST_RESULT_BINDING_INVALID",
+                "Control receipt accounting exists but the adapter receipt is unavailable.",
+            )
+        if receipt is not None and receipt.status == "NO_EFFECT":
+            disposition = "FAILED_NO_EFFECT"
+            attempt_state = "FAILED_NO_EFFECT"
+            recovery_required = False
+            reason_codes = (
+                "ADAPTER_EXACT_NO_EFFECT_RECEIPT",
+                original_audit_reason,
+            )
+        else:
+            disposition = "UNKNOWN_EFFECT"
+            attempt_state = "UNKNOWN_EFFECT"
+            recovery_required = True
+            reason_codes = (
+                (
+                    "ADAPTER_RECEIPT_WITHOUT_DURABLE_VERIFICATION"
+                    if receipt is not None
+                    else "ADAPTER_RECEIPT_MISSING"
+                ),
+                original_audit_reason,
+            )
+        receipt_sha256 = receipt.receipt_sha256 if receipt is not None else None
+        result = RequestLookupResult(
+            schema_version=REQUEST_LOOKUP_SCHEMA_VERSION,
+            principal_id=principal_id,
+            request_id=request.request_id,
+            request_sha256=request_sha256,
+            disposition=disposition,
+            decision_id=summary["decision_id"],
+            decision_outcome=summary["decision_outcome"],
+            decision_sha256=summary["decision_sha256"],
+            decision_context_sha256=summary["decision_context_sha256"],
+            policy_sha256=summary["policy_sha256"],
+            verification_status="NOT_DURABLY_RECORDED",
+            verification_sha256=None,
+            attempt_id=snapshot["attempt_id"],
+            adapter_receipt_sha256=receipt_sha256,
+            target_state_sha256=(
+                receipt.state_after_sha256 if receipt is not None else None
+            ),
+            decided_at=summary["decided_at"],
+            terminal_at=terminal_at,
+            recovery_required=recovery_required,
+            reason_codes=reason_codes,
+            replayed=False,
+            execution_attempted_this_call=False,
+            new_decision=False,
+            new_authorization=False,
+            new_effect=False,
+            authorization=None,
+        )
+        self._close_recovery_audit(
+            recovery_id=recovery_id,
+            result=result,
+            receipt_status=receipt.status if receipt is not None else None,
+            original_audit_status=original_audit_status,
+            original_decision_id=summary["decision_id"],
+        )
+        outcome_sha256 = terminal_attempt_outcome_sha256(result, attempt_state)
+        self._control_ledger.complete_request(
+            result,
+            attempt_state=attempt_state,
+            attempt_outcome_sha256=outcome_sha256,
+            adapter_receipt_sha256=receipt_sha256,
+        )
+        return self._control_ledger.lookup_request_result(
+            principal_id, request.request_id, request_sha256
+        )
 
     def _process_authenticated_json(
         self,
@@ -1025,7 +2294,10 @@ class Phase3DecisionFirewall:
 
         try:
             ledger_state = self._control_ledger.claim_request(
-                principal.id, request_id, request_sha256
+                principal.id,
+                request_id,
+                request_sha256,
+                claimed_at=now.isoformat(),
             )
         except ControlLedgerError:
             ledger_state = "UNAVAILABLE"
@@ -1406,6 +2678,24 @@ class Phase3DecisionFirewall:
             },
         )
         command = decision.to_dict()["permitted_action"] or {}
+        decision_projection = decision.to_dict()
+        authorization_projection = dict(decision_projection)
+        authorization_projection.pop("latency_ms", None)
+        authorization_projection.pop("explanation", None)
+        authorization_projection.pop("approval_requirement", None)
+        decision_authorization_sha256 = sha256_json(authorization_projection)
+        recovery_summary = {
+            "summary_version": "1",
+            "principal_id": principal.id,
+            "request_id": request_id,
+            "request_sha256": request_sha256,
+            "decision_id": decision_id,
+            "decision_outcome": decision.outcome,
+            "decision_sha256": decision.authorization_sha256(),
+            "decision_context_sha256": decision.decision_context_sha256,
+            "policy_sha256": decision.policy_sha256,
+            "decided_at": decision.decided_at,
+        }
         self._append(
             "BROKER_INVOKED",
             intake_id=intake_id,
@@ -1429,6 +2719,9 @@ class Phase3DecisionFirewall:
                 policy_version=self.policy.version,
                 policy_sha256=self._policy_sha256,
                 decision_context_sha256=decision.decision_context_sha256,
+                request_sha256=request_sha256,
+                decision_authorization_sha256=decision_authorization_sha256,
+                recovery_summary=recovery_summary,
             )
         except AuthorizationError as exc:
             self._append(
@@ -1785,7 +3078,7 @@ class Phase3DecisionFirewall:
     ) -> ApprovalReceipt:
         """Record exact human approval for later reevaluation; never execute."""
 
-        with self._process_lock:
+        with self._exclusive_audit_execution(), self._process_lock:
             matching_rows = [
                 row
                 for row in self._audit.read_all()

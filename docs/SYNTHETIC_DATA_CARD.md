@@ -78,9 +78,31 @@ all fixture labels to calculate final aggregate metrics. This same-process
 separation is not independent custody, and the results are not representative
 of operational performance.
 
-The Stage A durability tests create only ephemeral synthetic requests and
-temporary local SQLite databases. They add no dataset, historical record,
-representative sample, external source, or permission to process one.
+The provisional, unreleased Stage A `0.4.0-alpha.2` durability candidate creates
+only synthetic requests and local state during tests. Its three authoritative
+artifacts are one control SQLite database, one separately pathed offline
+synthetic-adapter SQLite database containing generated target state and
+adapter-reported receipts, and the JSONL lifecycle audit. Its sanitized
+request-result projection contains bounded identifiers, digests, timestamps,
+decision/verification summaries, terminal disposition, and replay facts rather
+than a reusable token, nonce, signature, credential, raw audit history, or
+executable authority. Recovery adds only a correlated metadata lifecycle
+(`RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, `RECOVERY_FINALIZED`) and
+classifies the original audit status as `COMPLETE`, `INCOMPLETE`, or
+`UNRESOLVED`; it does not create new command or verification data. These
+artifacts are records produced by the software, not a new model dataset,
+historical record, representative sample, external source, or permission to
+process one. Their persistence still creates future retention, capacity,
+minimization, backup/restore, and records-management obligations before any
+non-synthetic use.
+
+At the 2026-08-16 local source freeze, 43/43 focused Stage A, 18/18
+readiness-gate, 360/360 repository, and 46/46 deterministic corpus checks passed;
+the corpus reported `live_actions_possible=false`. These are project-controlled
+mechanism observations, not data representativeness, historical/live
+performance, privacy effectiveness, independent verification, an exact
+candidate commit/CI, or production authorization. The production gate remains
+`BLOCKED`.
 
 Each synthetic evidence item has a canonical content digest and a runtime HMAC
 attestation binding source identity/type, provenance, observation time,

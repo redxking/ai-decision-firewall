@@ -14,6 +14,18 @@ Phase 2.5 is separately published on `main` at exact Commit
 Graph success. That publication did not run `P2-CE-005`; it remains CE-0
 `NOT_EVALUATED`. Phase 3 is additive and separately published.
 
+The provisional, unreleased Stage A `0.4.0-alpha.2` candidate is a later
+production-development boundary. ADR-015 defines its two-database offline
+synthetic receipt/result design. At the 2026-08-16 local source freeze, 43/43
+focused Stage A tests, 18/18 production-readiness-gate tests, 360/360 repository
+tests, and the 46/46 deterministic corpus passed; the corpus reported
+`live_actions_possible=false`. Direct first-creation stress passed 10/10
+sequential plus 5/5 parallel repetitions, and the integrated exact-once race
+passed 5/5 parallel repetitions. These are project-controlled mechanism
+observations, not an exact candidate commit, regenerated manifest, CI,
+independent verification, owner acceptance, operational effectiveness, or
+production authorization.
+
 ## Closure assessment
 
 | Required capability | Initial gap | Local candidate state | Remaining evidence or production gap |
@@ -128,17 +140,44 @@ checks from remaining acceptance evidence.
 
 Exact-baseline restart testing demonstrated that process-local request and
 authorization state allowed the same completed request to cause a second
-synthetic effect after reconstruction. The Stage A candidate closes that
-specific path with opt-in SQLite/WAL authority state and tests request conflict,
-verified-decision replay, atomic token/attempt reservation, independent-process
-races, storage-lock failure, and conservative post-effect recovery.
+synthetic effect after reconstruction. The first Stage A increment closed that
+specific path with opt-in SQLite/WAL authority state and exercised request
+conflict, verified-decision replay, atomic token/attempt reservation,
+independent-process races, storage-lock failure, and conservative post-effect
+recovery.
 
-This moves the single-host durable-ledger item from `Missing` to
-`Integration tested` for the named synthetic boundary only. The following
-parts of the original gap remain open: terminal full-result retrieval, durable
-adapter receipts, crash injection at every instruction boundary, bounded load,
-retention/compaction, outbox export, process isolation, managed keys, external
-audit custody, multi-node consensus/fencing, failover, partitions, HA/DR, and
-vendor semantics. The 18-domain release gate in
+ADR-015 adds the next bounded mechanism: a separately pathed SQLite database
+owned by the offline synthetic adapter, an immutable receipt tied to a stable
+principal/request/decision/token/command/target/precondition/policy/adapter
+binding, durable synthetic target state, and a closed authority-free terminal
+`RequestLookupResult`. The existing `process_json` contract continues to deny
+duplicates; the separate authenticated lookup requires the exact principal,
+request ID, and canonical request digest and returns no token or new authority.
+
+The receipt/result implementation has reached a local source freeze. The current
+checks cover exact startup serialization; strict store/path/sidecar/schema and
+cross-store correlation; one immutable receipt/effect; sanitized exact lookup;
+normal-audit-before-T3 ordering; recovery-audit prefix/resume/readback/fencing;
+selected process-kill and response-loss boundaries; chronology; corruption;
+and revoked-authority disposition. The local results above carry no exact
+candidate commit, manifest, or CI claim. The following gaps remain open even
+after the mechanism is present:
+
+- T1 authority reservation, T2 adapter state/receipt, observation, JSONL audit,
+  and T3 terminal result are not one atomic transaction;
+- the adapter receipt and observer are same-project and same-store custodied,
+  not independently authenticated target evidence;
+- bounded cooperative same-host fencing and operator-asserted quiescence are
+  not a distributed lease, epoch, consensus, or execution-ownership proof;
+- the selected process-kill, cross-store divergence, corruption, and
+  audit-failure tests do not cover power loss, all filesystem/disk failures,
+  bounded load, retention/compaction, or backup/restore campaigns;
+- process isolation, authenticated IPC, managed keys, external audit custody,
+  multi-node consensus/fencing, failover, partitions, HA/DR, and vendor
+  semantics remain absent; and
+- `UNKNOWN_EFFECT` preserves uncertainty but supplies no automatic retry,
+  rollback, or operational resolution.
+
+The 18-domain release gate in
 [`../production/PRODUCTION_READINESS.md`](../production/PRODUCTION_READINESS.md)
 therefore derives `BLOCKED`.

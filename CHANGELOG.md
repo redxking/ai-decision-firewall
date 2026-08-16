@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — `0.4.0-alpha.1` Stage A production-development candidate
+## Unreleased — provisional `0.4.0-alpha.2` Stage A production-development candidate
 
 - Reproduced a critical restart replay on the published Phase 3.1 baseline:
   two newly constructed firewall instances sharing the same valid audit path
@@ -13,17 +13,53 @@
   conservative `UNKNOWN_EFFECT` reconciliation. WAL, `synchronous=FULL`, strict
   schema/version checks, foreign keys, bounded lock waits, and unsafe-path
   refusal fail closed.
-- Added restart, conflict, process-concurrency, storage-lock, unknown-schema,
-  unsafe-path, durable-outbox, incomplete-attempt, and post-effect outcome-write
-  regressions. The Stage A ledger suite passed 16/16, the production-gate suite
-  passed 18/18, and the complete local repository suite passed 333/333 before
-  the commit freeze. This is a synthetic/offline single-host mechanism, not
-  distributed idempotency, HA, process isolation, or operational validation.
+- Adopted the ADR-015 two-database offline boundary. A separate SQLite
+  synthetic-adapter store transactionally updates only synthetic target state
+  and inserts one immutable exact-bound receipt before returning. The authority
+  ledger stores a closed, sanitized terminal `RequestLookupResult` through a
+  separate authenticated read-only seam; `process_json` remains fail closed on
+  duplicates and never returns the lookup envelope as a fresh decision.
+- Added query-only existing-store preflight, exact closed schema and semantic
+  validation, path/link/type/mode refusal, and cross-store correlation over
+  overlapping principal, request, decision/context, authority, policy,
+  receipt, and terminal-target facts. All three authoritative artifact paths
+  are preflighted before a missing artifact is created. Bounded cooperative
+  same-host fencing serializes direct store initialization and durable request,
+  approval, lookup, and recovery operations without adding a lock sidecar.
+- Added explicit `ISSUED` / `CONSUMED` / `REVOKED` authority semantics,
+  receipt-scoped attempt states, and quiesced recovery rules. Exact `NO_EFFECT`
+  receipts may close as `FAILED_NO_EFFECT`; `APPLIED`, `PARTIAL`, `AMBIGUOUS`,
+  or absent receipt evidence without separately durable verification closes as
+  `UNKNOWN_EFFECT` with `recovery_required=true`. Receipt absence never proves
+  no effect or permits retry. Recovery never reissues a command, reopens
+  authority, or fabricates verification or rollback.
+- Required a valid read-back normal JSONL lifecycle closure before T3. Recovery
+  writes and reads back the exact contiguous `RECOVERY_STARTED`,
+  `RECOVERY_EVIDENCE_ASSESSED`, and `RECOVERY_FINALIZED` prefix before T3,
+  truthfully records the original lifecycle as `COMPLETE`, `INCOMPLETE`, or
+  `UNRESOLVED`, and resumes idempotently at any prefix. A pending recovery
+  commit fences request and approval writers; append/readback failure
+  suppresses T3; a post-T3 repeat returns the identical audit-inert result.
+- Added restart, conflict, multiprocess initialization/exact-once,
+  storage-lock, schema/path/sidecar, durable-outbox, cross-store substitution,
+  response-loss, recovery-prefix, audit-failure, chronology, and post-effect
+  outcome-write regressions. At the 2026-08-16 local source freeze, 43/43
+  focused Stage A tests, 18/18 production-gate tests, the complete 360/360
+  repository suite, and the deterministic 46/46 corpus passed; the corpus
+  reported `live_actions_possible=false`. Direct first-creation stress passed
+  10/10 sequential and 5/5 parallel repetitions, and the integrated exact-once
+  race passed 5/5 parallel repetitions. These are project-controlled local
+  mechanism observations, not an exact-commit or CI result, independent
+  verification, production authorization, or operational effectiveness.
+  The boundary remains synthetic/offline and single-host, not cross-store
+  atomic, distributed, highly available, process isolated, or operationally
+  validated.
 - Added a strict 18-domain production-readiness matrix and validator whose
   derived production gate remains `BLOCKED`, plus threat, failure/recovery,
   operations, architecture, and evidence-boundary records.
 - No historical or live data, connector, operational credential, external
-  target, model promotion, deployment, push, merge, tag, or release is included.
+  target, model promotion, deployment, regenerated candidate manifest, exact
+  candidate commit, CI, push, merge, tag, or release is included.
 
 ## `0.3.1-alpha.1` — published Phase 3.1 governed model-evaluation baseline
 

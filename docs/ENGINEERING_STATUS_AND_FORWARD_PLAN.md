@@ -33,14 +33,30 @@ metrics, and an unconditional `NOT_AUTHORIZED` promotion state. It contains no
 historical/live adapter or action path and has no owner-approved performance
 threshold or model-promotion authority.
 
-Fourth, the unreleased **`0.4.0-alpha.1` Stage A production-development
-candidate** adds an opt-in, single-host SQLite authority ledger after exact-
-baseline testing found that a completed request could cause a second synthetic
-effect after restart. The ledger makes request claims, verified-decision
-issuance, token consumption, attempt reservation/outcome, and a digest-only
-audit outbox durable. Its 18-domain production gate remains `BLOCKED`. It is
-not a deployed service, distributed replay control, process isolation, or
-operational authority.
+Fourth, the provisional, unreleased **`0.4.0-alpha.2` Stage A
+production-development candidate** adds an opt-in single-host control ledger
+after exact-baseline
+testing found that a completed request could cause a second synthetic effect
+after restart. ADR-015 extends that local mechanism with a separately pathed
+SQLite synthetic-adapter state/receipt store and a closed, sanitized terminal
+request-result lookup. Authority reservation, adapter state/receipt, terminal
+result, and JSONL audit are distinct commit boundaries without cross-store
+atomicity. Bounded cooperative same-host fencing, strict store/cross-store
+correlation, valid normal-audit closure before T3, and an exact three-record
+recovery-audit protocol are implemented. The adapter receipt and same-project
+observer are not independent target evidence. The 18-domain production gate
+remains `BLOCKED`; this is not a deployed service, distributed replay control,
+process isolation, HA, or operational authority.
+
+At the 2026-08-16 source-freeze checkout, 43/43 focused Stage A tests, 18/18
+production-readiness-gate tests, the complete 360/360 repository suite, and the
+deterministic 46/46 corpus passed locally; the corpus reported
+`live_actions_possible=false`. Direct first-creation stress passed 10/10
+sequential and 5/5 parallel repetitions, and the integrated exact-once race
+passed 5/5 parallel repetitions. These are project-controlled local mechanism
+observations. No exact candidate commit, regenerated manifest, CI, release,
+owner acceptance, independent verification, or operational-effectiveness claim
+is attached to them.
 
 All Phase 3 observations are CE-1 implementation-conformance evidence over
 synthetic inputs and effects. They do not establish live containment,
@@ -58,7 +74,7 @@ external independence.
 | Phase 3 T&E | Required high-risk/no-effect and low-risk/verified-effect demo acceptance PASS; deterministic corpus 46/46; focused tests 57/57; exact-commit CI passed |
 | Phase 3 repository aggregate | Then-current 288/288 passed locally and in exact-commit CI |
 | Phase 3.1 model evaluation | Published exact Commit `bb6b8f28`; 11/11 focused and 299/299 then-current aggregate; exact-commit CI/Dependency Graph passed; no historical data or promotion authority |
-| Stage A durability increment | Unreleased `0.4.0-alpha.1` production-development candidate; single-host synthetic SQLite authority state; production gate `BLOCKED` |
+| Stage A durability increment | Provisional unreleased `0.4.0-alpha.2`; separate single-host SQLite control and offline synthetic-adapter stores plus JSONL audit and sanitized lookup; local source freeze 43/43 focused, 18/18 readiness gate, 360/360 full, 46/46 corpus; no exact candidate commit/manifest/CI, cross-store atomicity, or production authorization; gate `BLOCKED` |
 | Data/action boundary | Synthetic only; no historical organizational data, live feed, test tenant, production connector, credential, or live action |
 
 ## What Phase 3 adds
@@ -156,9 +172,12 @@ security assurance.
 - The broker capability, private target method, and exact environment type are
   application-level Python controls. They are not OS/process isolation, a
   reference monitor, or protection against arbitrary hostile same-process code.
-- Request and authorization ledgers are process-local memory. They are not
-  durable, distributed, crash consistent, or sufficient for multi-node replay
-  prevention/idempotency.
+- In the published Phase 3 baseline, request and authorization ledgers are
+  process-local memory. The opt-in Stage A candidate replaces that narrow path
+  with local durable authority state and a separate durable synthetic-adapter
+  database plus bounded cooperative same-host fencing, but remains
+  non-distributed and without a cross-store transaction, distributed execution-
+  ownership fence, or multi-node replay guarantee.
 - Evidence attestations use domain-separated runtime HMAC synthetic keys. They do not establish
   enterprise device identity, PKI/HSM custody, source authenticity,
   nonrepudiation, rotation/revocation, or independent provenance.
@@ -174,6 +193,47 @@ security assurance.
 - Two synthetic targets and injected faults do not establish vendor semantics,
   real topology, eventual consistency, rollback feasibility, human workflow,
   mission outcome, or operational safety.
+
+## Stage A offline durability boundary
+
+ADR-015 defines three store-local transactions: consume authority and reserve
+an attempt in the control database; apply the exact-bound command and insert an
+immutable receipt in the separate offline synthetic-adapter database; then,
+after same-project read-only observation and successful readback of a valid
+normal JSONL lifecycle closure, close the attempt/request and store a sanitized
+terminal `RequestLookupResult` in the control database. The control database,
+adapter database, and JSONL lifecycle audit are three authoritative artifacts;
+the audit remains separate from all three database transactions.
+
+All three artifact paths are safely preflighted before a missing artifact is
+created. Existing stores are opened query-only for strict version, schema,
+semantic, path/link/type/mode, and sidecar checks. Startup and durable process,
+lookup, approval, and recovery routes use bounded cooperative same-host
+fencing. Cross-store validation correlates overlapping principal, request,
+decision/context, authority, policy, receipt, and terminal target facts and
+fails closed on a missing required or orphan receipt or a recomputed
+substitution.
+
+An authenticated exact-principal, exact-request, exact-digest lookup can return
+only the persisted authority-free terminal projection. It explicitly reports
+that the lookup created no decision, authorization, execution attempt, or
+effect. It never returns the original signed token or smuggles the projection
+through the existing `Phase3Result` processing contract. Changed request or
+adapter bindings fail closed without disclosing the prior result.
+
+Recovery remains explicit and quiesced. An exact affirmative `NO_EFFECT`
+receipt can support `FAILED_NO_EFFECT`; an applied, partial, ambiguous, or
+absent receipt without separately durable verification closes conservatively as
+`UNKNOWN_EFFECT` with `recovery_required=true`; absence is not no-effect
+evidence or retry authority. Corrupt, unavailable, or mismatched
+adapter evidence halts reconciliation without changing state. Before T3,
+recovery writes and reads back an exact contiguous `RECOVERY_STARTED`,
+`RECOVERY_EVIDENCE_ASSESSED`, `RECOVERY_FINALIZED` trio that records the
+correlated original lifecycle as `COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`.
+Append/readback failure suppresses T3; partial prefixes resume idempotently;
+pending recovery fences other durable writers; and a post-T3 repeat is an
+audit-inert replay. The quiescence assertion and same-host cooperative fence do
+not constitute a distributed lease, epoch, or execution-ownership guarantee.
 
 <!-- PAGE BREAK -->
 
@@ -222,11 +282,16 @@ claims.
 
 ## Forward plan and gates
 
-1. **Freeze Phase 3.1 separately.** Reconcile the exact synthetic mechanism,
-   tests, traceability, diagram and integrity manifest without changing the
-   published Phase 3 boundary.
-2. **Publish deliberately.** Publish a Phase 3.1 commit only under explicit
-   authorization and require exact-commit CI and Dependency Graph checks.
+1. **Package the locally frozen ADR-015 increment separately.** Preserve the
+   exact two-database synthetic mechanism, tests, traceability, and diagrams;
+   regenerate and verify the integrity manifest; then record an exact candidate
+   commit and CI without changing the published Phase 3 or Phase 3.1 evidence
+   boundaries.
+2. **Expand the local failure campaign.** Build on the selected process-kill,
+   response-loss, audit-failure, cross-store corruption, and concurrent-startup
+   cases with power-loss, filesystem/disk exhaustion, backup/restore,
+   retention/compaction, and bounded-load evidence at every authority, adapter,
+   observation, audit, and result boundary.
 3. **Keep promotion prohibited.** Require owner-approved metrics, thresholds,
    uncertainty rules, subgroup floors and rollback criteria before any model
    replacement can be proposed.
@@ -235,8 +300,9 @@ claims.
    Gate B package. Neither is implied by Phase 3 simulation success.
 5. **Require a new architecture before integration.** A read-only service or
    controlled non-production action phase requires enterprise identity and
-   source trust, process isolation, managed keys, durable distributed
-   idempotency, vendor-specific broker/readback, rollback/reconciliation,
+   source trust, process isolation and authenticated IPC, managed keys, tested
+   execution ownership/fencing, durable distributed idempotency, vendor-specific
+   broker and independently custodied readback, rollback/reconciliation,
    external audit custody, change/incident authority, and authorizing-official
    acceptance.
 

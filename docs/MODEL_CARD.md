@@ -11,8 +11,19 @@
 > external recommendation/confidence as explicitly non-authoritative request
 > fields. Published Phase 3.1 exact Commit `bb6b8f28` adds a separate
 > synthetic-only temporal evaluation mechanism. It does not replace the
-> tracked v0.1 model or authorize model promotion. The Stage A durability
-> increment does not train, select, promote, or change a model.
+> tracked v0.1 model or authorize model promotion. The provisional, unreleased
+> Stage A `0.4.0-alpha.2` durability increment adds only local control state,
+> offline synthetic-adapter
+> state/receipts, and sanitized terminal lookup. It does not train, select,
+> promote, evaluate, or change a model, and an adapter receipt supplies no
+> model-performance or independent-verification evidence. Its 2026-08-16 local
+> source-freeze observations—43/43 focused Stage A, 18/18 readiness-gate,
+> 360/360 repository, and 46/46 deterministic corpus checks with
+> `live_actions_possible=false`—are software-mechanism evidence only. They are
+> not an exact candidate commit/CI, historical/live model evaluation, owner
+> acceptance, operational effectiveness, or production authorization. Model
+> promotion remains `NOT_AUTHORIZED`, and the production gate remains
+> `BLOCKED`.
 
 ## Purpose
 

@@ -119,8 +119,11 @@ command semantics, independent observation, or operational safety.
 
 ## Follow-on decision gates
 
-1. Add a durable synthetic adapter receipt and full terminal request-result
-   lookup, then inject process termination at every transition boundary.
+1. Define a durable synthetic adapter receipt and sanitized terminal-result
+   lookup, then inject process termination at every transition boundary. The
+   successor decision is recorded in
+   [ADR-015](015_durable_synthetic_adapter_receipt_and_result_lookup.md); its
+   later evidence does not alter this ADR's original Stage A claim.
 2. Define authenticated broker/adapter IPC, process isolation, workload
    identities, and deny-by-default egress.
 3. Select a distributed authority store only after topology, consistency,

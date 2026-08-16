@@ -145,6 +145,8 @@ def new_harness(
     audit_path: str | Path | None = None,
     control_ledger_path: str | Path | None = None,
     control_ledger_busy_timeout_ms: int = 1000,
+    synthetic_adapter_path: str | Path | None = None,
+    synthetic_adapter_busy_timeout_ms: int = 1000,
     principal: AuthenticatedPrincipal | None = None,
 ) -> Phase3Harness:
     policy = Phase3PolicyConfig.load(POLICY_PATH)
@@ -203,6 +205,8 @@ def new_harness(
         audit_path=audit_path,
         control_ledger_path=control_ledger_path,
         control_ledger_busy_timeout_ms=control_ledger_busy_timeout_ms,
+        synthetic_adapter_path=synthetic_adapter_path,
+        synthetic_adapter_busy_timeout_ms=synthetic_adapter_busy_timeout_ms,
         clock=clock,
         id_factory=id_factory,
         fault_modes=configured_faults,

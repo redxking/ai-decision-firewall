@@ -14,6 +14,17 @@ This safety case does not establish production security, operational efficacy,
 live-containment safety, exhaustive attack coverage, a failure-rate bound,
 external assurance, or authorizing-official acceptance.
 
+The provisional, unreleased Stage A `0.4.0-alpha.2` addendum is a separate
+production-development boundary. ADR-015 defines local durable control state, a
+separately pathed offline synthetic-adapter state/receipt database, and an
+authority-free terminal lookup. At the 2026-08-16 local source freeze, 43/43
+focused Stage A tests, 18/18 readiness-gate tests, 360/360 repository tests, and
+46/46 deterministic corpus scenarios passed; the corpus reported
+`live_actions_possible=false`. These are project-controlled mechanism
+observations without an exact candidate commit, regenerated manifest, CI,
+independent verification, owner acceptance, operational effectiveness, or
+production authorization. The machine gate remains `BLOCKED`.
+
 ## Top-level safety claim
 
 Within the tested simulation-only boundary, an untrusted agent request cannot
@@ -150,12 +161,14 @@ isolate hostile code already executing in the same interpreter, constrain OS
 calls, prevent introspection/monkey-patching, create a privilege boundary, or
 replace process/container/host controls.
 
-### Process-local authorization state
+### Published process-local state and Stage A local durability
 
-The authorization and request ledgers are in memory. They provide atomic
-single-process behavior for the tested concurrent calls but are not durable,
-replicated, crash consistent, or shared across service nodes. There is no
-distributed idempotency or recovery protocol.
+In the published Phase 3 baseline, the authorization and request ledgers are in
+memory. Stage A replaces that narrow optional path with a local durable
+control database and a separate durable synthetic-adapter database. It still
+is not replicated or shared across service nodes and has no distributed
+idempotency, consensus, lease/epoch/fencing, failover, or cross-store atomic
+transaction.
 
 ### Synthetic HMAC source trust
 
@@ -209,33 +222,80 @@ efficacy measure, or calibration result.
 
 ## Stage A safety-case addendum
 
-### New claim supported
+### Bounded claim
 
-For an explicitly configured, single-host SQLite control ledger, the tested
-same-principal/same-request replay cannot create a second authorization, broker
-call, or synthetic effect after service-object reconstruction. A conflicting
-canonical request digest fails closed. Verified-decision issuance is unique,
-and authorization consumption plus attempt reservation is transactional before
-synthetic target invocation. Independent-process race tests exercise the
-database uniqueness and write-serialization boundary.
+For an explicitly configured Stage A path, the control database binds the
+authenticated principal, request ID, and canonical request digest before
+authority is issued. Authorization consumption and exact attempt reservation
+are one local transaction. A second, separately pathed database owned by the
+offline synthetic adapter validates a stable idempotency binding, updates only
+durable synthetic target state, and inserts one immutable receipt before
+returning. An exact repeated adapter call returns the existing receipt without
+another state change; a changed binding under the same key fails closed.
+
+After same-project read-only observation, the control database may atomically
+close the request/attempt and insert one sanitized `RequestLookupResult`, but
+only after the valid normal JSONL lifecycle is closed and read back. The
+separate authenticated lookup requires the exact principal, request ID, and
+request digest and returns no token, nonce, signature, credential, raw audit
+history, executable command, or new authority. The `process_json` processing
+contract remains fail closed on duplicates and does not turn lookup into a
+fresh decision.
+
+Before any missing authoritative artifact is created, all three paths are
+preflighted and existing stores are queried without mutation for exact schema,
+semantics, path/link/type/mode, sidecar, and integrity constraints. Cross-store
+validation correlates overlapping request, authority, decision/context,
+policy, receipt, and terminal-target facts and rejects missing required or
+orphan receipts and recomputed substitutions. Bounded cooperative same-host
+fencing serializes direct store initialization and durable processing, lookup,
+approval, and recovery. These are tested candidate mechanism claims, not
+operational results or an OS/distributed security boundary.
 
 ### Failure honesty
 
-Unknown schema, unsafe path, integrity failure, or a lock extending beyond the
-bounded timeout prevents new authority and target invocation. A post-effect
-attempt-outcome commit failure cannot return `VERIFIED`; it returns
-`ROLLBACK_REQUIRED`, leaves the token consumed, and explicit restart
-reconciliation moves the reservation to `UNKNOWN_EFFECT`. Reconciliation is
-idempotent and never automatically reissues the command.
+Unknown schema, unsafe or aliased paths, integrity failure, or a lock extending
+beyond the bounded timeout prevents new authority and target invocation. The
+control database, adapter transaction, observation, JSONL audit, and terminal
+control result are separate boundaries; no partial sequence may be represented
+as cross-store atomic or complete.
+
+Reconciliation is explicit and operator-asserted quiescent, never automatic in
+a constructor. An exact affirmative `NO_EFFECT` receipt can support
+`FAILED_NO_EFFECT`. `APPLIED`, `PARTIAL`, or `AMBIGUOUS` receipt evidence without
+separately durable verification, or no receipt at all, remains
+`UNKNOWN_EFFECT` with `recovery_required=true`; absence proves neither no effect
+nor retry safety. Corrupt, unavailable, or mismatched
+adapter evidence halts reconciliation without a state transition. Exact receipt
+and terminal-result repeats are idempotent; changed payloads conflict.
+Reconciliation never invokes the adapter command, mints a replacement token,
+reopens authorization, fabricates verification, or declares rollback. Before
+T3 it writes and reads back exactly one contiguous `RECOVERY_STARTED`,
+`RECOVERY_EVIDENCE_ASSESSED`, `RECOVERY_FINALIZED` trio. The trio truthfully
+records the correlated original lifecycle as `COMPLETE`, `INCOMPLETE`, or
+`UNRESOLVED`, with no command and no new effect. Append/readback failure
+suppresses T3; an exact prefix resumes without duplicate rows; a pending
+recovery commit fences request, approval, and unrelated recovery writers; and a
+post-T3 repeat is an identical audit-inert replay. A receipt never becomes
+verification.
 
 ### Residual risk
 
-This is a single-host synthetic mechanism. It has no durable target-side
-receipt, so an unresolved reservation cannot distinguish lost response from
-committed effect. Exact duplicates are blocked rather than returning a
-persisted full result. SQLite availability can deny service and has no
-multi-node fencing, quorum, failover, or split-brain behavior. Same-process
-compromise can still subvert broker, target, observer, keys, and application
-audit. The detailed threat/control/residual-risk mapping is in
+This is a single-host synthetic mechanism. Its durable receipt is
+adapter-reported and same-project/same-store custodied; it is not independent
+target evidence, vendor semantics, or proof of operational effect. The
+same-project observer does not change that custody boundary. T1 authority
+reservation, T2 adapter state/receipt, observation, JSONL audit, and T3
+terminal result can diverge. Operator-asserted quiescence and bounded
+cooperative same-host fencing do not create a distributed lease, epoch,
+consensus, or execution-ownership guarantee. SQLite availability can deny
+service and supplies no quorum, failover, or split-brain protection.
+Same-process compromise can
+still subvert broker, adapter, observer, keys, both databases, and application
+audit. The sanitized lookup solves neither action-level idempotency across
+different request identities nor recovery of `UNKNOWN_EFFECT`. The detailed
+threat/control/residual-risk mapping is in
 [`../production/THREAT_CONTROL_REGISTER.md`](../production/THREAT_CONTROL_REGISTER.md).
-These residual risks continue to prohibit production use.
+These residual risks continue to prohibit production use. The machine
+production gate remains `BLOCKED`, and no live connector, credential, target,
+deployment, or operational authority is granted.

@@ -72,6 +72,10 @@ class AuthorizationGate:
         if ttl_seconds < 1 or ttl_seconds > 3600:
             raise ValueError("Authorization TTL must be within 1..3600 seconds.")
         self._signing_key = bytes(signing_key)
+        self.authorization_key_domain_id = (
+            "phase3-authorization-hmac-sha256-"
+            + hashlib.sha256(signing_key).hexdigest()[:24]
+        )
         if len(decision_verification_key) < 32 or not verifier_instance_id:
             raise ValueError("Decision-verification trust configuration is invalid.")
         self._decision_verification_key = bytes(decision_verification_key)
@@ -201,6 +205,14 @@ class AuthorizationGate:
                 token.token_id,
                 verification_id=decision_verification.verification_id,
                 decision_id=decision.decision_id,
+                principal_id=agent_id,
+                request_id=decision.request_id,
+                request_sha256=decision.request_sha256,
+                unsigned_token_sha256=sha256_json(token.unsigned_dict()),
+                issuer_instance_id=token.issuer_instance_id,
+                key_domain_id=self.authorization_key_domain_id,
+                decision_authorization_sha256=decision_authorization_sha256,
+                issued_at=token.issued_at,
             )
         except ControlLedgerError as exc:
             self.metrics.record_authorization_failure()
@@ -225,6 +237,8 @@ class AuthorizationGate:
         evaluated_at: datetime | None = None,
         attempt_id: str | None = None,
         attempt_binding_sha256: str | None = None,
+        idempotency_key: str | None = None,
+        recovery_summary: dict[str, Any] | None = None,
     ) -> None:
         try:
             self._validate(
@@ -250,6 +264,8 @@ class AuthorizationGate:
                 attempt_id=attempt_id,
                 attempt_binding_sha256=attempt_binding_sha256,
                 consumed_at=consumed_at,
+                idempotency_key=idempotency_key,
+                recovery_summary=recovery_summary,
             )
         except ControlLedgerError as exc:
             self.metrics.record_authorization_failure()
@@ -277,6 +293,28 @@ class AuthorizationGate:
             raise AttemptPersistenceError(
                 exc.reason_code,
                 "Durable attempt outcome did not commit; effect is indeterminate.",
+                attempt_id=attempt_id,
+            ) from exc
+
+    def record_adapter_receipt(
+        self,
+        *,
+        attempt_id: str,
+        adapter_receipt_sha256: str,
+        receipt_outcome_sha256: str,
+        recorded_at: str,
+    ) -> None:
+        try:
+            self.ledger.record_adapter_receipt(
+                attempt_id,
+                adapter_receipt_sha256=adapter_receipt_sha256,
+                receipt_outcome_sha256=receipt_outcome_sha256,
+                recorded_at=recorded_at,
+            )
+        except ControlLedgerError as exc:
+            raise AttemptPersistenceError(
+                exc.reason_code,
+                "Durable adapter receipt did not commit; effect is indeterminate.",
                 attempt_id=attempt_id,
             ) from exc
 
@@ -312,10 +350,10 @@ class AuthorizationGate:
             ledger_state = self.ledger.state(token.token_id)
         except ControlLedgerError as exc:
             raise AuthorizationError(exc.reason_code, str(exc)) from exc
-        if ledger_state == "CONSUMED":
+        if ledger_state != "ISSUED":
             raise AuthorizationError(
                 "AUTHORIZATION_REPLAY",
-                "Authorization has already been consumed.",
+                "Authorization is not in the single-use ISSUED state.",
             )
         bindings: tuple[tuple[str, Any, Any], ...] = (
             ("REQUEST", token.request_id, request_id),

@@ -4,11 +4,11 @@
 - **Phase 2 evidence boundary:** published `P2-CE-001` through `P2-CE-004` retain their version-bound claims. `P2-CE-005` was not executed or published and remains CE-0 `NOT_EVALUATED`; the Phase 2.5 commit and green CI do not create that campaign result.
 - **Published Phase 3 baseline:** exact Commit [`423685d105be813056617db738297eba83d3d9d0`](https://github.com/redxking/ai-decision-firewall/commit/423685d105be813056617db738297eba83d3d9d0) is on `main`; exact-commit [CI](https://github.com/redxking/ai-decision-firewall/actions/runs/31908090324) and [Dependency Graph](https://github.com/redxking/ai-decision-firewall/actions/runs/31908091856) checks passed. Its simulation-only boundary includes 57/57 focused Phase 3 tests, both demonstration checks PASS, a 46/46 deterministic corpus, and the then-current 288/288 repository aggregate. These are CE-1 implementation-conformance observations, not operational validation.
 - **Published Phase 3.1 baseline:** exact Commit [`bb6b8f28afba0961bb97b24e6050fccaa94d5702`](https://github.com/redxking/ai-decision-firewall/commit/bb6b8f28afba0961bb97b24e6050fccaa94d5702) is on `main`; exact-commit [CI](https://github.com/redxking/ai-decision-firewall/actions/runs/31911161052) passed on Python 3.11 and 3.12 and the [Dependency Graph](https://github.com/redxking/ai-decision-firewall/actions/runs/31911162048) check passed. Its `0.3.1-alpha.1` synthetic-only evaluation mechanism passed 11/11 focused and 299/299 then-current repository tests. Model promotion remains unconditionally `NOT_AUTHORIZED`. No Phase 3.1 tag or GitHub Release exists.
-- **Stage A production-development candidate:** the unreleased `0.4.0-alpha.1` branch corrects a verified cross-restart request replay with an opt-in, single-host SQLite authority ledger and adds an enforceable 18-domain production gate. The gate is `BLOCKED`. This increment is offline and synthetic; it does not add historical/live data, a connector, an operational credential, a live target, process isolation, distributed replay control, HA, deployment, or operational authority.
-- **Stage A local verification:** 16/16 durable-ledger tests, 18/18 production-gate tests, and the complete 333/333 repository suite passed before the local commit freeze. These are development-environment observations; exact-commit CI is not claimed because this branch has not been pushed.
+- **Stage A production-development candidate:** the provisional, unreleased `0.4.0-alpha.2` candidate corrects a verified cross-restart request replay and implements the ADR-015 two-database offline design: an opt-in single-host control ledger, a separate durable synthetic-adapter state/receipt store, the existing JSONL lifecycle audit, and a sanitized authenticated terminal-result lookup. The two databases and audit are three distinct authoritative artifacts; T1 reservation, T2 adapter commit, normal or recovery audit closure, and T3 terminal commit are not one cross-store transaction. Startup and durable operations use bounded cooperative same-host fencing and strict store/correlation checks, but this is not a distributed lease, epoch, consensus, or cross-store atomicity guarantee. The enforceable 18-domain production gate remains `BLOCKED`. This increment adds no historical/live data, connector, operational credential, live target, process isolation, independently custodied target verification, HA, deployment, or operational authority.
+- **Stage A local verification boundary:** at the 2026-08-16 source-freeze checkout, 43/43 focused Stage A tests, 18/18 production-readiness-gate tests, the complete 360/360 repository suite, and the deterministic 46/46 corpus passed locally; the corpus reported `live_actions_possible=false`. Direct first-creation stress passed 10/10 sequential and 5/5 parallel repetitions, and the integrated exact-once race passed 5/5 parallel repetitions. These are project-controlled local mechanism observations, not historical/live evaluation, independent verification, operational effectiveness, owner acceptance, or production authorization. No exact candidate commit, regenerated manifest, CI, push, merge, tag, or release is claimed.
 - **Validated baseline:** v0.1.0 synthetic proof of concept
 - **Decision domain:** privileged-identity containment
-- **Operational status:** synthetic only. Phase 2 remains read-only; Phase 3 can change only in-memory synthetic target state. No organizational historical data, approved Gate B package, live feed, production/test-tenant connector, or operational credential is included.
+- **Operational status:** synthetic only. Phase 2 remains read-only; the published Phase 3 path can change only in-memory synthetic target state. The opt-in Stage A candidate can change only its separate local durable synthetic-adapter database and return authority-free lookup results. No organizational historical data, approved Gate B package, live feed, production/test-tenant connector, or operational credential is included.
 - **Safety boundary:** not approved for production integration, operational decision-making, or live containment
 
 AI systems can rank alerts and recommend actions, but consequential operations require a stronger control boundary: the system must determine whether the available evidence is trustworthy and sufficient, whether an action is within delegated authority, and whether the intended effect actually occurred.
@@ -556,10 +556,12 @@ Verify a package only against the manifest committed with those exact bytes. The
 `MANIFEST.sha256` in published Commit `854b15c` covers that Phase 2.5 package.
 The manifest in published Phase 3 exact Commit `423685d` covers that exact
 tree, and the Phase 3.1 manifest applies only to exact Commit `bb6b8f28`. The
-Stage A production-development candidate requires a newly regenerated and
-verified manifest before its local evidence freeze. The tracked data, model,
-and baseline outputs remain at their published bytes. Reverify a manifest only
-after checking out its matching commit:
+provisional Stage A `0.4.0-alpha.2` production-development candidate requires a
+newly regenerated and verified manifest before any exact-commit evidence or
+release claim. Its local source-freeze test observations do not substitute for
+that manifest or CI. The tracked data, model, and baseline outputs remain at
+their published bytes. Reverify a manifest only after checking out its matching
+commit:
 
 ```bash
 shasum -a 256 -c MANIFEST.sha256
@@ -613,7 +615,7 @@ shasum -a 256 -c MANIFEST.sha256
 ├── src/adf_poc/
 │   ├── replay/                     # Contracts, Gate B, qualification, path-free harness, secure output, metrics
 │   ├── phase3/                     # Raw request, evidence, decision, authorization, simulation, readback, audit, corpus
-│   └── stage_a.py                  # Optional single-host durable authority-state ledger
+│   └── stage_a.py                  # Optional authority ledger, durable synthetic adapter, receipts, and sanitized lookup
 ├── tests/                          # Safety and end-to-end tests
 ├── run_poc.py                      # End-to-end synthetic baseline entry point
 ├── run_phase2.py                   # Offline replay/shadow starter entry point
@@ -638,13 +640,14 @@ The current baseline has not established:
 - analyst agreement, workflow fit, or mission/business consequences;
 - behavior under vendor API semantics, race conditions, eventual consistency, or production-scale load;
 - cryptographic provenance rooted in enterprise trust infrastructure;
-- production key management, distributed token replay protection, or durable
-  target-side command receipts; the Stage A candidate provides opt-in
-  single-host durable request/token/attempt state only;
+- production key management, distributed token replay protection, or
+  independently custodied target-side command receipts; the Stage A candidate
+  provides only opt-in single-host authority state plus a separate local
+  synthetic-adapter state/receipt database and authority-free result lookup;
 - an externally anchored or independently signed audit trail (a process able to rewrite the log can recompute the v0.1 hash chain);
 - organizationally or externally independent source-to-decision assurance. Phase 2.5 separately recomputes the evidence, model, policy, verifier, and read-only final surfaces from the same normalized case, model, and policy bytes in the same process and project; agreement is calculation consistency, not source truth, outcome correctness, policy fitness, efficacy, or independent custody;
 - externally trusted audit timestamps, OS-level nonaccess/non-egress, or independent evidence custody;
-- external or operational target-state readback or executable rollback orchestration; Phase 3 performs functionally separate observation only over the same in-memory simulator;
+- external or operational target-state readback or executable rollback orchestration; Phase 3 performs functionally separate observation over the same in-memory simulator, while Stage A reads the separate durable synthetic-adapter store through a same-project observer that is still not independent evidence;
 - reconciliation of conflicting break-glass or asset-criticality values in the v0.1 direct-run interface (the Phase 2 canonical adapter instead rejects such disagreement before engine invocation);
 - suitability for safety-critical, operational-technology, or critical-infrastructure control environments;
 - agentic alignment, scheming, sabotage resistance, or monitor effectiveness; the evaluated path is deterministic and contains no autonomous generative agent.
@@ -668,11 +671,18 @@ separate `P2-CE-005` two-commit campaign protocol was not entered. Any future
 execution still requires an explicit governed designation of Commit A, a clean
 detached no-retry run, and a distinct validated evidence-only Commit B.
 
-The immediate engineering path is to freeze and verify the Stage A single-host
-durable-control increment while retaining the published Phase 3.1
-no-promotion boundary. Its next safe technical gate is a durable synthetic
-adapter receipt and full terminal-result seam with crash injection. The next
-data-bearing step remains external: accountable owners must
+The ADR-015 Stage A two-database synthetic receipt and sanitized terminal-result
+increment has reached a local source freeze while retaining the published Phase
+3.1 no-promotion boundary. The next safe technical gate is a separately
+controlled campaign for broader power-loss, filesystem/disk, restore,
+retention, load, and cross-store divergence conditions at every authority,
+adapter, observation, audit, and result boundary, followed by distributed
+execution ownership and process isolation. Current tests cover selected real
+process termination, concurrent first creation, response loss, recovery
+prefixes, audit-write ambiguity, and cross-store corruption; they do not make
+those broader operational claims.
+
+The next data-bearing step remains external: accountable owners must
 assemble and authenticate the restricted Gate B authority, custody, privacy,
 mapping, adjudication, and pilot package before a small de-identified historical
 corpus can be processed. No Gate B approval, historical run, live feed, or
@@ -697,6 +707,7 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full sequence and exit conditio
 - [`DELIVERY_NOTES.md`](DELIVERY_NOTES.md) — v0.1 scope, results, and handoff
 - [`docs/AI_Decision_Firewall_POC_Engineering_Baseline_v0.1.pdf`](docs/AI_Decision_Firewall_POC_Engineering_Baseline_v0.1.pdf) — engineering baseline
 - [`docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md`](docs/ENGINEERING_STATUS_AND_FORWARD_PLAN.md) — current living status and forward plan
+- [`docs/adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md`](docs/adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md) — bounded two-database Stage A receipt, lookup, and reconciliation decision; production authorization not granted
 - [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.docx) — inspected artifact for the now-published Phase 3 simulation-only baseline
 - [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.0-alpha.1-candidate.pdf) — paired 7-page Phase 3 artifact; all rendered pages inspected at that boundary
 - [`docs/AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.docx`](docs/AI_Decision_Firewall_Engineering_Status_v0.3.1-alpha.1-candidate.docx) — current Phase 3.1 status package built from the reviewed Markdown and diagrams
