@@ -12,14 +12,20 @@
 > 46/46 corpus scenarios. These are simulation-only CE-1 observations; no
 > Gate B package, historical dataset, live feed, production/test-tenant
 > connector, operational action, production safety, or external assurance is
-> approved. The provisional, unreleased `0.4.0-alpha.2` Stage A candidate adds a
+> approved. The unreleased `0.4.0-alpha.2` Stage A implementation adds a
 > bounded two-database offline synthetic receipt/result mechanism under ADR-015.
-> Its 2026-08-16 local source-freeze observations are 43/43 focused Stage A,
-> 18/18 readiness-gate, 360/360 repository, and 46/46 corpus checks, with
-> `live_actions_possible=false`. They are project-controlled mechanism evidence,
-> not an exact candidate commit/CI, independent verification, owner acceptance,
-> operational validation, or production authorization. The gate remains
-> `BLOCKED`.
+> It is published on `main` at exact Commit
+> `8818d5d2d40faebced66a254d58b1f0d04c9f8b4`. Exact local verification passed
+> 43/43 focused Stage A in 8.248 seconds, 18/18 readiness-gate, the warning-fatal
+> 360/360 repository suite in 48.995 seconds, 57/57 focused Phase 3, and 46/46
+> corpus checks with `live_actions_possible=false`; its 307-entry manifest
+> verified 307/307. Exact-SHA CI run 31953570779 and Dependency Graph run
+> 31953572482 succeeded. These are project-controlled mechanism observations,
+> not independent verification, owner acceptance, operational validation, or
+> production authorization. No tag or GitHub Release was created, no deployment
+> occurred, and no exact-SHA Pages run was observed. The gate remains `BLOCKED`;
+> see
+> [`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 ## Top-level claim
 

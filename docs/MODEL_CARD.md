@@ -11,19 +11,24 @@
 > external recommendation/confidence as explicitly non-authoritative request
 > fields. Published Phase 3.1 exact Commit `bb6b8f28` adds a separate
 > synthetic-only temporal evaluation mechanism. It does not replace the
-> tracked v0.1 model or authorize model promotion. The provisional, unreleased
-> Stage A `0.4.0-alpha.2` durability increment adds only local control state,
-> offline synthetic-adapter
+> tracked v0.1 model or authorize model promotion. The unreleased Stage A
+> `0.4.0-alpha.2` durability implementation is published on `main` at exact
+> Commit `8818d5d2d40faebced66a254d58b1f0d04c9f8b4` and adds only local control
+> state, offline synthetic-adapter
 > state/receipts, and sanitized terminal lookup. It does not train, select,
 > promote, evaluate, or change a model, and an adapter receipt supplies no
-> model-performance or independent-verification evidence. Its 2026-08-16 local
-> source-freeze observations—43/43 focused Stage A, 18/18 readiness-gate,
-> 360/360 repository, and 46/46 deterministic corpus checks with
-> `live_actions_possible=false`—are software-mechanism evidence only. They are
-> not an exact candidate commit/CI, historical/live model evaluation, owner
-> acceptance, operational effectiveness, or production authorization. Model
-> promotion remains `NOT_AUTHORIZED`, and the production gate remains
-> `BLOCKED`.
+> model-performance or independent-verification evidence. Its exact local
+> observations—43/43 focused Stage A in 8.248 seconds, 18/18 readiness-gate,
+> warning-fatal 360/360 repository in 48.995 seconds, 57/57 focused Phase 3, and
+> 46/46 deterministic corpus checks with `live_actions_possible=false`—are
+> software-mechanism evidence only. Its 307-entry manifest verified 307/307, and
+> exact-SHA CI run 31953570779 and Dependency Graph run 31953572482 succeeded.
+> They are not historical/live model evaluation, owner acceptance, operational
+> effectiveness, or production authorization. No tag or GitHub Release was
+> created, no deployment occurred, and no exact-SHA Pages run was observed.
+> Model promotion remains `NOT_AUTHORIZED`, and the production gate remains
+> `BLOCKED`; see
+> [`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 ## Purpose
 

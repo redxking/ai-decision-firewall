@@ -18,6 +18,18 @@ independent evidence, and the increment does not establish an operational
 service, production trust boundary, or authority to use historical data,
 external systems, credentials, connectors, or targets.
 
+The bounded implementation is frozen at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+Exact-SHA GitHub Actions [run 31953570779](https://github.com/redxking/ai-decision-firewall/actions/runs/31953570779)
+succeeded on Python 3.11 and 3.12, and [Dependency Graph run
+31953572482](https://github.com/redxking/ai-decision-firewall/actions/runs/31953572482)
+succeeded. The exact-SHA Pages query returned no runs. These observations are
+exact implementation evidence only; they do not establish a release,
+deployment, owner acceptance, production authorization, or operational
+effectiveness. The successor evidence record is carried separately from the
+implementation by this evidence-only change. Its exact carrier SHA is
+necessarily reported after creation and is not self-claimed in these contents.
+
 The machine-readable source of truth is
 [`config/production_readiness_requirements.json`](../../config/production_readiness_requirements.json).
 It contains mandatory requirements for all 18 production-readiness domains,
@@ -30,8 +42,8 @@ recorded `OPERATIONALLY_EFFECTIVE` state.
 
 ## Verified starting point
 
-The following observations were independently reproduced or verified before
-the Stage A code was changed:
+The following project-controlled observations were reproduced or verified
+before the Stage A code was changed:
 
 | Item | Verified state | Evidence boundary |
 |---|---|---|
@@ -147,27 +159,44 @@ epoch, protection from a noncooperating same-user writer, failover, HA, or DR.
 
 The default Phase 3 simulation remains process-local for published-baseline
 compatibility. The two-database successor path is opt-in and offline. Its
-implementation evidence is repository-controlled synthetic conformance only;
-exact-commit evidence, complete regression, manifest regeneration, CI, and the
-real process-kill/storage-failure campaign remain separate release steps.
+implementation evidence is repository-controlled synthetic conformance only.
+The exact implementation commit, local focused/full verification, manifest,
+and exact-SHA CI are now recorded below. Broader real power-loss, filesystem and
+storage-failure, hostile-writer, capacity, independent-assessment, and
+operational campaigns remain separate release steps.
 
-### Current pre-commit observation
+### Exact implementation evidence
 
-On 2026-08-16, the mutable candidate worktree produced the following local
-observations. These results are useful defect-closure evidence, but they are
-not exact-commit, manifest, CI, release, or operational evidence:
+On 2026-08-16, the frozen implementation and exact-SHA automation produced the
+following bounded evidence. Local results are project-controlled observations;
+CI and Dependency Graph success are exact-SHA implementation checks. None is
+production authorization, operational effectiveness, or owner acceptance:
 
 | Check | Observed result | Evidence boundary |
 |---|---|---|
-| Focused Stage A receipt/recovery and durable-ledger suite | 43/43 passed in 8.854 seconds with bytecode writes disabled and warnings treated as errors | Mutable pre-commit worktree; rerun after the exact candidate commit is frozen. |
+| Implementation identity | Commit `8818d5d2d40faebced66a254d58b1f0d04c9f8b4`; candidate `0.4.0-alpha.2` / `0.4.0a2`; baseline remains `bb6b8f28afba0961bb97b24e6050fccaa94d5702` | Exact source identity; not the later ER-002 evidence-carrier identity. |
+| Focused Stage A receipt/recovery and durable-ledger suite | 43/43 passed in 8.248 seconds with bytecode writes disabled and warnings treated as errors | Exact implementation mechanism coverage; synthetic and project controlled. |
+| Multiprocess exact-once repeat | 5/5 passed | Bounded same-host cooperative-process evidence, not distributed linearizability, HA, or a capacity result. |
 | Production-readiness validator | Structurally valid; 18 domains, 36 mandatory requirements, 36 blocking requirements; derived `BLOCKED`; expected exit 2 | Every `owner_acceptance` remains `NOT_RECORDED`; structural validity is not readiness. |
+| Complete repository regression | 360/360 passed in 48.995 seconds with `PYTHONWARNINGS=error` | Local exact-implementation observation; no intended production environment was exercised. |
+| Phase 3 inherited boundary | 57/57 focused; both demonstrations PASS; deterministic corpus 46/46 with `live_actions_possible=false` | Preserves simulation-only behavior; no live action or operational-effect claim. |
+| Phase 3.1 inherited boundary | 11/11 focused; promotion remains `NOT_AUTHORIZED` | Synthetic model-evaluation mechanism only. |
+| Integrity inventory | 307/307 entries verified | SHA-256 inventory is not a signature, SBOM, reproducible build, or external custody. |
+| Exact-SHA CI | Run `31953570779` succeeded for Commit `8818d5d2...` on Python 3.11 and 3.12 | The workflow unit-test step did not promote `ResourceWarning` to an error; green CI remains implementation evidence only. |
+| Dependency Graph | Run `31953572482` succeeded | Dependency ingestion success is not an SBOM, signature, provenance attestation, release, or deployment. |
+| Pages | Exact-SHA query returned `[]` | Pages did not run; no publication or deployment claim follows. |
 
 The successor requirement-to-implementation map is
 [`STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv`](STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv).
-It binds exact implemented seams to named tests and the pre-commit observation
-above while deliberately deferring exact commit, manifest, complete regression,
-and CI claims until the source is frozen and rerun. It is not an evidence
-record or owner acceptance. The historical
+It binds exact implemented seams to named tests and the exact implementation
+evidence above. Successor evidence record
+[`STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md`](STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md)
+(`ADF-STAGE-A-ER-002`) binds the implementation commit, local observations,
+manifest, exact-SHA CI, evidence status, and non-inferences. ER-002 is not owner
+acceptance, production authorization, operational effectiveness, or a release;
+its evidence carrier is necessarily unnamed within its own contents and its
+separate 308-entry manifest verified 308/308 during carrier qualification. Its
+exact SHA is reported in the completion handoff. The historical
 [`STAGE_A_EVIDENCE_RECORD.md`](STAGE_A_EVIDENCE_RECORD.md) remains unchanged and
 must not be used as evidence for this successor.
 
@@ -213,10 +242,12 @@ Not authorized or performed:
 - model promotion, threshold approval, policy approval, or target-owner
   acceptance.
 
-This pre-commit control record makes no claim that the successor was pushed,
-merged, tagged, released, deployed, or accepted. Those states require separate
-exact evidence; a later publication cannot retroactively turn this pre-commit
-observation into exact-commit evidence.
+This control record confirms the exact implementation commit and exact-SHA CI
+only. The ER-002 evidence carrier is necessarily unnamed within its own
+contents; its exact SHA is reported after creation in the completion handoff.
+No claim is made that the successor was tagged, released, deployed,
+operationally accepted, or authorized for production. Publication of source and successful CI do not
+establish any of those states.
 
 ## Remaining release blockers
 
@@ -246,10 +277,12 @@ open gates:
 - mission, security, data, model, policy, operations, target-system, and
   authorizing-official acceptances are not recorded.
 
-The next safe engineering gate is exact-commit verification of this bounded
-successor followed by real process termination and storage-failure injection at
-every T1, T2, observation, audit, and T3 boundary, including receipt/result
-corruption and cross-store divergence. Process isolation should follow the
-verified transaction contract. Any move to representative data, external
-identity, a connector, or a designated target requires a separate, exact
-authorization package.
+The next safe engineering gate is broader real power-loss, kill/fsync,
+filesystem and storage-failure injection at every T1, T2, observation, audit,
+and T3 boundary, including receipt/result corruption, hostile writers, mixed
+backups, and cross-store divergence, plus resource and soak evidence. Process
+isolation should follow the verified transaction contract. ER-002 must be
+published in a later evidence-only carrier whose exact SHA and manifest are
+recorded only after that commit exists. Any move to representative data,
+external identity, a connector, or a designated target requires a separate,
+exact authorization package.

@@ -78,7 +78,10 @@ all fixture labels to calculate final aggregate metrics. This same-process
 separation is not independent custody, and the results are not representative
 of operational performance.
 
-The provisional, unreleased Stage A `0.4.0-alpha.2` durability candidate creates
+The unreleased Stage A `0.4.0-alpha.2` durability implementation is published on
+`main` at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4)
+and creates
 only synthetic requests and local state during tests. Its three authoritative
 artifacts are one control SQLite database, one separately pathed offline
 synthetic-adapter SQLite database containing generated target state and
@@ -96,13 +99,17 @@ process one. Their persistence still creates future retention, capacity,
 minimization, backup/restore, and records-management obligations before any
 non-synthetic use.
 
-At the 2026-08-16 local source freeze, 43/43 focused Stage A, 18/18
-readiness-gate, 360/360 repository, and 46/46 deterministic corpus checks passed;
-the corpus reported `live_actions_possible=false`. These are project-controlled
+Against that exact commit, local verification passed 43/43 focused Stage A in
+8.248 seconds, 18/18 readiness-gate, the warning-fatal 360/360 repository suite
+in 48.995 seconds, 57/57 focused Phase 3, and 46/46 deterministic corpus checks;
+the corpus reported `live_actions_possible=false`. Its 307-entry manifest
+verified 307/307; exact-SHA CI run 31953570779 succeeded on Python 3.11/3.12 and
+Dependency Graph run 31953572482 succeeded. These are project-controlled
 mechanism observations, not data representativeness, historical/live
-performance, privacy effectiveness, independent verification, an exact
-candidate commit/CI, or production authorization. The production gate remains
-`BLOCKED`.
+performance, privacy effectiveness, independent verification, or production
+authorization. No tag or GitHub Release was created, no deployment occurred,
+and no exact-SHA Pages run was observed. The production gate remains `BLOCKED`; see
+[`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 Each synthetic evidence item has a canonical content digest and a runtime HMAC
 attestation binding source identity/type, provenance, observation time,

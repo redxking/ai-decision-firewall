@@ -12,15 +12,20 @@
 > then-current 288/288 repository suite. No
 > Gate B package, historical-data approval, live feed, production/test-tenant
 > integration, operational credential, or live-action authority exists. The
-> unreleased Stage A candidate adds only opt-in local durability through
+> unreleased Stage A implementation adds only opt-in local durability through
 > separate control and offline synthetic-adapter SQLite databases plus a
-> sanitized result lookup. The provisional version is `0.4.0-alpha.2`. At its
-> 2026-08-16 local source freeze, 43/43 focused Stage A, 18/18 readiness-gate,
-> 360/360 repository, and 46/46 corpus checks passed; the corpus reported
-> `live_actions_possible=false`. These are project-controlled mechanism
-> observations without an exact candidate commit, regenerated manifest, CI,
-> owner acceptance, operational validation, or production authority. Its
-> production gate remains `BLOCKED`.
+> sanitized result lookup. Version `0.4.0-alpha.2` is published on `main` at
+> exact implementation Commit `8818d5d2d40faebced66a254d58b1f0d04c9f8b4`.
+> Exact local verification passed 43/43 focused Stage A in 8.248 seconds, 18/18
+> readiness-gate, the warning-fatal 360/360 repository suite in 48.995 seconds,
+> 57/57 focused Phase 3, and 46/46 corpus checks with
+> `live_actions_possible=false`; its 307-entry manifest verified 307/307.
+> Exact-SHA CI run 31953570779 succeeded on Python 3.11/3.12 and Dependency Graph run
+> 31953572482 succeeded. These are project-controlled mechanism observations,
+> not owner acceptance, operational validation, or production authority. No tag
+> or GitHub Release was created, no deployment occurred, and no exact-SHA Pages
+> run was observed. Its production gate remains `BLOCKED`; see
+> [`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 ## Mission objective
 
@@ -69,7 +74,7 @@ audit.
 | `shadow_read_only` semantics | Implemented as a code-owned read-only mode | No live feed or deployed service exists; the name describes execution semantics only |
 | Phase 3 simulation-only operational MVP | Published `0.3.0-alpha.1` at exact Commit `423685d`; 57/57 focused tests, then-current 288/288 repository tests, demo acceptance PASS, corpus 46/46; exact-commit CI/Dependency Graph passed | Raw synthetic requests; opaque synthetic invocation credentials; in-memory `NETWORK_ISOLATE`; exact-scope token; separate same-project readback; no live connector or operational credential |
 | Phase 3.1 synthetic model evaluation | Published `0.3.1-alpha.1` exact Commit `bb6b8f28`; synthetic temporal baseline/challenger mechanism only | Digest-bound repository fixtures; no historical/live adapter, action path, owner threshold, promotion authority, or operational claim |
-| Stage A two-store offline durability | Provisional unreleased `0.4.0-alpha.2`; optional single-host control database, separately pathed synthetic-adapter database, JSONL lifecycle audit, and sanitized terminal lookup; local source-freeze mechanism checks passed | Offline synthetic execution only; receipt/readback remain same-project and cross-store non-atomic; no external identity, connector, target, deployment, distributed replay claim, exact candidate commit/CI, or operational authority; production gate `BLOCKED` |
+| Stage A two-store offline durability | Unreleased `0.4.0-alpha.2` implementation published on `main` at exact Commit `8818d5d2`; 43/43 focused Stage A, 18/18 gate, warning-fatal 360/360 full, 57/57 Phase 3, 46/46 corpus, manifest 307/307; exact-SHA CI and Dependency Graph succeeded | Offline synthetic execution only; receipt/readback remain same-project and cross-store non-atomic; no external identity, connector, target, deployment, distributed replay claim, owner acceptance, or operational authority; production gate `BLOCKED` |
 | Controlled test-tenant mode | Planned | Requires separately approved non-production architecture, process isolation, managed credentials, durable idempotency, vendor-independent readback, rollback, stop conditions, and change control |
 | Limited pilot mode | Planned | Would require a bounded approved population, human authorization, operational evidence, and an authorizing-official decision |
 

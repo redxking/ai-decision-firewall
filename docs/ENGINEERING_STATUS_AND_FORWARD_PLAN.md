@@ -33,8 +33,10 @@ metrics, and an unconditional `NOT_AUTHORIZED` promotion state. It contains no
 historical/live adapter or action path and has no owner-approved performance
 threshold or model-promotion authority.
 
-Fourth, the provisional, unreleased **`0.4.0-alpha.2` Stage A
-production-development candidate** adds an opt-in single-host control ledger
+Fourth, the unreleased **`0.4.0-alpha.2` Stage A production-development
+implementation** is published on `main` at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+It adds an opt-in single-host control ledger
 after exact-baseline
 testing found that a completed request could cause a second synthetic effect
 after restart. ADR-015 extends that local mechanism with a separately pathed
@@ -48,15 +50,21 @@ observer are not independent target evidence. The 18-domain production gate
 remains `BLOCKED`; this is not a deployed service, distributed replay control,
 process isolation, HA, or operational authority.
 
-At the 2026-08-16 source-freeze checkout, 43/43 focused Stage A tests, 18/18
-production-readiness-gate tests, the complete 360/360 repository suite, and the
-deterministic 46/46 corpus passed locally; the corpus reported
-`live_actions_possible=false`. Direct first-creation stress passed 10/10
-sequential and 5/5 parallel repetitions, and the integrated exact-once race
-passed 5/5 parallel repetitions. These are project-controlled local mechanism
-observations. No exact candidate commit, regenerated manifest, CI, release,
-owner acceptance, independent verification, or operational-effectiveness claim
-is attached to them.
+Against that exact implementation commit, local verification passed 43/43
+focused Stage A tests in 8.248 seconds, 18/18 production-readiness-gate tests,
+the warning-fatal 360/360 repository suite in 48.995 seconds, 57/57 focused Phase
+3 tests, and the deterministic 46/46 corpus with
+`live_actions_possible=false`. The integrated exact-once race passed 5/5
+parallel repetitions. The 307-entry implementation manifest verified
+307/307. Exact-SHA
+[CI run 31953570779](https://github.com/redxking/ai-decision-firewall/actions/runs/31953570779)
+succeeded on Python 3.11 and 3.12, and
+[Dependency Graph run 31953572482](https://github.com/redxking/ai-decision-firewall/actions/runs/31953572482)
+succeeded. These are project-controlled mechanism observations, not owner
+acceptance, independent verification, operational effectiveness, or production
+authorization. No tag or GitHub Release was created, no deployment occurred,
+and no exact-SHA Pages run was observed. See
+[`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 All Phase 3 observations are CE-1 implementation-conformance evidence over
 synthetic inputs and effects. They do not establish live containment,
@@ -74,7 +82,7 @@ external independence.
 | Phase 3 T&E | Required high-risk/no-effect and low-risk/verified-effect demo acceptance PASS; deterministic corpus 46/46; focused tests 57/57; exact-commit CI passed |
 | Phase 3 repository aggregate | Then-current 288/288 passed locally and in exact-commit CI |
 | Phase 3.1 model evaluation | Published exact Commit `bb6b8f28`; 11/11 focused and 299/299 then-current aggregate; exact-commit CI/Dependency Graph passed; no historical data or promotion authority |
-| Stage A durability increment | Provisional unreleased `0.4.0-alpha.2`; separate single-host SQLite control and offline synthetic-adapter stores plus JSONL audit and sanitized lookup; local source freeze 43/43 focused, 18/18 readiness gate, 360/360 full, 46/46 corpus; no exact candidate commit/manifest/CI, cross-store atomicity, or production authorization; gate `BLOCKED` |
+| Stage A durability increment | Unreleased `0.4.0-alpha.2` published on `main` at exact Commit `8818d5d2`; separate single-host SQLite control and offline synthetic-adapter stores plus JSONL audit and sanitized lookup; exact local 43/43 focused, 18/18 readiness gate, warning-fatal 360/360 full, 57/57 Phase 3, 46/46 corpus; manifest 307/307 and exact-SHA CI/Dependency Graph succeeded; no cross-store atomicity or production authorization; gate `BLOCKED` |
 | Data/action boundary | Synthetic only; no historical organizational data, live feed, test tenant, production connector, credential, or live action |
 
 ## What Phase 3 adds
@@ -282,11 +290,12 @@ claims.
 
 ## Forward plan and gates
 
-1. **Package the locally frozen ADR-015 increment separately.** Preserve the
-   exact two-database synthetic mechanism, tests, traceability, and diagrams;
-   regenerate and verify the integrity manifest; then record an exact candidate
-   commit and CI without changing the published Phase 3 or Phase 3.1 evidence
-   boundaries.
+1. **Preserve the two-commit evidence boundary.** Keep the exact ADR-015
+   implementation, tests, traceability, and diagrams bound to published Commit
+   `8818d5d2`; carry ER-002 and its separately regenerated manifest without
+   changing that implementation; and report the non-self-referential carrier
+   SHA in the completion handoff. Do not alter the published Phase 3 or Phase
+   3.1 evidence boundaries.
 2. **Expand the local failure campaign.** Build on the selected process-kill,
    response-loss, audit-failure, cross-store corruption, and concurrent-startup
    cases with power-loss, filesystem/disk exhaustion, backup/restore,

@@ -195,8 +195,8 @@
       "accountable_owner": "SERVICE_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv"],
-      "remaining_gate": "Freeze exact commit, manifest, complete regression, and CI; complete real power-loss, disk-failure, hostile-writer, and bounded-load campaigns. Cross-store atomicity, distributed linearizability, fencing epochs, failover, and HA remain absent.",
+      "evidence_artifacts": ["src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "Exact implementation Commit 8818d5d2d40faebced66a254d58b1f0d04c9f8b4 and CI run 31953570779 establish only the bounded local mechanism. Complete real power-loss, disk-failure, hostile-writer, and bounded-load campaigns. Cross-store atomicity, distributed linearizability, fencing epochs, failover, and HA remain absent.",
       "release_gate": "STAGE_A_DURABILITY_GATE",
       "prohibited_inference": "Single-host SQLite does not establish distributed linearizability or HA."
     },
@@ -225,7 +225,7 @@
       "accountable_owner": "EXECUTION_SERVICE_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/phase3/simulation.py", "src/adf_poc/stage_a.py", "tests/test_phase3_authorization_boundary.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv"],
+      "evidence_artifacts": ["src/adf_poc/phase3/simulation.py", "src/adf_poc/stage_a.py", "tests/test_phase3_authorization_boundary.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
       "remaining_gate": "Move the same-process broker and offline synthetic adapter into isolated workloads with authenticated IPC, workload identities, deny-by-default egress, and independently governed adapter credentials before any later integration.",
       "release_gate": "BROKER_ISOLATION_GATE",
       "prohibited_inference": "Private Python capability and same-process closures are not OS isolation."
@@ -255,7 +255,7 @@
       "accountable_owner": "VERIFICATION_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/phase3/simulation.py", "src/adf_poc/stage_a.py", "tests/test_phase3_adversarial.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv"],
+      "evidence_artifacts": ["src/adf_poc/phase3/simulation.py", "src/adf_poc/stage_a.py", "tests/test_phase3_adversarial.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
       "remaining_gate": "The observer remains same-project and same-store custodied. Add independently authenticated target-side readback, durable observation receipts, bounded eventual-consistency handling, and target-owner acceptance.",
       "release_gate": "POST_ACTION_OBSERVATION_GATE",
       "prohibited_inference": "Same-process observation is not independent target custody."
@@ -285,7 +285,7 @@
       "accountable_owner": "OPERATIONS_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "tests/test_phase3_release_blockers.py", "docs/production/FAILURE_RECOVERY_MATRIX.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md"],
+      "evidence_artifacts": ["src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "tests/test_phase3_release_blockers.py", "docs/production/FAILURE_RECOVERY_MATRIX.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
       "remaining_gate": "Complete real power-loss and storage-failure campaigns at every T1, T2, observation, JSONL recovery-prefix, and T3 boundary plus queue, network, key, expiry, observer-delay, rollback-failure, and hostile cross-store corruption campaigns.",
       "release_gate": "RECOVERY_ACCEPTANCE_GATE",
       "prohibited_inference": "Handled exceptions and explicit recovery do not prove power-loss safety."
@@ -315,7 +315,7 @@
       "accountable_owner": "AUDIT_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/audit.py", "src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv"],
+      "evidence_artifacts": ["src/adf_poc/audit.py", "src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
       "remaining_gate": "Exercise cross-store divergence and add an authenticated exporter, sequence and recovery-point binding, retention, trusted time, readback, and external anchoring.",
       "release_gate": "AUDIT_CUSTODY_GATE",
       "prohibited_inference": "A self-custodied hash chain and local outbox are replaceable by a privileged writer."
@@ -345,8 +345,8 @@
       "accountable_owner": "SERVICE_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py"],
-      "remaining_gate": "Freeze exact test evidence and add representative throughput, latency, saturation, hot-target, disk-growth, result-retention, resource, and denial-of-service tests.",
+      "evidence_artifacts": ["tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "Exact implementation evidence covers the bounded local concurrency cases only. Add representative throughput, latency, saturation, hot-target, disk-growth, result-retention, resource, and denial-of-service tests.",
       "release_gate": "CAPACITY_AND_AVAILABILITY_GATE",
       "prohibited_inference": "A small race test is not a capacity or availability result."
     },
@@ -405,7 +405,7 @@
       "accountable_owner": "DATA_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["docs/phase31/DATA_GOVERNANCE_GATE.md", "src/adf_poc/stage_a.py", "tests/test_phase31_model_evaluation.py", "tests/test_gate_b.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv"],
+      "evidence_artifacts": ["docs/phase31/DATA_GOVERNANCE_GATE.md", "src/adf_poc/stage_a.py", "tests/test_phase31_model_evaluation.py", "tests/test_gate_b.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
       "remaining_gate": "Define and approve terminal-result retention and deletion, and retain the synthetic-only boundary until explicit data approval identifies source, custodian, purpose, retention, environment, access, and outputs.",
       "release_gate": "DATA_GOVERNANCE_GATE",
       "prohibited_inference": "Absence of real data is not privacy compliance for a future deployment."
@@ -435,8 +435,8 @@
       "accountable_owner": "RELEASE_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["pyproject.toml", ".github/workflows/ci.yml", "MANIFEST.sha256"],
-      "remaining_gate": "There is no control-schema migrator. Preserve any v1 evidence and create a distinct reviewed v2 ledger; then regenerate the Stage A manifest and complete exact-commit tests, SBOM, provenance, dependency lock, and signed artifacts.",
+      "evidence_artifacts": ["pyproject.toml", ".github/workflows/ci.yml", "MANIFEST.sha256", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "There is no control-schema migrator. Preserve any v1 evidence and create a distinct reviewed v2 ledger. Exact implementation Commit 8818d5d2d40faebced66a254d58b1f0d04c9f8b4 passed its bound manifest, CI run 31953570779, and Dependency Graph run 31953572482. The separate ER-002 evidence carrier regenerates and verifies a manifest that covers the record; its exact carrier SHA is reported outside the necessarily non-self-referential record. SBOM, reproducible-build evidence, provenance, dependency lock, and signed artifacts remain absent.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "A SHA-256 inventory is not an SBOM, signature, or reproducible-build proof."
     },
@@ -465,7 +465,7 @@
       "accountable_owner": "OPERATIONS_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/phase3/metrics.py", "src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py"],
+      "evidence_artifacts": ["src/adf_poc/phase3/metrics.py", "src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
       "remaining_gate": "Export durable metrics and outbox to an approved monitor with receipt/result/reconciliation and cross-store-divergence thresholds, loss detection, retention, and operator-tested response.",
       "release_gate": "OPERATIONS_ACCEPTANCE_GATE",
       "prohibited_inference": "Local counters and outbox rows are not operational monitoring."
@@ -495,8 +495,8 @@
       "accountable_owner": "VERIFICATION_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["tests/", "docs/TEST_AND_EVALUATION_PLAN.md"],
-      "remaining_gate": "The mutable 0.4.0-alpha.2 candidate focused suite observed 43/43 passing on 2026-08-16; freeze the successor exact commit and rerun focused and complete suites, then add resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, and cross-store-divergence campaigns.",
+      "evidence_artifacts": ["tests/", "docs/TEST_AND_EVALUATION_PLAN.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "Exact implementation Commit 8818d5d2d40faebced66a254d58b1f0d04c9f8b4 passed the recorded focused and complete local suites and CI run 31953570779 succeeded for the exact SHA on Python 3.11 and 3.12. Resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
       "release_gate": "VERIFICATION_ACCEPTANCE_GATE",
       "prohibited_inference": "Green CI is implementation evidence, not operational effectiveness."
     },
@@ -525,8 +525,8 @@
       "accountable_owner": "RELEASE_AND_OPERATIONS_OWNERS",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "NOT_IMPLEMENTED",
-      "evidence_artifacts": ["MANIFEST.sha256", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv"],
-      "remaining_gate": "Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists; freeze the successor candidate, regenerate the manifest, rerun exact-commit verification, and demonstrate approved deployment, upgrade, rollback, patch, compatibility, backup/restore, and withdrawal lifecycles.",
+      "evidence_artifacts": ["MANIFEST.sha256", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Preserve the separately regenerated ER-002 carrier manifest and report that carrier SHA outside its necessarily non-self-referential contents. Demonstrate approved deployment, upgrade, rollback, patch, compatibility, backup/restore, and withdrawal lifecycles.",
       "release_gate": "RELEASE_LIFECYCLE_ACCEPTANCE_GATE",
       "prohibited_inference": "A local commit does not mean pushed, merged, tagged, released, or deployed, and source rollback is not operational rollback."
     },

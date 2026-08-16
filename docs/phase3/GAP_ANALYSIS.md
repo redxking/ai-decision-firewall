@@ -14,23 +14,27 @@ Phase 2.5 is separately published on `main` at exact Commit
 Graph success. That publication did not run `P2-CE-005`; it remains CE-0
 `NOT_EVALUATED`. Phase 3 is additive and separately published.
 
-The provisional, unreleased Stage A `0.4.0-alpha.2` candidate is a later
-production-development boundary. ADR-015 defines its two-database offline
-synthetic receipt/result design. At the 2026-08-16 local source freeze, 43/43
-focused Stage A tests, 18/18 production-readiness-gate tests, 360/360 repository
-tests, and the 46/46 deterministic corpus passed; the corpus reported
-`live_actions_possible=false`. Direct first-creation stress passed 10/10
-sequential plus 5/5 parallel repetitions, and the integrated exact-once race
-passed 5/5 parallel repetitions. These are project-controlled mechanism
-observations, not an exact candidate commit, regenerated manifest, CI,
-independent verification, owner acceptance, operational effectiveness, or
-production authorization.
+The unreleased Stage A `0.4.0-alpha.2` implementation is a later
+production-development boundary published on `main` at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+ADR-015 defines its two-database offline synthetic receipt/result design.
+Against that exact commit, local verification passed 43/43 focused Stage A tests
+in 8.248 seconds, 18/18 production-readiness-gate tests, the warning-fatal
+360/360 repository suite in 48.995 seconds, 57/57 focused Phase 3 tests, and the
+46/46 deterministic corpus with `live_actions_possible=false`. The integrated
+exact-once race passed 5/5 parallel repetitions. Its
+307-entry manifest verified 307/307; exact-SHA CI run 31953570779 and Dependency
+Graph run 31953572482 succeeded. These are project-controlled mechanism
+observations, not independent verification, owner acceptance, operational
+effectiveness, or production authorization. No tag or GitHub Release was
+created, no deployment occurred, and no exact-SHA Pages run was observed. See
+[`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 ## Closure assessment
 
 | Required capability | Initial gap | Local candidate state | Remaining evidence or production gap |
 |---|---|---|---|
-| Strict external JSON boundary | Existing utilities but no Phase 3 contract | Closed v0.3.0 raw-request schema; duplicate/non-finite/size/depth/time/version failures tested fail closed | Exact-candidate CI, fuzz/property/resource campaigns |
+| Strict external JSON boundary | Existing utilities but no Phase 3 contract | Closed v0.3.0 raw-request schema; duplicate/non-finite/size/depth/time/version failures tested fail closed | Fuzz/property/resource campaigns |
 | Trusted requesting-agent identity | Missing | An opaque invocation credential is resolved by a firewall-owned registry to a signed `ResolvedPrincipal`; request claims must match, and absent/unregistered/compromised/self-elevating identities are denied | Enterprise IAM/device identity and external authentication evidence |
 | Trusted target and action facts | Missing | Validated policy inventory/action catalog override request claims; current state comes from read-only observer | Enterprise CMDB/action catalog authenticity and vendor semantics |
 | Evidence assurance | Existing but insufficient | Runtime HMAC attestation, content digest, subject-target binding, source registry, freshness-at-decision, relevance, corroboration, conflicts, missing sources, and poisoned text are evaluated | Enterprise source identity, key custody/rotation/revocation, external provenance and source-truth validation |
@@ -48,9 +52,9 @@ production authorization.
 | Human approval | Missing | Exact expiring approval requirement and trusted-human/scope/single-use gate; receipt permits reevaluation only | Production workflow, separation of duties, identity proof and authorizing-official process |
 | Lifecycle audit | Partial | Complete correlated request-to-final-state hash-linked lifecycle, including rejection/suppression, exact executed-path semantic binding, approval receipts, and one honest `POST_EFFECT_ACCOUNTING_FAILURE` / `ROLLBACK_REQUIRED` closure when a required post-effect prewrite fails | Automated rollback; external anchor/WORM custody, trusted time, and truncation/whole-chain replacement protection |
 | Required metrics | Partial | Four outcomes, policy matches, evidence conflict, auth failure, broker rejection, verification failure and latency counters | Durable telemetry, exporters, reconciliation and production SLOs |
-| Preserve Phase 2 read-only modes | Existing | Phase 3 is a separate package/path; Phase 2 does not construct or route to the Phase 3 broker | Exact freeze aggregate and CI regression |
+| Preserve Phase 2 read-only modes | Existing | Phase 3 is a separate package/path; Phase 2 does not construct or route to the Phase 3 broker; exact Commit `8818d5d2` passed the complete local and CI regression | Reverify the complete boundary after every future implementation change |
 | No-live-action boundary | Existing principle | Engine accepts only exact in-memory simulation environment; no live/generic mode or adapter | OS/network-egress evidence and deployment hardening if a later service exists |
-| Required SOC demonstrations | Missing | Both raw-request demo acceptance checks reported PASS with required decisions, effects, audit and metrics | Exact-commit CI rerun; no operational efficacy inference |
+| Required SOC demonstrations | Missing | Both raw-request demo acceptance checks reported PASS with required decisions, effects, audit and metrics locally and in exact-SHA CI | Independent intended-environment validation; no operational efficacy inference |
 | Systematic adversarial corpus | Partial prior negatives | Declarative deterministic 46-scenario corpus observed 46/46 passing | Independent red team, fuzz/property/load campaigns and broader attack surface |
 
 ## Safety defects found and closed before freeze
@@ -154,14 +158,14 @@ binding, durable synthetic target state, and a closed authority-free terminal
 duplicates; the separate authenticated lookup requires the exact principal,
 request ID, and canonical request digest and returns no token or new authority.
 
-The receipt/result implementation has reached a local source freeze. The current
-checks cover exact startup serialization; strict store/path/sidecar/schema and
+The receipt/result implementation is bound to published exact Commit
+`8818d5d2`. Its exact checks cover startup serialization; strict
+store/path/sidecar/schema and
 cross-store correlation; one immutable receipt/effect; sanitized exact lookup;
 normal-audit-before-T3 ordering; recovery-audit prefix/resume/readback/fencing;
 selected process-kill and response-loss boundaries; chronology; corruption;
-and revoked-authority disposition. The local results above carry no exact
-candidate commit, manifest, or CI claim. The following gaps remain open even
-after the mechanism is present:
+and revoked-authority disposition. The exact commit, 307/307 manifest result,
+and successful CI/Dependency Graph runs above do not close the following gaps:
 
 - T1 authority reservation, T2 adapter state/receipt, observation, JSONL audit,
   and T3 terminal result are not one atomic transaction;

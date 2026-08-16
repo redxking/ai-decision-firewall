@@ -4,8 +4,8 @@
 - **Phase 2 evidence boundary:** published `P2-CE-001` through `P2-CE-004` retain their version-bound claims. `P2-CE-005` was not executed or published and remains CE-0 `NOT_EVALUATED`; the Phase 2.5 commit and green CI do not create that campaign result.
 - **Published Phase 3 baseline:** exact Commit [`423685d105be813056617db738297eba83d3d9d0`](https://github.com/redxking/ai-decision-firewall/commit/423685d105be813056617db738297eba83d3d9d0) is on `main`; exact-commit [CI](https://github.com/redxking/ai-decision-firewall/actions/runs/31908090324) and [Dependency Graph](https://github.com/redxking/ai-decision-firewall/actions/runs/31908091856) checks passed. Its simulation-only boundary includes 57/57 focused Phase 3 tests, both demonstration checks PASS, a 46/46 deterministic corpus, and the then-current 288/288 repository aggregate. These are CE-1 implementation-conformance observations, not operational validation.
 - **Published Phase 3.1 baseline:** exact Commit [`bb6b8f28afba0961bb97b24e6050fccaa94d5702`](https://github.com/redxking/ai-decision-firewall/commit/bb6b8f28afba0961bb97b24e6050fccaa94d5702) is on `main`; exact-commit [CI](https://github.com/redxking/ai-decision-firewall/actions/runs/31911161052) passed on Python 3.11 and 3.12 and the [Dependency Graph](https://github.com/redxking/ai-decision-firewall/actions/runs/31911162048) check passed. Its `0.3.1-alpha.1` synthetic-only evaluation mechanism passed 11/11 focused and 299/299 then-current repository tests. Model promotion remains unconditionally `NOT_AUTHORIZED`. No Phase 3.1 tag or GitHub Release exists.
-- **Stage A production-development candidate:** the provisional, unreleased `0.4.0-alpha.2` candidate corrects a verified cross-restart request replay and implements the ADR-015 two-database offline design: an opt-in single-host control ledger, a separate durable synthetic-adapter state/receipt store, the existing JSONL lifecycle audit, and a sanitized authenticated terminal-result lookup. The two databases and audit are three distinct authoritative artifacts; T1 reservation, T2 adapter commit, normal or recovery audit closure, and T3 terminal commit are not one cross-store transaction. Startup and durable operations use bounded cooperative same-host fencing and strict store/correlation checks, but this is not a distributed lease, epoch, consensus, or cross-store atomicity guarantee. The enforceable 18-domain production gate remains `BLOCKED`. This increment adds no historical/live data, connector, operational credential, live target, process isolation, independently custodied target verification, HA, deployment, or operational authority.
-- **Stage A local verification boundary:** at the 2026-08-16 source-freeze checkout, 43/43 focused Stage A tests, 18/18 production-readiness-gate tests, the complete 360/360 repository suite, and the deterministic 46/46 corpus passed locally; the corpus reported `live_actions_possible=false`. Direct first-creation stress passed 10/10 sequential and 5/5 parallel repetitions, and the integrated exact-once race passed 5/5 parallel repetitions. These are project-controlled local mechanism observations, not historical/live evaluation, independent verification, operational effectiveness, owner acceptance, or production authorization. No exact candidate commit, regenerated manifest, CI, push, merge, tag, or release is claimed.
+- **Published Stage A implementation boundary:** the unreleased `0.4.0-alpha.2` implementation is on `main` at exact Commit [`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4). It corrects a verified cross-restart request replay and implements the ADR-015 two-database offline design: an opt-in single-host control ledger, a separate durable synthetic-adapter state/receipt store, the existing JSONL lifecycle audit, and a sanitized authenticated terminal-result lookup. The two databases and audit are three distinct authoritative artifacts; T1 reservation, T2 adapter commit, normal or recovery audit closure, and T3 terminal commit are not one cross-store transaction. Startup and durable operations use bounded cooperative same-host fencing and strict store/correlation checks, but this is not a distributed lease, epoch, consensus, or cross-store atomicity guarantee. The enforceable 18-domain production gate remains `BLOCKED`. This increment adds no historical/live data, connector, operational credential, live target, process isolation, independently custodied target verification, HA, deployment, or operational authority.
+- **Stage A exact-commit verification boundary:** against exact Commit `8818d5d2`, local verification passed 43/43 focused Stage A tests in 8.248 seconds, 18/18 production-readiness-gate tests, the complete warning-fatal 360/360 repository suite in 48.995 seconds, 57/57 focused Phase 3 tests, and the deterministic 46/46 corpus with `live_actions_possible=false`; the 307-entry implementation manifest verified 307/307. Exact-SHA [CI run 31953570779](https://github.com/redxking/ai-decision-firewall/actions/runs/31953570779) succeeded on Python 3.11 and 3.12, and [Dependency Graph run 31953572482](https://github.com/redxking/ai-decision-firewall/actions/runs/31953572482) succeeded. These are project-controlled mechanism observations, not historical/live evaluation, independent verification, operational effectiveness, owner acceptance, or production authorization. No tag or GitHub Release was created, no deployment occurred, and no exact-SHA Pages run was observed. See [`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 - **Validated baseline:** v0.1.0 synthetic proof of concept
 - **Decision domain:** privileged-identity containment
 - **Operational status:** synthetic only. Phase 2 remains read-only; the published Phase 3 path can change only in-memory synthetic target state. The opt-in Stage A candidate can change only its separate local durable synthetic-adapter database and return authority-free lookup results. No organizational historical data, approved Gate B package, live feed, production/test-tenant connector, or operational credential is included.
@@ -556,12 +556,14 @@ Verify a package only against the manifest committed with those exact bytes. The
 `MANIFEST.sha256` in published Commit `854b15c` covers that Phase 2.5 package.
 The manifest in published Phase 3 exact Commit `423685d` covers that exact
 tree, and the Phase 3.1 manifest applies only to exact Commit `bb6b8f28`. The
-provisional Stage A `0.4.0-alpha.2` production-development candidate requires a
-newly regenerated and verified manifest before any exact-commit evidence or
-release claim. Its local source-freeze test observations do not substitute for
-that manifest or CI. The tracked data, model, and baseline outputs remain at
-their published bytes. Reverify a manifest only after checking out its matching
-commit:
+307-entry manifest in published Stage A implementation Commit `8818d5d2`
+verified 307/307 and applies only to that implementation tree. It does not cover
+the later [`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md)
+or its evidence-carrier tree. The carrier therefore uses its own separately
+regenerated 308-entry manifest covering that record; carrier qualification
+verified it 308/308. Its exact SHA is reported in the completion handoff. The tracked data, model,
+and baseline outputs remain at their published bytes. Reverify a manifest only
+after checking out its matching commit:
 
 ```bash
 shasum -a 256 -c MANIFEST.sha256
@@ -672,8 +674,11 @@ execution still requires an explicit governed designation of Commit A, a clean
 detached no-retry run, and a distinct validated evidence-only Commit B.
 
 The ADR-015 Stage A two-database synthetic receipt and sanitized terminal-result
-increment has reached a local source freeze while retaining the published Phase
-3.1 no-promotion boundary. The next safe technical gate is a separately
+implementation is published on `main` at exact Commit `8818d5d2` while retaining
+the Phase 3.1 no-promotion boundary. Its exact local, manifest, CI, and Dependency
+Graph observations are bound in
+[`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
+The next safe technical gate is a separately
 controlled campaign for broader power-loss, filesystem/disk, restore,
 retention, load, and cross-store divergence conditions at every authority,
 adapter, observation, audit, and result boundary, followed by distributed

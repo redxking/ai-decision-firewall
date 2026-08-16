@@ -199,8 +199,10 @@ rate/circuit controls, and separate operational authorization.
 
 ## Stage A durability addendum
 
-The provisional, unreleased `0.4.0-alpha.2` production-development candidate
-retains the ADR-014 opt-in control ledger and adopts ADR-015's separately
+The unreleased `0.4.0-alpha.2` production-development implementation is
+published on `main` at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+It retains the ADR-014 opt-in control ledger and adopts ADR-015's separately
 pathed offline synthetic-adapter database. The logical sequence is:
 
 ```text
@@ -282,12 +284,14 @@ recorded in [ADR-014](../adr/014_stage_a_durable_transaction_spine.md) and
 The machine production gate remains `BLOCKED`; this architecture grants no live
 connector, credential, target, deployment, or operational authority.
 
-At the 2026-08-16 source-freeze checkout, local project-controlled observations
-were 43/43 focused Stage A tests, 18/18 readiness-gate tests, 360/360 repository
-tests, and 46/46 deterministic corpus scenarios with
-`live_actions_possible=false`. Direct public-store first-creation stress passed
-10/10 sequential and 5/5 parallel repetitions; the integrated exact-once race
-passed 5/5 parallel repetitions. These results establish only the tested local
-mechanism. No exact candidate commit, regenerated manifest, CI, independent
-verification, owner acceptance, operational effectiveness, or production
-authorization is claimed.
+Against that exact implementation commit, local project-controlled verification
+passed 43/43 focused Stage A tests in 8.248 seconds, 18/18 readiness-gate tests,
+the warning-fatal 360/360 repository suite in 48.995 seconds, 57/57 focused Phase
+3 tests, and 46/46 deterministic corpus scenarios with
+`live_actions_possible=false`. The integrated exact-once race passed 5/5
+parallel repetitions. Its 307-entry manifest verified 307/307;
+exact-SHA CI run 31953570779 and Dependency Graph run 31953572482 succeeded.
+These results establish only the tested project-controlled mechanism. No tag,
+GitHub Release, deployment, exact-SHA Pages run, independent verification, owner
+acceptance, operational effectiveness, or production authorization is claimed.
+See [`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).

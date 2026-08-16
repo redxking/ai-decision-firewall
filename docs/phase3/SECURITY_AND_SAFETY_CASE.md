@@ -14,16 +14,21 @@ This safety case does not establish production security, operational efficacy,
 live-containment safety, exhaustive attack coverage, a failure-rate bound,
 external assurance, or authorizing-official acceptance.
 
-The provisional, unreleased Stage A `0.4.0-alpha.2` addendum is a separate
-production-development boundary. ADR-015 defines local durable control state, a
-separately pathed offline synthetic-adapter state/receipt database, and an
-authority-free terminal lookup. At the 2026-08-16 local source freeze, 43/43
-focused Stage A tests, 18/18 readiness-gate tests, 360/360 repository tests, and
-46/46 deterministic corpus scenarios passed; the corpus reported
-`live_actions_possible=false`. These are project-controlled mechanism
-observations without an exact candidate commit, regenerated manifest, CI,
-independent verification, owner acceptance, operational effectiveness, or
-production authorization. The machine gate remains `BLOCKED`.
+The unreleased Stage A `0.4.0-alpha.2` addendum is a separate
+production-development boundary published on `main` at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+ADR-015 defines local durable control state, a separately pathed offline
+synthetic-adapter state/receipt database, and an authority-free terminal lookup.
+Against that exact commit, local verification passed 43/43 focused Stage A in
+8.248 seconds, 18/18 readiness-gate, the warning-fatal 360/360 repository suite
+in 48.995 seconds, 57/57 focused Phase 3, and 46/46 deterministic corpus
+scenarios with `live_actions_possible=false`. Its 307-entry manifest verified
+307/307; exact-SHA CI run 31953570779 and Dependency Graph run 31953572482
+succeeded. These are project-controlled mechanism observations, not independent
+verification, owner acceptance, operational effectiveness, or production
+authorization. No tag or GitHub Release was created, no deployment occurred,
+and no exact-SHA Pages run was observed. The machine gate remains `BLOCKED`; see
+[`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 ## Top-level safety claim
 

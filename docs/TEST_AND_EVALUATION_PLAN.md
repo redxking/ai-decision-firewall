@@ -129,13 +129,14 @@ See [`phase2/VALIDATION_PLAN.md`](phase2/VALIDATION_PLAN.md) and [`phase2/CLAIM_
 
 ## Stage A production-development verification
 
-The provisional, unreleased `0.4.0-alpha.2` ADR-015 candidate reached a local
-source freeze on 2026-08-16. The focused Stage A modules passed 43/43; the
-production-readiness gate passed 18/18 and derived `BLOCKED`; complete test
-discovery passed 360/360 with `ResourceWarning` treated as error; and the
-deterministic corpus passed 46/46 with `live_actions_possible=false`. Direct
-public-store simultaneous first-creation stress passed 10/10 sequential plus
-5/5 parallel outer repetitions; the integrated shared-audit exact-once race
+The unreleased `0.4.0-alpha.2` ADR-015 implementation is published on `main` at
+exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+Against that exact commit, the focused Stage A modules passed 43/43 in 8.248
+seconds; the production-readiness gate passed 18/18 and derived `BLOCKED`;
+complete warning-fatal test discovery passed 360/360 in 48.995 seconds; the
+focused Phase 3 suite passed 57/57; and the deterministic corpus passed 46/46
+with `live_actions_possible=false`. The integrated shared-audit exact-once race
 passed 5/5 parallel outer repetitions.
 
 The tested boundary includes all-three-path preflight before creation; exact
@@ -165,12 +166,20 @@ Named hard-gate regressions include
 surface and additional exact test names are recorded in the
 [`Phase 3 T&E plan`](phase3/TEST_AND_EVALUATION_PLAN.md).
 
-These are project-controlled local mechanism observations, not an exact
-candidate commit, regenerated manifest, CI, independent target verification,
-historical/live evaluation, owner acceptance, operational effectiveness, or
-production authorization. They do not establish cross-store atomicity,
+The 307-entry implementation manifest verified 307/307. Exact-SHA
+[CI run 31953570779](https://github.com/redxking/ai-decision-firewall/actions/runs/31953570779)
+succeeded on Python 3.11 and 3.12, and
+[Dependency Graph run 31953572482](https://github.com/redxking/ai-decision-firewall/actions/runs/31953572482)
+succeeded. These are project-controlled mechanism observations, not independent
+target verification, historical/live evaluation, owner acceptance, operational
+effectiveness, or production authorization. No tag or GitHub Release was
+created, no deployment occurred, and no exact-SHA Pages run was observed. They
+do not establish cross-store atomicity,
 distributed idempotency/leases/epochs/fencing, process isolation, vendor
 semantics, HA/DR, or operational recovery.
+
+The exact commands, results, and limitations are recorded in
+[`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 The repository-wide production gate remains `BLOCKED`. The exact current
 coverage and every unresolved degraded mode are recorded in

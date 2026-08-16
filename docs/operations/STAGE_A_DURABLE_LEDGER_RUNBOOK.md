@@ -2,7 +2,7 @@
 
 **Runbook state:** bounded development procedure; not operationally accepted
 **Scope:** one host; one schema-v2 control SQLite database; one schema-v1 offline synthetic-adapter SQLite database; one JSONL lifecycle audit
-**Baseline:** `bb6b8f28afba0961bb97b24e6050fccaa94d5702` plus the pre-commit `0.4.0-alpha.2` Stage A successor candidate
+**Baseline:** `bb6b8f28afba0961bb97b24e6050fccaa94d5702`; Stage A implementation Commit `8818d5d2d40faebced66a254d58b1f0d04c9f8b4` on `main`
 **Production authority:** none
 
 ## Purpose and hard boundary
@@ -281,11 +281,17 @@ Reconciliation may create a distinct recovered projection from an exact receipt.
 
 There is no approved long-running service to start. The only supported exercise
 is the repository-controlled focused Stage A harness using isolated temporary
-control and adapter databases plus synthetic fixtures. On 2026-08-16, the
-mutable `0.4.0-alpha.2` worktree's focused receipt/recovery and durable-ledger
-suite was observed at 43/43 passing in 8.854 seconds. This is local pre-commit
-evidence only, not exact-commit, manifest, complete-regression, CI, or runbook-
-exercise evidence.
+control and adapter databases plus synthetic fixtures. Against exact
+implementation Commit `8818d5d2`, that focused receipt/recovery and
+durable-ledger suite passed 43/43 in 8.248 seconds; the readiness-gate suite
+passed 18/18; the warning-fatal full suite passed 360/360 in 48.995 seconds; the
+focused Phase 3 suite passed 57/57; and the corpus passed 46/46 with
+`live_actions_possible=false`. The 307-entry manifest verified 307/307, and
+exact-SHA CI run 31953570779 plus Dependency Graph run 31953572482 succeeded.
+This is exact-commit project-controlled implementation evidence, not an
+operational runbook exercise, independent verification, owner acceptance, or
+production authorization. See
+[`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 For any later reviewed offline callers, verify the exact approved
 `control_ledger_path`, `synthetic_adapter_path`, and `audit_path`, retain
@@ -390,11 +396,15 @@ Escalation is `STAGE_A_OPERATOR` to `RELEASE_OWNER` and `SECURITY_OWNER`, with `
 
 ## Verification and runbook exercise record
 
-Before claiming this successor increment, freeze an exact commit and then rerun
-the focused and complete repository suites plus integrity validation from the
-isolated worktree. The 43/43 focused pre-commit observation above is not a
-substitute. Record exact runtime, environment, tests, results, limitations,
-manifest state, and CI only after the freeze.
+The successor implementation was frozen and published on `main` at exact Commit
+`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`. Its exact local runtimes, tests,
+results, limitations, 307/307 manifest state, successful Python 3.11/3.12 CI,
+and successful Dependency Graph run are recorded in
+[`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
+No tag or GitHub Release was created, no deployment occurred, and no exact-SHA
+Pages run was observed; the runbook remains operationally unexercised. Any later
+implementation claim
+requires its own exact commit, manifest, verification, and automation record.
 
 The current focused suite names the following implemented controls directly:
 
@@ -443,3 +453,4 @@ No outcome authorizes Stage B or C, model promotion, historical-data access, ext
 | 2026-08-15 | Initial control-ledger inspection, reconciliation, emergency-disable, and preservation guidance. | Documented against unfrozen local Stage A; not operationally validated. |
 | 2026-08-15 | Added separate offline adapter receipt/store, closed terminal lookup, exact recovery table, schema-v1 refusal/preservation and new-v2 procedure, and three-artifact backup boundary. | Documentation candidate only; exact source/test/evidence freeze remains pending. |
 | 2026-08-16 | Aligned `0.4.0-alpha.2` with bounded cooperative first-open/operation ownership, preflight-before-create, full semantic/chronology scans, runtime cross-store correlation, and exact recovery-audit trio/writer fence. | 43/43 focused tests observed on mutable worktree; exact commit, full regression, manifest, CI, and operational exercise remain pending. |
+| 2026-08-16 | Bound the Stage A implementation to exact Commit `8818d5d2` on `main` and linked `ADF-STAGE-A-ER-002`. | Exact local 43/43 focused, 18/18 gate, warning-fatal 360/360 full, 57/57 Phase 3, 46/46 corpus, manifest 307/307, CI and Dependency Graph succeeded; no tag, GitHub Release, deployment, owner acceptance, or operational exercise; no exact-SHA Pages run observed. |

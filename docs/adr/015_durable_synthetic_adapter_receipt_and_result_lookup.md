@@ -8,7 +8,7 @@
 
 **Production authorization:** not granted
 
-**Candidate:** `0.4.0-alpha.2`; pre-commit, not an exact-commit evidence claim
+**Implementation boundary:** unreleased `0.4.0-alpha.2`; exact Commit [`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4) on `main`; exact evidence in [`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md)
 
 ## Context
 

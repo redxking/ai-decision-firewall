@@ -466,29 +466,37 @@ Report separately:
 
 Do not infer a completed demonstration from code presence, fixture generation,
 test discovery, or a prior-commit result. The Stage A observations below are
-explicitly date-bound local source-freeze results; they require a regenerated
-manifest, exact candidate commit, and CI before any release-bound claim. Do not
-represent simulation results as live containment, production safety, measured
-operational efficacy, or external independent assurance.
+bound to exact implementation Commit `8818d5d2`, its verified implementation
+manifest, and exact-SHA automation. Do not represent those simulation results as
+live containment, production safety, measured operational efficacy, or external
+independent assurance.
 
 ## Stage A two-store durability qualification
 
-The provisional, unreleased `0.4.0-alpha.2` candidate reached a local source
-freeze on 2026-08-16. The current checkout produced these project-controlled
+The unreleased `0.4.0-alpha.2` implementation is published on `main` at exact
+Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+That exact implementation checkout produced these project-controlled
 observations:
 
 | Verification surface | Local observation |
 |---|---|
-| `tests.test_stage_a_receipt_recovery` plus `tests.test_stage_a_durable_control_ledger` | 43/43 passed |
+| `tests.test_stage_a_receipt_recovery` plus `tests.test_stage_a_durable_control_ledger` | 43/43 passed in 8.248 seconds |
 | `tests.test_production_readiness_gate` | 18/18 passed; strict 18-domain matrix valid; derived gate `BLOCKED` |
-| Full `tests/test_*.py` discovery with `ResourceWarning` promoted to error | 360/360 passed |
+| Full `tests/test_*.py` discovery with warnings promoted to errors | 360/360 passed in 48.995 seconds |
+| Focused Phase 3 implementation suite | 57/57 passed |
 | Deterministic Phase 3 adversarial corpus | 46/46 passed; `live_actions_possible=false` |
-| Direct public-store simultaneous first creation | 10/10 sequential and 5/5 parallel outer repetitions passed |
 | Integrated shared-audit exact-once process race | 5/5 parallel outer repetitions passed |
+| Implementation `MANIFEST.sha256` | 307/307 passed |
+| Exact-SHA CI run `31953570779` | Success on Python 3.11 and 3.12 |
+| Exact-SHA Dependency Graph run `31953572482` | Success |
 
-These results are not an exact candidate commit, regenerated manifest, CI,
-independent evaluation, historical/live validation, owner acceptance,
-operational effectiveness, or production authorization.
+These results are not independent evaluation, historical/live validation,
+owner acceptance, operational effectiveness, or production authorization. No
+tag or GitHub Release was created, no deployment occurred, and no exact-SHA
+Pages run was observed. The exact commands, results, and limitations are
+recorded in
+[`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 The focused qualification now exercises:
 
@@ -548,7 +556,7 @@ Named release-blocker regressions include
 `test_recovery_audit_prefix_is_restart_idempotent_at_every_record`, and
 `test_pending_recovery_fences_request_and_approval_audit_writers`.
 
-Even with this local qualification passing, queue behavior, bounded
+Even with this exact-commit qualification and automation passing, queue behavior, bounded
 load/retention, multi-node partitions/failover, distributed execution fencing,
 external audit export,
 managed-key lifecycle, process isolation/authenticated IPC, independently

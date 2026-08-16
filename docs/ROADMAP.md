@@ -1,6 +1,6 @@
 # Engineering roadmap
 
-## Current boundary — 2026-08-15
+## Current boundary — 2026-08-16
 
 - Exact Phase 2.5 Commit
   `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main`; its
@@ -17,18 +17,25 @@
   focused module passed 11/11 and the then-current repository suite passed
   299/299 locally and in exact-commit CI. No historical/live adapter, owner
   promotion threshold or action path exists.
-- The provisional, unreleased `0.4.0-alpha.2` Stage A
-  production-development candidate adds
+- The unreleased `0.4.0-alpha.2` Stage A production-development implementation
+  is published on `main` at exact Commit
+  [`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+  It adds
   single-host durable request, authorization, attempt, and audit-outbox state
   plus a separate durable offline synthetic-adapter state/receipt database and
   an authority-free terminal-result lookup. Bounded cooperative same-host
   fencing, strict store/cross-store validation, and recovery-audit closure are
   implemented, but the store-local transactions and JSONL audit are not
-  cross-store atomic. The local source-freeze checkout passed 43/43 focused
-  Stage A, 18/18 readiness-gate, 360/360 repository, and 46/46 corpus checks;
-  these are project-controlled mechanism observations without an exact
-  candidate commit, regenerated manifest, or CI claim. Its machine-derived
-  production gate is `BLOCKED`; no Stage B or C activity is authorized.
+  cross-store atomic. Exact local verification passed 43/43 focused Stage A in
+  8.248 seconds, 18/18 readiness-gate, the warning-fatal 360/360 repository suite
+  in 48.995 seconds, 57/57 focused Phase 3, and 46/46 corpus checks with
+  `live_actions_possible=false`; the 307-entry implementation manifest verified
+  307/307. Exact-SHA CI run 31953570779 succeeded on Python 3.11/3.12 and
+  Dependency Graph run 31953572482 succeeded. These are project-controlled
+  mechanism observations; no tag, GitHub Release, deployment, or exact-SHA Pages
+  run was created. Its machine-derived production gate is `BLOCKED`; no Stage B
+  or C activity is authorized. See
+  [`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 - No historical organizational data, approved Gate B package, live feed,
   test-tenant/production connector, operational credential, or live action is
   authorized or present.
@@ -133,7 +140,7 @@ significance, model superiority or promotion eligibility.
 exact-commit CI and no model-promotion claim. Historical evaluation remains a
 separate authority state.
 
-## Stage A — Two-store offline synthetic durability (provisional `0.4.0-alpha.2` candidate)
+## Stage A — Two-store offline synthetic durability (`0.4.0-alpha.2` implementation)
 
 The first bounded increment corrected the verified process-restart replay path
 with an explicitly configured SQLite/WAL authority ledger. ADR-015 extends the
@@ -166,18 +173,20 @@ writers until terminal commit. The trio records the original lifecycle as
 `COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`. Receipt evidence remains
 adapter-reported and never equals independent verification.
 
-**Current source-freeze evidence for this increment:** exact duplicate lookup
+**Published implementation evidence for this increment:** exact duplicate lookup
 returns only an authority-free replay result and never a second effect;
 receipt/result binding, conflict, corruption, recovery, audit ambiguity,
 startup concurrency, and independent-process races passed their focused local
 checks; the full suite remained green; and the 18-domain production gate
-derived `BLOCKED`. The recorded observations are 43/43 focused Stage A, 18/18
-readiness-gate, 360/360 repository, and 46/46 corpus with
-`live_actions_possible=false`; direct first-creation stress passed 10/10
-sequential plus 5/5 parallel repetitions and the integrated exact-once race
-passed 5/5 parallel repetitions. An exact candidate commit, regenerated
-manifest, CI result, release, owner acceptance, and operational effectiveness
-remain unrecorded. This is not exit from Stage A as a whole.
+derived `BLOCKED`. Exact implementation Commit `8818d5d2` is on `main`. Its
+recorded local observations are 43/43 focused Stage A in 8.248 seconds, 18/18
+readiness-gate, warning-fatal 360/360 repository in 48.995 seconds, 57/57 focused
+Phase 3, and 46/46 corpus with `live_actions_possible=false`; the integrated
+exact-once race passed 5/5 parallel repetitions. The manifest
+verified 307/307, and exact-SHA CI plus Dependency Graph succeeded. A version
+tag, GitHub Release, deployment, exact-SHA Pages run, owner acceptance, and
+operational effectiveness remain absent. This is not exit from Stage A as a
+whole.
 
 **Next safe gate:** expand the local campaign beyond the selected process-kill,
 audit-failure, corruption, and concurrency cases to cover power loss,

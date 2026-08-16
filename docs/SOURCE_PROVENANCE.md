@@ -26,22 +26,30 @@ project-authored code, contracts, policy, tests, documentation, demos, and
 synthetic corpus fixtures published in exact Commit `423685d`; they are not
 derived from an external operational dataset or vendor connector. The Phase
 3.1 exact Commit `bb6b8f28` adds only digest-bound repository synthetic fixtures
-and has no historical/live source adapter. The provisional, unreleased Stage A
-`0.4.0-alpha.2` durability increment adds code, tests, local synthetic target
-state, adapter-reported receipts, sanitized result projections, and temporary
-local SQLite databases only; no external source, historical payload, connector,
-credential, or target was introduced. The separate adapter database and its
-same-project observer are project-authored test mechanisms, not target-side
-custody, independent verification, or independent source provenance.
+and has no historical/live source adapter. The unreleased Stage A
+`0.4.0-alpha.2` durability implementation is published on `main` at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
+It adds code, tests, local synthetic target state, adapter-reported receipts,
+sanitized result projections, and temporary local SQLite databases only; no
+external source, historical payload, connector, credential, or target was
+introduced. The separate adapter database and its same-project observer are
+project-authored test mechanisms, not target-side custody, independent
+verification, or independent source provenance.
 
-At the 2026-08-16 source-freeze checkout, local project-controlled verification
-observed 43/43 focused Stage A tests, 18/18 production-readiness-gate tests,
-360/360 repository tests, and a 46/46 deterministic corpus with
-`live_actions_possible=false`. These observations describe the tested checkout;
-they are not external source evidence, historical/live evaluation, an exact
-candidate commit, regenerated integrity manifest, CI result, release, owner
-acceptance, or operational effectiveness. The production gate remains
-`BLOCKED`.
+Against that exact implementation commit, local project-controlled verification
+passed 43/43 focused Stage A tests in 8.248 seconds, 18/18
+production-readiness-gate tests, the warning-fatal 360/360 repository suite in
+48.995 seconds, 57/57 focused Phase 3 tests, and a 46/46 deterministic corpus
+with `live_actions_possible=false`. Its 307-entry manifest verified 307/307;
+exact-SHA [CI run 31953570779](https://github.com/redxking/ai-decision-firewall/actions/runs/31953570779)
+succeeded on Python 3.11 and 3.12, and
+[Dependency Graph run 31953572482](https://github.com/redxking/ai-decision-firewall/actions/runs/31953572482)
+succeeded. These observations are not external source evidence, historical/live
+evaluation, owner acceptance, or operational effectiveness. No tag or GitHub
+Release was created, no deployment occurred, and no exact-SHA Pages run was
+observed. The
+production gate remains `BLOCKED`. See
+[`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 Phase 3 evidence attestations are runtime synthetic HMAC controls, not source
 provenance for this repository and not an independent source trust anchor. No

@@ -13,9 +13,11 @@ logistic baseline, calibration challenger, aggregate metrics, unconditional
 `NOT_AUTHORIZED` promotion state, and the separate future Gate B authority
 boundary. The Phase 3.1 package has no historical/live adapter or action path.
 
-Diagram 10 is the unreleased `0.4.0-alpha.2` Stage A
-production-development view for a durable offline synthetic adapter receipt and
-sanitized terminal-result lookup. It deliberately shows three distinct commit
+Diagram 10 is the unreleased `0.4.0-alpha.2` Stage A production-development view
+published in exact implementation Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4)
+on `main`. It shows a durable offline synthetic adapter receipt and sanitized
+terminal-result lookup with three distinct commit
 boundaries: T1 control reservation, T2 adapter-state mutation plus immutable
 receipt, and T3 control terminal result plus outbox. JSONL audit and read-only
 observation are additional separate boundaries; no box spans both SQLite
@@ -35,11 +37,17 @@ simplified transaction-flow view; ADR-015 and the Stage A runbook are
 authoritative for those guardrail details.
 
 Missing, ambiguous, partial, mismatched, or corrupt evidence never authorizes
-an automatic retry; unresolved cases remain quarantined or halt recovery. The
-mutable candidate's 16 receipt/recovery plus 27 durable-ledger tests were
-observed at 43/43 passing on 2026-08-16. That is pre-commit local evidence only:
-the exact candidate commit, manifest, complete regression, CI, and release
-record remain pending. Cooperative locking and correlation do not establish
+an automatic retry; unresolved cases remain quarantined or halt recovery.
+Against exact Commit `8818d5d2`, the 16 receipt/recovery plus 27 durable-ledger
+tests passed 43/43 in 8.248 seconds; the readiness gate passed 18/18; the
+warning-fatal full suite passed 360/360 in 48.995 seconds; the focused Phase 3
+suite passed 57/57; and the corpus passed 46/46 with
+`live_actions_possible=false`. The 307-entry manifest verified 307/307, and
+exact-SHA CI run 31953570779 plus Dependency Graph run 31953572482 succeeded.
+No tag or GitHub Release was created, no deployment occurred, and no exact-SHA
+Pages run was observed. See
+[`ADF-STAGE-A-ER-002`](../production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
+Cooperative locking and correlation do not establish
 cross-store atomicity, protection from a noncooperating writer, distributed
 fencing, independent custody, failover, HA/DR, a live adapter, or production
 authority.
@@ -63,7 +71,7 @@ The three metric charts remain historical Phase 1 `v0.1.0` synthetic-simulation 
 | `07_scenario_outcomes.*` | Historical Phase 1 v0.1 dispositions by generated scenario | Synthetic generator family; not historical or operational outcomes |
 | [`08_phase3_operational_mvp.dot`](08_phase3_operational_mvp.dot), [`PNG`](08_phase3_operational_mvp.png), [`SVG`](08_phase3_operational_mvp.svg) | Published Phase 3 credential-to-decision-to-synthetic-effect architecture, including no-action branches and functionally separate same-project readback | Exact Commit `423685d`; simulation-only CE-1; no live connectors |
 | [`09_phase31_model_evaluation.dot`](09_phase31_model_evaluation.dot), [`PNG`](09_phase31_model_evaluation.png), [`SVG`](09_phase31_model_evaluation.svg) | Phase 3.1 synthetic source binding, temporal split, baseline/challenger comparison, metrics, and no-promotion boundary | Published exact Commit `bb6b8f28`; synthetic mechanism only; no historical/live adapter or action path |
-| [`10_stage_a_durable_adapter_reconciliation.dot`](10_stage_a_durable_adapter_reconciliation.dot), [`PNG`](10_stage_a_durable_adapter_reconciliation.png), [`SVG`](10_stage_a_durable_adapter_reconciliation.svg) | Unreleased `0.4.0-alpha.2` Stage A T1/T2/T3 transaction flow, same-store observation, sanitized lookup, and fail-closed recovery branches; ADR-015/runbook carry the detailed startup, correlation, chronology, and recovery-tail controls | Pre-commit production-development view; no cross-store atomicity, independently custodied verification, hostile/distributed fencing, HA/DR, automatic retry, live adapter, or production authority |
+| [`10_stage_a_durable_adapter_reconciliation.dot`](10_stage_a_durable_adapter_reconciliation.dot), [`PNG`](10_stage_a_durable_adapter_reconciliation.png), [`SVG`](10_stage_a_durable_adapter_reconciliation.svg) | Unreleased `0.4.0-alpha.2` Stage A T1/T2/T3 transaction flow, same-store observation, sanitized lookup, and fail-closed recovery branches; ADR-015/runbook carry the detailed startup, correlation, chronology, and recovery-tail controls | Published exact Commit `8818d5d2` production-development view; no cross-store atomicity, independently custodied verification, hostile/distributed fencing, HA/DR, automatic retry, live adapter, or production authority |
 
 ## Reproducible rendering
 

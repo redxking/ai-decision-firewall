@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased — provisional `0.4.0-alpha.2` Stage A production-development candidate
+## Unreleased — `0.4.0-alpha.2` Stage A production-development candidate
+
+Exact implementation Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4)
+was published to `main` on 2026-08-16. The version remains unreleased: no tag or
+GitHub Release was created, no deployment occurred, and no exact-SHA Pages run
+was observed. Exact evidence and limitations are recorded in
+[`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 - Reproduced a critical restart replay on the published Phase 3.1 baseline:
   two newly constructed firewall instances sharing the same valid audit path
@@ -43,13 +50,17 @@
 - Added restart, conflict, multiprocess initialization/exact-once,
   storage-lock, schema/path/sidecar, durable-outbox, cross-store substitution,
   response-loss, recovery-prefix, audit-failure, chronology, and post-effect
-  outcome-write regressions. At the 2026-08-16 local source freeze, 43/43
-  focused Stage A tests, 18/18 production-gate tests, the complete 360/360
-  repository suite, and the deterministic 46/46 corpus passed; the corpus
-  reported `live_actions_possible=false`. Direct first-creation stress passed
-  10/10 sequential and 5/5 parallel repetitions, and the integrated exact-once
-  race passed 5/5 parallel repetitions. These are project-controlled local
-  mechanism observations, not an exact-commit or CI result, independent
+  outcome-write regressions. At exact implementation Commit `8818d5d2`, local
+  verification passed 43/43 focused Stage A tests in 8.248 seconds, 18/18
+  production-gate tests, the warning-fatal 360/360 repository suite in 48.995
+  seconds, 57/57 focused Phase 3 tests, and the deterministic 46/46 corpus; the
+  corpus reported `live_actions_possible=false`. The integrated exact-once race
+  passed 5/5 parallel repetitions. The 307-entry implementation manifest
+  verified 307/307. Exact-SHA CI run
+  [31953570779](https://github.com/redxking/ai-decision-firewall/actions/runs/31953570779)
+  succeeded on Python 3.11 and 3.12, and Dependency Graph run
+  [31953572482](https://github.com/redxking/ai-decision-firewall/actions/runs/31953572482)
+  succeeded. These are project-controlled mechanism observations, not independent
   verification, production authorization, or operational effectiveness.
   The boundary remains synthetic/offline and single-host, not cross-store
   atomic, distributed, highly available, process isolated, or operationally
@@ -57,9 +68,12 @@
 - Added a strict 18-domain production-readiness matrix and validator whose
   derived production gate remains `BLOCKED`, plus threat, failure/recovery,
   operations, architecture, and evidence-boundary records.
+- Added successor evidence record `ADF-STAGE-A-ER-002` in a separate carrier
+  with a regenerated 308-entry manifest that verified 308/308. The carrier SHA
+  is necessarily reported after creation rather than self-claimed here.
 - No historical or live data, connector, operational credential, external
-  target, model promotion, deployment, regenerated candidate manifest, exact
-  candidate commit, CI, push, merge, tag, or release is included.
+  target, or model promotion was introduced. No deployment, tag, or GitHub
+  Release occurred; no exact-SHA Pages run was observed.
 
 ## `0.3.1-alpha.1` — published Phase 3.1 governed model-evaluation baseline
 
