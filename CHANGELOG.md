@@ -27,6 +27,15 @@
   Desktop evidence remains limited to verified `dm-error`. Silent dropped
   writes, lost flushes, physical power loss, and intended-filesystem behavior
   remain open.
+- Added a manual-only, exact-SHA GitHub-hosted Linux carrier for the flakey
+  campaign. It uses read-only repository authority, validates the manifest and
+  ordinary suite before privilege, requires the kernel target, publishes no
+  image, and retains bounded diagnostic evidence. A committed carrier alone is
+  not a passing storage-fault result.
+- Made the four-worker bounded-load campaign's durable-lock budget explicit at
+  20 seconds, below its existing 30-second per-operation deadline, after an
+  exact-SHA Python 3.11 run exposed scheduler-dependent starvation at the
+  earlier 5-second test setting.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 

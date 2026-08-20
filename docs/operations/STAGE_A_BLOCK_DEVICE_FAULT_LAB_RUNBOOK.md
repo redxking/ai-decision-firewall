@@ -64,6 +64,21 @@ Repeat with `--fault-mode dm-flakey-error-writes` only on a kernel that reports
 the required target. Each invocation is a separately identified five-boundary
 campaign.
 
+For an ephemeral GitHub-hosted Linux run, merge the reviewed workflow first,
+record the exact `main` commit, and dispatch only that commit:
+
+```bash
+gh workflow run stage-a-storage-lab.yml --ref main \
+  -f candidate_sha=<exact-40-character-main-sha> \
+  -f authorization=I_ACKNOWLEDGE_PRIVILEGED_EPHEMERAL_LAB
+```
+
+The workflow checks out the supplied SHA, verifies it exactly, validates the
+manifest and ordinary suite, requires the host `flakey` target, builds without
+publishing, and runs only `dm-flakey-error-writes`. Its least-privilege token is
+read-only. The privileged container still has control of the ephemeral runner
+kernel, so this workflow is manual and never runs for pull requests or pushes.
+
 The runner binds a unique local alias to the inspected image ID, builds a
 temporary lab-only derivative with exact `dmsetup`, ext4, and util-linux package
 versions, disconnects the runtime network, and executes five cases. It does
@@ -104,6 +119,8 @@ Capture:
   state, audit-chain result, `e2fsck` return code, raw pre/post-repair image
   hashes, and the exact application paths whose digests changed;
 - whether cleanup completed and whether any interruption occurred.
+- for GitHub-hosted execution, the run URL, attempt, exact workflow commit, and
+  downloaded 30-day evidence-artifact digest before local preservation.
 
 The repository-controlled 2026-08-20 development run used Docker Desktop
 4.87.0, LinuxKit kernel 7.0.12 on arm64, and the locally inspected Stage A image
@@ -161,4 +178,6 @@ filesystem metadata; it does not authenticate application evidence. Root in the
 privileged lab is not the production runtime identity and is accepted only for
 loop/device-mapper control in this isolated layer. Pre-repair file digests are
 observations through the restored filesystem and are not substitutes for the
-raw block-image hash or an independently custodied snapshot.
+raw block-image hash or an independently custodied snapshot. A GitHub-hosted
+log or artifact is platform-retained repository-controlled evidence, not
+independent custody, trusted-builder provenance, or intended-environment proof.

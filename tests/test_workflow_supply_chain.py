@@ -186,6 +186,28 @@ class WorkflowSupplyChainTests(unittest.TestCase):
         ):
             self.assertNotIn(publishing_command, workflow)
 
+    def test_storage_fault_lab_is_manual_exact_sha_and_fails_closed(self) -> None:
+        workflow = (WORKFLOW_ROOT / "stage-a-storage-lab.yml").read_text(
+            encoding="utf-8"
+        )
+        trigger = workflow.split("permissions:", 1)[0]
+        self.assertIn("workflow_dispatch:", trigger)
+        self.assertNotIn("pull_request:", trigger)
+        self.assertNotIn("push:", trigger)
+        self.assertIn("candidate_sha:", workflow)
+        self.assertIn("I_ACKNOWLEDGE_PRIVILEGED_EPHEMERAL_LAB", workflow)
+        self.assertIn('test "$(git rev-parse HEAD)" = "${ADF_CANDIDATE_SHA}"', workflow)
+        self.assertIn("python scripts/validate_manifest.py", workflow)
+        self.assertIn("sudo modprobe dm_flakey", workflow)
+        self.assertIn("sudo dmsetup targets", workflow)
+        self.assertIn("grep -Eq '^flakey[[:space:]]'", workflow)
+        self.assertIn("--fault-mode dm-flakey-error-writes", workflow)
+        self.assertIn("--allow-privileged-lab", workflow)
+        self.assertIn("retention-days: 30", workflow)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertNotIn("secrets.", workflow)
+        self.assertNotIn("docker push", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()
