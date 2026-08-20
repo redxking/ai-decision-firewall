@@ -11,6 +11,9 @@ was observed. Exact evidence and limitations are recorded in
 
 - Pinned every external GitHub Action in CI and Pages to a full commit SHA and
   added a regression that rejects tags, branches, and short SHAs.
+- Advanced the official CI and Pages actions to immutable Node.js 24 releases
+  after GitHub reported that the earlier Node.js 20 actions were deprecated and
+  being force-run on Node.js 24.
 - Added exact-version, SHA-256 hash-locked runtime and documentation dependency
   graphs, a reproducible CycloneDX 1.6 runtime SBOM, closed lock/SBOM
   validation, and `--require-hashes` CI installation. A clean temporary runtime
