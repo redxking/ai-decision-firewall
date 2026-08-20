@@ -2,6 +2,7 @@
 !Dockerfile
 !requirements.lock
 !run_service.py
+!run_preview.py
 !src/
 !src/**
 !config/

@@ -148,6 +148,13 @@ class WorkflowSupplyChainTests(unittest.TestCase):
         self.assertIn("docker image inspect", workflow)
         self.assertIn("docker run --rm", workflow)
         self.assertIn("Validate packaged policy and schema", workflow)
+        self.assertIn("Run the networkless Stage A developer preview", workflow)
+        self.assertIn("/opt/adf/run_preview.py demo --root /preview", workflow)
+        self.assertIn(
+            "--tmpfs /preview:rw,noexec,nosuid,nodev,size=32m,"
+            "uid=10001,gid=10001,mode=0700",
+            workflow,
+        )
         self.assertIn("Run bounded storage-fault campaigns in the image", workflow)
         self.assertIn("tests.test_stage_a_sigkill_campaign", workflow)
         self.assertIn("tests.test_stage_a_storage_failure_campaign", workflow)

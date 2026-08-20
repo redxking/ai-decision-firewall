@@ -97,6 +97,44 @@ resistance, trusted time, continuous backup, or RPO/RTO evidence. See the
 
 ## Quick start
 
+### Playable Stage A developer preview
+
+After installing the locked dependencies below, run the durable synthetic
+preview with one command:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python3 run_preview.py demo
+```
+
+The command creates owner-private state under
+`outputs/local/stage-a-preview`, runs a workstation case and a Tier 0 domain
+controller case through the real Stage A service boundary, prints only the
+sanitized result contract, and verifies the audit chain. It opens no listener,
+uses no live connector or credential, and cannot affect an external target.
+
+Inspect, continue, or explicitly reset the same preview state:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python3 run_preview.py status
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python3 run_preview.py scenario workstation
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python3 run_preview.py generate workstation \
+  --output /tmp/adf-preview-request.json
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python3 run_preview.py submit \
+  --file /tmp/adf-preview-request.json
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python3 run_preview.py reset \
+  --confirm-synthetic-preview
+```
+
+Docker users can run the same demo in a networkless, read-only, capability-free
+container. Its preview state is intentionally ephemeral:
+
+```bash
+./scripts/run_preview_container.sh
+```
+
+See the [developer preview guide](docs/DEVELOPER_PREVIEW.md) for expected
+outcomes, persistence boundaries, and tester feedback requests.
+
 Requirements: Python 3.11 or later, NumPy, and jsonschema. The commands below
 use a Linux/macOS shell; the Stage A durable path requires POSIX cooperative
 locking.

@@ -9,6 +9,15 @@ GitHub Release was created, no deployment occurred, and no exact-SHA Pages run
 was observed. Exact evidence and limitations are recorded in
 [`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
+- Added a one-command, networkless Stage A developer preview that creates
+  owner-private disposable credentials and durable local state, runs the real
+  service boundary against workstation and Tier 0 domain-controller synthetic
+  scenarios, returns only sanitized terminal results, and verifies audit-chain
+  integrity. It supports restart/status, generated signed request inspection,
+  fail-closed tamper experiments, and an explicitly gated reset that refuses
+  unmarked or unexpectedly shaped directories. A restricted ephemeral
+  container wrapper and CI smoke path exercise the same runtime without adding
+  a listener, live connector, external target, or production-readiness claim.
 - Pinned every external GitHub Action in CI and Pages to a full commit SHA and
   added a regression that rejects tags, branches, and short SHAs.
 - Advanced the official CI and Pages actions to immutable Node.js 24 releases
