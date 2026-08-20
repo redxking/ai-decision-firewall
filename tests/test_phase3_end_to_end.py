@@ -11,6 +11,7 @@ from adf_poc.phase3.scenarios import (
     anonymous_principal,
     request_json,
 )
+from adf_poc.utils import canonical_json
 from run_phase3 import run_demonstration
 
 from tests.phase3_support import (
@@ -88,6 +89,49 @@ class Phase3AuditAndMetricsTests(unittest.TestCase):
         self.assertEqual(metrics["verification_failures"], 0)
         self.assertEqual(metrics["decision_latency_ms"]["count"], 1)
         self.assertGreaterEqual(metrics["decision_latency_ms"]["mean"], 0.0)
+
+    def test_file_audit_with_in_memory_control_appends_across_reopen(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            audit_path = Path(directory).resolve() / "phase3-audit-only.jsonl"
+            first = new_harness(audit_path=audit_path)
+            first.firewall.process_json(
+                request_json(
+                    domain_controller_case(first, request_id="P3-AUDIT-ONLY-ONE")
+                ),
+                credential=first.credential,
+            )
+            first.firewall.process_json(
+                request_json(workstation_case(first, request_id="P3-AUDIT-ONLY-TWO")),
+                credential=first.credential,
+            )
+            prefix = audit_path.read_bytes()
+            prefix_rows = AuditLogger(audit_path).read_all()
+            self.assertEqual(
+                prefix,
+                b"".join(
+                    (canonical_json(row) + "\n").encode("utf-8") for row in prefix_rows
+                ),
+            )
+
+            reopened = new_harness(audit_path=audit_path)
+            self.assertEqual(audit_path.read_bytes(), prefix)
+            appended = reopened.firewall.process_json(
+                request_json(
+                    domain_controller_case(reopened, request_id="P3-AUDIT-ONLY-THREE")
+                ),
+                credential=reopened.credential,
+            )
+            expected_suffix = b"".join(
+                (canonical_json(row) + "\n").encode("utf-8")
+                for row in appended.audit_records
+            )
+            self.assertEqual(audit_path.read_bytes(), prefix + expected_suffix)
+            self.assertEqual(
+                AuditLogger(audit_path).read_all(),
+                [*prefix_rows, *appended.audit_records],
+            )
+            valid, errors = AuditLogger.verify(audit_path)
+            self.assertTrue(valid, errors)
 
     def test_metrics_reconcile_one_of_each_decision_outcome(self) -> None:
         escalate_harness = new_harness()

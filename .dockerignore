@@ -1,0 +1,14 @@
+*
+!Dockerfile
+!requirements.lock
+!run_service.py
+!src/
+!src/**
+!config/
+!config/phase3_policy.json
+!artifacts/
+!artifacts/supply-chain/
+!artifacts/supply-chain/runtime.cdx.json
+src/**/__pycache__/
+src/**/*.py[cod]
+src/**/.DS_Store

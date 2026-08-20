@@ -2,14 +2,18 @@ from __future__ import annotations
 
 from contextlib import closing
 from datetime import datetime
+import fcntl
 import json
 import multiprocessing
 import os
 import queue
+import shutil
 import sqlite3
+import stat
 import tempfile
 import unittest
 from pathlib import Path
+from time import monotonic
 from unittest.mock import patch
 
 from adf_poc.audit import AuditLogger
@@ -51,18 +55,14 @@ def _crash_at_adapter_boundary(
 
     if boundary == "before_adapter":
 
-        def crash_before(
-            self: SQLiteSyntheticAdapterStore, **values: object
-        ) -> object:
+        def crash_before(self: SQLiteSyntheticAdapterStore, **values: object) -> object:
             os._exit(71)
 
         replacement = crash_before
         expected_exit = 71
     elif boundary == "after_adapter_commit":
 
-        def crash_after(
-            self: SQLiteSyntheticAdapterStore, **values: object
-        ) -> object:
+        def crash_after(self: SQLiteSyntheticAdapterStore, **values: object) -> object:
             original_execute_once(self, **values)
             os._exit(72)
 
@@ -72,10 +72,19 @@ def _crash_at_adapter_boundary(
         os._exit(79)
 
     with patch.object(SQLiteSyntheticAdapterStore, "execute_once", replacement):
-        harness.firewall.process_json(
-            raw_request, credential=harness.soc_credential
-        )
+        harness.firewall.process_json(raw_request, credential=harness.soc_credential)
     os._exit(expected_exit + 10)
+
+
+def _hold_audit_file_lock(audit_path: str, ready: object, release: object) -> None:
+    descriptor = os.open(audit_path, os.O_RDWR | os.O_APPEND)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        ready.set()
+        release.wait(timeout=15)
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
 
 
 def _concurrent_request_worker(
@@ -181,9 +190,7 @@ def _crash_after_closed_audit_before_terminal_commit(
         os._exit(84)
 
     with patch.object(SQLiteControlLedger, "complete_request", crash_before_t3):
-        harness.firewall.process_json(
-            raw_request, credential=harness.soc_credential
-        )
+        harness.firewall.process_json(raw_request, credential=harness.soc_credential)
     os._exit(104)
 
 
@@ -233,9 +240,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 "RECOVERY_FINALIZED",
             ],
         )
-        recovery_ids = {
-            row["payload"]["recovery_id"] for row in recovery
-        }
+        recovery_ids = {row["payload"]["recovery_id"] for row in recovery}
         self.assertEqual(len(recovery_ids), 1)
         self.assertTrue(
             all(
@@ -281,6 +286,463 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             71 if boundary == "before_adapter" else 72,
         )
 
+    def _completed_case(self, root: Path, *, request_id: str) -> tuple[object, str]:
+        harness = new_harness(
+            audit_path=root / "audit.jsonl",
+            control_ledger_path=root / "control.sqlite3",
+            synthetic_adapter_path=root / "adapter.sqlite3",
+        )
+        raw = request_json(workstation_case(harness, request_id=request_id))
+        result = harness.firewall.process_json(raw, credential=harness.soc_credential)
+        self.assertEqual(result.decision.outcome, "ALLOW")
+        return harness, raw
+
+    def test_completed_durable_state_requires_existing_nonempty_audit_on_restart(
+        self,
+    ) -> None:
+        for replacement in ("missing", "empty"):
+            with (
+                self.subTest(replacement=replacement),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory).resolve()
+                self._completed_case(
+                    root, request_id=f"P3-STAGE-A-AUDIT-{replacement.upper()}"
+                )
+                audit_path = root / "audit.jsonl"
+                control_path = root / "control.sqlite3"
+                adapter_path = root / "adapter.sqlite3"
+                audit_path.unlink()
+                if replacement == "empty":
+                    audit_path.touch(mode=0o600)
+                    audit_path.chmod(0o600)
+                before = {
+                    control_path: control_path.read_bytes(),
+                    adapter_path: adapter_path.read_bytes(),
+                }
+
+                with self.assertRaises(ControlLedgerError) as raised:
+                    new_harness(
+                        audit_path=audit_path,
+                        control_ledger_path=control_path,
+                        synthetic_adapter_path=adapter_path,
+                    )
+                self.assertEqual(
+                    raised.exception.reason_code, "AUDIT_CONTINUITY_REQUIRED"
+                )
+                self.assertEqual({path: path.read_bytes() for path in before}, before)
+                self.assertEqual(audit_path.exists(), replacement == "empty")
+                if audit_path.exists():
+                    self.assertEqual(audit_path.read_bytes(), b"")
+
+    def test_truncated_hash_valid_audit_prefix_blocks_restart_and_new_intake(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            self._completed_case(root, request_id="P3-STAGE-A-AUDIT-PREFIX")
+            audit_path = root / "audit.jsonl"
+            rows = audit_path.read_bytes().splitlines(keepends=True)
+            self.assertGreater(len(rows), 1)
+            audit_path.write_bytes(b"".join(rows[:-1]))
+            valid, errors = validate_phase3_audit_chain(
+                AuditLogger(audit_path).read_all()
+            )
+            self.assertTrue(valid, errors)
+            truncated = audit_path.read_bytes()
+
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    audit_path=audit_path,
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+            self.assertEqual(raised.exception.reason_code, "AUDIT_CONTINUITY_REQUIRED")
+            self.assertEqual(audit_path.read_bytes(), truncated)
+
+    def test_nonterminal_control_without_matching_audit_suffix_blocks_restart(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness = new_harness(
+                audit_path=root / "audit.jsonl",
+                control_ledger_path=root / "control.sqlite3",
+                synthetic_adapter_path=root / "adapter.sqlite3",
+            )
+            harness.firewall.process_json("{}", credential=harness.soc_credential)
+            audit_path = root / "audit.jsonl"
+            closed_prefix = audit_path.read_bytes()
+            now = harness.clock()
+            raw = request_json(
+                workstation_case(
+                    harness, request_id="P3-STAGE-A-MISSING-NONTERMINAL-AUDIT"
+                )
+            )
+            self._run_crash(
+                root,
+                raw_request=raw,
+                now=now,
+                boundary="after_adapter_commit",
+            )
+            audit_path.write_bytes(closed_prefix)
+            control_path = root / "control.sqlite3"
+            adapter_path = root / "adapter.sqlite3"
+            before = {
+                path: path.read_bytes()
+                for path in (audit_path, control_path, adapter_path)
+            }
+
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    now=now,
+                    audit_path=audit_path,
+                    control_ledger_path=control_path,
+                    synthetic_adapter_path=adapter_path,
+                )
+            self.assertEqual(raised.exception.reason_code, "AUDIT_CONTINUITY_REQUIRED")
+            self.assertEqual({path: path.read_bytes() for path in before}, before)
+
+    def test_post_construction_audit_delete_or_regular_replacement_fails_before_effect(
+        self,
+    ) -> None:
+        for replacement in ("missing", "empty"):
+            with (
+                self.subTest(replacement=replacement),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory).resolve()
+                harness, _raw = self._completed_case(
+                    root,
+                    request_id=f"P3-STAGE-A-AUDIT-RUNTIME-{replacement.upper()}",
+                )
+                audit_path = root / "audit.jsonl"
+                adapter = harness.firewall._adapter_store
+                assert adapter is not None
+                before_receipts = adapter.receipt_count()
+                before_state = adapter.observe("WORKSTATION_042")
+                audit_path.unlink()
+                if replacement == "empty":
+                    audit_path.touch(mode=0o600)
+                    audit_path.chmod(0o600)
+
+                raw = request_json(
+                    workstation_case(
+                        harness,
+                        request_id=f"P3-STAGE-A-AUDIT-NEXT-{replacement.upper()}",
+                    )
+                )
+                with self.assertRaises(RuntimeError):
+                    harness.firewall.process_json(
+                        raw, credential=harness.soc_credential
+                    )
+                self.assertEqual(adapter.receipt_count(), before_receipts)
+                self.assertEqual(adapter.observe("WORKSTATION_042"), before_state)
+                self.assertEqual(audit_path.exists(), replacement == "empty")
+
+    def test_post_construction_main_store_replacement_fails_before_audit_or_effect(
+        self,
+    ) -> None:
+        cases = (
+            (
+                "control.sqlite3",
+                ControlLedgerError,
+                "CONTROL_LEDGER_IDENTITY_CHANGED",
+            ),
+            (
+                "adapter.sqlite3",
+                SyntheticAdapterError,
+                "SYNTHETIC_ADAPTER_IDENTITY_CHANGED",
+            ),
+        )
+        for name, error_type, reason_code in cases:
+            with self.subTest(store=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                harness = new_harness(
+                    audit_path=root / "audit.jsonl",
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+                audit_path = root / "audit.jsonl"
+                audit_before = audit_path.read_bytes()
+                target = root / name
+                replacement = root / f"replacement-{name}"
+                shutil.copyfile(target, replacement)
+                replacement.chmod(0o600)
+                os.replace(replacement, target)
+                target_before = target.read_bytes()
+                raw = request_json(
+                    workstation_case(
+                        harness,
+                        request_id=f"P3-STAGE-A-RUNTIME-{name.upper()}",
+                    )
+                )
+
+                with self.assertRaises(error_type) as raised:
+                    harness.firewall.process_json(
+                        raw, credential=harness.soc_credential
+                    )
+                self.assertEqual(raised.exception.reason_code, reason_code)
+                self.assertEqual(audit_path.read_bytes(), audit_before)
+                self.assertEqual(target.read_bytes(), target_before)
+
+    def test_hash_valid_audit_rejects_same_ledger_historical_control_rollback(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            audit_path = root / "audit.jsonl"
+            control_path = root / "control.sqlite3"
+            adapter_path = root / "adapter.sqlite3"
+            harness = new_harness(
+                audit_path=audit_path,
+                control_ledger_path=control_path,
+                synthetic_adapter_path=adapter_path,
+            )
+            empty_backup = root / "empty-control.sqlite3"
+            with (
+                closing(sqlite3.connect(control_path)) as source,
+                closing(sqlite3.connect(empty_backup)) as destination,
+            ):
+                source.backup(destination)
+            empty_backup.chmod(0o600)
+
+            raw = request_json(
+                domain_controller_case(
+                    harness,
+                    request_id="P3-STAGE-A-SAME-LEDGER-ROLLBACK",
+                )
+            )
+            result = harness.firewall.process_json(
+                raw, credential=harness.soc_credential
+            )
+            self.assertIn(result.decision.outcome, {"DENY", "ESCALATE"})
+            audit_before = audit_path.read_bytes()
+            self.assertTrue(audit_before)
+
+            os.replace(empty_backup, control_path)
+            for suffix in ("-wal", "-shm", "-journal"):
+                Path(f"{control_path}{suffix}").unlink(missing_ok=True)
+            control_before = control_path.read_bytes()
+            adapter_before = adapter_path.read_bytes()
+
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    audit_path=audit_path,
+                    control_ledger_path=control_path,
+                    synthetic_adapter_path=adapter_path,
+                )
+            self.assertEqual(raised.exception.reason_code, "AUDIT_CONTINUITY_REQUIRED")
+            self.assertEqual(audit_path.read_bytes(), audit_before)
+            self.assertEqual(control_path.read_bytes(), control_before)
+            self.assertEqual(adapter_path.read_bytes(), adapter_before)
+
+    def test_nonempty_audit_cannot_initialize_missing_peer_stores(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            source = root / "source"
+            source.mkdir()
+            harness = new_harness(
+                audit_path=source / "audit.jsonl",
+                control_ledger_path=source / "control.sqlite3",
+                synthetic_adapter_path=source / "adapter.sqlite3",
+            )
+            raw = request_json(
+                domain_controller_case(
+                    harness,
+                    request_id="P3-STAGE-A-ORPHAN-AUDIT",
+                )
+            )
+            harness.firewall.process_json(raw, credential=harness.soc_credential)
+
+            orphan = root / "orphan"
+            orphan.mkdir()
+            orphan_audit = orphan / "audit.jsonl"
+            shutil.copyfile(source / "audit.jsonl", orphan_audit)
+            orphan_audit.chmod(0o600)
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    audit_path=orphan_audit,
+                    control_ledger_path=orphan / "control.sqlite3",
+                    synthetic_adapter_path=orphan / "adapter.sqlite3",
+                )
+            self.assertEqual(raised.exception.reason_code, "AUDIT_CONTINUITY_REQUIRED")
+            self.assertFalse((orphan / "control.sqlite3").exists())
+            self.assertFalse((orphan / "adapter.sqlite3").exists())
+
+    def test_lookup_never_recreates_a_missing_established_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness, raw = self._completed_case(
+                root, request_id="P3-STAGE-A-AUDIT-LOOKUP"
+            )
+            audit_path = root / "audit.jsonl"
+            audit_path.unlink()
+
+            with self.assertRaises(RuntimeError):
+                harness.firewall.lookup_request_result(
+                    raw, credential=harness.soc_credential
+                )
+            self.assertFalse(audit_path.exists())
+
+    def test_audit_file_lock_timeout_fails_closed_without_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness = new_harness(
+                audit_path=root / "audit.jsonl",
+                control_ledger_path=root / "control.sqlite3",
+                control_ledger_busy_timeout_ms=100,
+                synthetic_adapter_path=root / "adapter.sqlite3",
+                synthetic_adapter_busy_timeout_ms=100,
+            )
+            raw = request_json(
+                workstation_case(harness, request_id="P3-STAGE-A-AUDIT-LOCK")
+            )
+            paths = (
+                root / "audit.jsonl",
+                root / "control.sqlite3",
+                root / "adapter.sqlite3",
+            )
+            before = {path: path.read_bytes() for path in paths}
+            context = multiprocessing.get_context("spawn")
+            ready = context.Event()
+            release = context.Event()
+            holder = context.Process(
+                target=_hold_audit_file_lock,
+                args=(str(root / "audit.jsonl"), ready, release),
+            )
+            holder.start()
+            self.assertTrue(ready.wait(timeout=10))
+            started = monotonic()
+            try:
+                with self.assertRaises(ControlLedgerError) as raised:
+                    harness.firewall.process_json(
+                        raw, credential=harness.soc_credential
+                    )
+                elapsed = monotonic() - started
+                self.assertEqual(raised.exception.reason_code, "DURABLE_AUDIT_BUSY")
+                self.assertLess(elapsed, 1.0)
+                self.assertEqual({path: path.read_bytes() for path in paths}, before)
+                self.assertEqual(harness.firewall._adapter_store.receipt_count(), 0)
+            finally:
+                release.set()
+                holder.join(timeout=10)
+                if holder.is_alive():  # pragma: no cover - bounded cleanup
+                    holder.terminate()
+                    holder.join(timeout=5)
+            self.assertEqual(holder.exitcode, 0)
+
+    def test_locked_audit_path_swap_is_detected_before_control_or_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness = new_harness(
+                audit_path=root / "audit.jsonl",
+                control_ledger_path=root / "control.sqlite3",
+                synthetic_adapter_path=root / "adapter.sqlite3",
+            )
+            audit_path = root / "audit.jsonl"
+            detached = root / "detached-audit.jsonl"
+            raw = request_json(
+                workstation_case(harness, request_id="P3-STAGE-A-AUDIT-SWAP")
+            )
+            original_append = AuditLogger.append
+            swapped = False
+
+            def replace_before_append(
+                logger: AuditLogger,
+                record_type: str,
+                payload: dict[str, object],
+            ) -> dict[str, object]:
+                nonlocal swapped
+                if not swapped:
+                    audit_path.rename(detached)
+                    audit_path.touch(mode=0o600)
+                    audit_path.chmod(0o600)
+                    swapped = True
+                return original_append(logger, record_type, payload)
+
+            control_before = (root / "control.sqlite3").read_bytes()
+            adapter_before = (root / "adapter.sqlite3").read_bytes()
+            with patch.object(AuditLogger, "append", replace_before_append):
+                with self.assertRaises(RuntimeError):
+                    harness.firewall.process_json(
+                        raw, credential=harness.soc_credential
+                    )
+            self.assertTrue(swapped)
+            self.assertEqual(audit_path.read_bytes(), b"")
+            self.assertEqual(detached.read_bytes(), b"")
+            self.assertEqual((root / "control.sqlite3").read_bytes(), control_before)
+            self.assertEqual((root / "adapter.sqlite3").read_bytes(), adapter_before)
+            self.assertEqual(harness.firewall._adapter_store.receipt_count(), 0)
+
+    def test_brand_new_empty_durable_set_starts_with_bound_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness = new_harness(
+                audit_path=root / "audit.jsonl",
+                control_ledger_path=root / "control.sqlite3",
+                synthetic_adapter_path=root / "adapter.sqlite3",
+            )
+            audit_path = root / "audit.jsonl"
+            self.assertTrue(audit_path.is_file())
+            self.assertEqual(audit_path.read_bytes(), b"")
+            self.assertEqual(harness.firewall._control_ledger.pending_outbox(), ())
+            self.assertEqual(harness.firewall._adapter_store.receipt_count(), 0)
+
+    def test_unbound_durable_authority_cannot_hide_behind_an_empty_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            harness = new_harness(
+                audit_path=root / "audit.jsonl",
+                control_ledger_path=root / "control.sqlite3",
+                synthetic_adapter_path=root / "adapter.sqlite3",
+            )
+            harness.firewall._control_ledger.register(
+                "AUTH-UNBOUND-AUDIT",
+                verification_id="VERIFY-UNBOUND-AUDIT",
+                decision_id="DECISION-UNBOUND-AUDIT",
+            )
+            self.assertEqual((root / "audit.jsonl").read_bytes(), b"")
+
+            with self.assertRaises(ControlLedgerError) as raised:
+                new_harness(
+                    audit_path=root / "audit.jsonl",
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+            self.assertEqual(raised.exception.reason_code, "AUDIT_CONTINUITY_REQUIRED")
+
+    def test_permissive_authoritative_artifacts_are_rejected_without_repair(
+        self,
+    ) -> None:
+        names = ("audit.jsonl", "control.sqlite3", "adapter.sqlite3")
+        for name in names:
+            with self.subTest(path=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                new_harness(
+                    audit_path=root / "audit.jsonl",
+                    control_ledger_path=root / "control.sqlite3",
+                    synthetic_adapter_path=root / "adapter.sqlite3",
+                )
+                target = root / name
+                target.chmod(0o666)
+                before = {
+                    path.name: (path.read_bytes(), stat.S_IMODE(path.stat().st_mode))
+                    for path in (root / item for item in names)
+                }
+
+                with self.assertRaises(ValueError):
+                    new_harness(
+                        audit_path=root / "audit.jsonl",
+                        control_ledger_path=root / "control.sqlite3",
+                        synthetic_adapter_path=root / "adapter.sqlite3",
+                    )
+                after = {
+                    path.name: (path.read_bytes(), stat.S_IMODE(path.stat().st_mode))
+                    for path in (root / item for item in names)
+                }
+                self.assertEqual(after, before)
+
     def test_restart_lookup_is_sanitized_and_duplicate_does_no_new_work(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -292,9 +754,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             raw = request_json(
                 workstation_case(first, request_id="P3-STAGE-A-RESULT-REPLAY")
             )
-            result = first.firewall.process_json(
-                raw, credential=first.soc_credential
-            )
+            result = first.firewall.process_json(raw, credential=first.soc_credential)
             self.assertEqual(result.decision.outcome, "ALLOW")
             self.assertIsNotNone(result.verification)
             assert result.verification is not None
@@ -358,7 +818,9 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             self.assertFalse((root / "control.sqlite3").exists())
             self.assertFalse((root / "adapter.sqlite3").exists())
 
-    def test_all_artifacts_preflight_before_creation_and_reserve_sqlite_sidecars(self) -> None:
+    def test_all_artifacts_preflight_before_creation_and_reserve_sqlite_sidecars(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             invalid_adapter = root / "invalid-adapter.sqlite3"
@@ -370,6 +832,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                     "INSERT INTO metadata(key, value) VALUES('schema_version', '1')"
                 )
                 connection.commit()
+            invalid_adapter.chmod(0o600)
 
             new_parent = root / "must-not-be-created"
             with self.assertRaises(SyntheticAdapterError) as invalid:
@@ -402,10 +865,8 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             sidecar_presence_before = tuple(
                 sidecar.exists() for sidecar in control_sidecars
             )
-            directory_entries_before = {
-                child.name for child in root.iterdir()
-            }
-            with self.assertRaises(SyntheticAdapterError):
+            directory_entries_before = {child.name for child in root.iterdir()}
+            with self.assertRaises(ValueError):
                 new_harness(
                     audit_path=existing_audit,
                     control_ledger_path=existing_control,
@@ -450,7 +911,9 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             self.assertFalse(ancestor.exists())
             self.assertFalse((root / "ancestor-adapter.sqlite3").exists())
 
-    def test_independent_processes_create_one_effect_receipt_and_terminal_result(self) -> None:
+    def test_independent_processes_create_one_effect_receipt_and_terminal_result(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             seed = new_harness()
@@ -503,13 +966,9 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             results.join_thread()
 
             self.assertTrue(all(row[0] == "OK" for row in observed), observed)
-            self.assertEqual(
-                sorted(row[1] for row in observed), ["ALLOW", "DENY"]
-            )
+            self.assertEqual(sorted(row[1] for row in observed), ["ALLOW", "DENY"])
             self.assertEqual(sum(bool(row[2]) for row in observed), 1)
-            self.assertEqual(
-                sum(row[3] == "VERIFIED" for row in observed), 1
-            )
+            self.assertEqual(sum(row[3] == "VERIFIED" for row in observed), 1)
 
             reopened = new_harness(
                 now=now,
@@ -525,9 +984,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             self.assertEqual(lookup.disposition, "COMPLETED_VERIFIED")
             self.assertEqual(reopened.firewall._adapter_store.receipt_count(), 1)
             self.assertEqual(
-                reopened.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                reopened.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "isolated",
             )
 
@@ -584,24 +1041,19 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 synthetic_adapter_path=root / "adapter.sqlite3",
             )
             raw = request_json(
-                workstation_case(
-                    harness, request_id="P3-STAGE-A-AUDIT-REPLACEMENT"
-                )
+                workstation_case(harness, request_id="P3-STAGE-A-AUDIT-REPLACEMENT")
             )
             protected = root / "protected-audit-target.bin"
             protected.write_bytes(b"must remain unchanged")
+            audit_path.unlink()
             audit_path.symlink_to(protected)
 
             with self.assertRaises(RuntimeError):
-                harness.firewall.process_json(
-                    raw, credential=harness.soc_credential
-                )
+                harness.firewall.process_json(raw, credential=harness.soc_credential)
             self.assertEqual(protected.read_bytes(), b"must remain unchanged")
             self.assertEqual(harness.firewall._adapter_store.receipt_count(), 0)
             self.assertEqual(
-                harness.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                harness.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "connected",
             )
 
@@ -640,7 +1092,9 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 harness.firewall._adapter_store.receipt_count(), receipt_count
             )
 
-    def test_process_kill_before_adapter_becomes_terminal_unknown_without_retry(self) -> None:
+    def test_process_kill_before_adapter_becomes_terminal_unknown_without_retry(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             seed = new_harness()
@@ -662,9 +1116,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 synthetic_adapter_path=root / "adapter.sqlite3",
             )
             self.assertEqual(
-                reopened.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                reopened.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "connected",
             )
             self.assertEqual(reopened.firewall._adapter_store.receipt_count(), 0)
@@ -701,7 +1153,9 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 len(reopened.firewall._control_ledger.pending_outbox()), outbox_count
             )
 
-    def test_process_kill_after_applied_receipt_recovers_unknown_without_reinvoke(self) -> None:
+    def test_process_kill_after_applied_receipt_recovers_unknown_without_reinvoke(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             seed = new_harness()
@@ -724,9 +1178,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             )
             self.assertEqual(reopened.firewall._adapter_store.receipt_count(), 1)
             self.assertEqual(
-                reopened.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                reopened.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "isolated",
             )
             recovered = reopened.firewall.reconcile_request(
@@ -756,7 +1208,9 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 original_lifecycle_valid=False,
             )
 
-    def test_process_kill_after_affirmative_no_effect_receipt_recovers_failed(self) -> None:
+    def test_process_kill_after_affirmative_no_effect_receipt_recovers_failed(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             faults = {"WORKSTATION_042": "FAILED"}
@@ -781,9 +1235,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 synthetic_adapter_path=root / "adapter.sqlite3",
             )
             self.assertEqual(
-                reopened.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                reopened.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "connected",
             )
             recovered = reopened.firewall.reconcile_request(
@@ -814,7 +1266,10 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             ("RECOVERY_FINALIZED", 83),
         )
         for record_type, exit_code in boundaries:
-            with self.subTest(record_type=record_type), tempfile.TemporaryDirectory() as directory:
+            with (
+                self.subTest(record_type=record_type),
+                tempfile.TemporaryDirectory() as directory,
+            ):
                 root = Path(directory).resolve()
                 seed = new_harness()
                 now = seed.clock()
@@ -874,10 +1329,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 rows = AuditLogger(root / "audit.jsonl").read_all()
                 for expected_type, _expected_code in boundaries:
                     self.assertEqual(
-                        sum(
-                            row["record_type"] == expected_type
-                            for row in rows
-                        ),
+                        sum(row["record_type"] == expected_type for row in rows),
                         1,
                     )
                 self._assert_closed_recovery_audit(
@@ -914,9 +1366,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
 
             audit_path = root / "audit.jsonl"
             original_rows = AuditLogger(audit_path).read_all()
-            lifecycle_valid, lifecycle_errors = validate_phase3_lifecycle(
-                original_rows
-            )
+            lifecycle_valid, lifecycle_errors = validate_phase3_lifecycle(original_rows)
             self.assertTrue(lifecycle_valid, lifecycle_errors)
 
             reopened = new_harness(
@@ -925,6 +1375,12 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 control_ledger_path=root / "control.sqlite3",
                 synthetic_adapter_path=root / "adapter.sqlite3",
             )
+            self.assertEqual(reopened.firewall._adapter_store.receipt_count(), 1)
+            audit_before_fence = audit_path.read_bytes()
+            with self.assertRaises(ControlLedgerError) as fenced:
+                reopened.firewall.process_json("{}", credential=reopened.soc_credential)
+            self.assertEqual(fenced.exception.reason_code, "AUDIT_CONTINUITY_REQUIRED")
+            self.assertEqual(audit_path.read_bytes(), audit_before_fence)
             self.assertEqual(reopened.firewall._adapter_store.receipt_count(), 1)
             recovered = reopened.firewall.reconcile_request(
                 raw,
@@ -945,9 +1401,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             )
             self.assertEqual(reopened.firewall._adapter_store.receipt_count(), 1)
             self.assertEqual(
-                reopened.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                reopened.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "isolated",
             )
             self._assert_closed_recovery_audit(
@@ -1020,9 +1474,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             )
             audit_before = audit_path.read_bytes()
             with self.assertRaises(ControlLedgerError) as request_blocked:
-                reopened.firewall.process_json(
-                    "{}", credential=reopened.soc_credential
-                )
+                reopened.firewall.process_json("{}", credential=reopened.soc_credential)
             self.assertEqual(
                 request_blocked.exception.reason_code,
                 "RECOVERY_AUDIT_PENDING",
@@ -1063,7 +1515,9 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             self.assertEqual(after_commit.decision.outcome, "DENY")
             self.assertNotEqual(audit_path.read_bytes(), audit_before)
 
-    def test_corrupt_receipt_halts_reconciliation_without_state_transition(self) -> None:
+    def test_corrupt_receipt_halts_reconciliation_without_state_transition(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             seed = new_harness()
@@ -1083,9 +1537,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 control_ledger_path=root / "control.sqlite3",
                 synthetic_adapter_path=root / "adapter.sqlite3",
             )
-            request_sha256 = load_decision_request_json(
-                raw, now=now
-            ).request_sha256()
+            request_sha256 = load_decision_request_json(raw, now=now).request_sha256()
             principal_id = json.loads(raw)["agent"]["id"]
             control = reopened.firewall._control_ledger
             before = control.request_snapshot(
@@ -1097,9 +1549,7 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             assert before is not None
             self.assertEqual(before["state"], "ATTEMPT_RESERVED")
             with closing(sqlite3.connect(root / "adapter.sqlite3")) as connection:
-                connection.execute(
-                    "UPDATE command_receipts SET receipt_json='{}'"
-                )
+                connection.execute("UPDATE command_receipts SET receipt_json='{}'")
                 connection.commit()
 
             with self.assertRaises(SyntheticAdapterError) as corrupt:
@@ -1108,19 +1558,19 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                     credential=reopened.soc_credential,
                     operator_asserted_quiesced=True,
                 )
-            self.assertEqual(
-                corrupt.exception.reason_code, "SYNTHETIC_ADAPTER_CORRUPT"
-            )
+            self.assertEqual(corrupt.exception.reason_code, "SYNTHETIC_ADAPTER_CORRUPT")
             after = control.request_snapshot(
                 principal_id,
                 "P3-STAGE-A-CORRUPT-RECEIPT",
                 request_sha256,
             )
             self.assertEqual(after, before)
-            self.assertIsNone(
+            with self.assertRaises(SyntheticAdapterError) as lookup_corrupt:
                 reopened.firewall.lookup_request_result(
                     raw, credential=reopened.soc_credential
                 )
+            self.assertEqual(
+                lookup_corrupt.exception.reason_code, "SYNTHETIC_ADAPTER_CORRUPT"
             )
 
     def test_fk_clean_impossible_control_history_fails_closed_on_reopen(self) -> None:
@@ -1135,18 +1585,14 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
                 synthetic_adapter_path=adapter_path,
             )
             raw = request_json(
-                workstation_case(
-                    harness, request_id="P3-STAGE-A-IMPOSSIBLE-HISTORY"
-                )
+                workstation_case(harness, request_id="P3-STAGE-A-IMPOSSIBLE-HISTORY")
             )
             completed = harness.firewall.process_json(
                 raw, credential=harness.soc_credential
             )
             self.assertEqual(completed.verification.status, "VERIFIED")
             self.assertEqual(
-                harness.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                harness.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "isolated",
             )
 
@@ -1173,13 +1619,13 @@ class StageAReceiptRecoveryTests(unittest.TestCase):
             )
             self.assertEqual(harness.firewall._adapter_store.receipt_count(), 1)
             self.assertEqual(
-                harness.firewall.observer.observe("WORKSTATION_042")[
-                    "network_state"
-                ],
+                harness.firewall.observer.observe("WORKSTATION_042")["network_state"],
                 "isolated",
             )
 
-    def test_adapter_exact_retry_ignores_new_correlation_but_changed_binding_conflicts(self) -> None:
+    def test_adapter_exact_retry_ignores_new_correlation_but_changed_binding_conflicts(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             harness = new_harness(

@@ -28,6 +28,18 @@ from adf_poc.utils import canonical_json, sha256_json
 from tests.phase3_support import new_harness, workstation_case
 
 
+def _outbox_digest(event_type: str, subject_id: str, payload: dict[str, object]) -> str:
+    return hashlib.sha256(
+        canonical_json(
+            {
+                "event_type": event_type,
+                "subject_id": subject_id,
+                "payload": payload,
+            }
+        ).encode("utf-8")
+    ).hexdigest()
+
+
 def _claim_worker(
     ledger_path: str,
     barrier: multiprocessing.synchronize.Barrier,
@@ -36,9 +48,7 @@ def _claim_worker(
     try:
         ledger = SQLiteControlLedger(ledger_path, busy_timeout_ms=5000)
         barrier.wait(timeout=10)
-        state = ledger.claim_request(
-            "SOC_AGENT_001", "STAGE-A-CONCURRENT", "a" * 64
-        )
+        state = ledger.claim_request("SOC_AGENT_001", "STAGE-A-CONCURRENT", "a" * 64)
         results.put(("OK", state))
     except Exception as exc:  # pragma: no cover - child diagnostic surface
         results.put(("ERROR", type(exc).__name__, getattr(exc, "reason_code", "")))
@@ -87,9 +97,7 @@ def _crash_before_adapter_worker(
         "execute_once",
         new=crash_before_adapter,
     ):
-        harness.firewall.process_json(
-            raw_request, credential=harness.soc_credential
-        )
+        harness.firewall.process_json(raw_request, credential=harness.soc_credential)
     os._exit(92)
 
 
@@ -134,9 +142,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             synthetic_adapter_path=root / "adapter.sqlite3",
         )
         raw = request_json(workstation_case(harness, request_id=request_id))
-        result = harness.firewall.process_json(
-            raw, credential=harness.soc_credential
-        )
+        result = harness.firewall.process_json(raw, credential=harness.soc_credential)
         self.assertEqual(result.decision.outcome, "ALLOW")
         self.assertIsNotNone(result.verification)
         return harness, raw
@@ -163,7 +169,9 @@ class StageADurableControlLedgerTests(unittest.TestCase):
         )
         return reopened, raw
 
-    def test_schema_durability_permissions_and_unknown_version_fail_closed(self) -> None:
+    def test_schema_durability_permissions_and_unknown_version_fail_closed(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory).resolve() / "control.sqlite3"
             ledger = SQLiteControlLedger(path)
@@ -172,10 +180,14 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
             with closing(sqlite3.connect(path)) as connection:
                 self.assertEqual(
-                    str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower(),
+                    str(
+                        connection.execute("PRAGMA journal_mode").fetchone()[0]
+                    ).lower(),
                     "wal",
                 )
-                self.assertEqual(connection.execute("PRAGMA synchronous").fetchone()[0], 2)
+                self.assertEqual(
+                    connection.execute("PRAGMA synchronous").fetchone()[0], 2
+                )
                 tables = {
                     row[0]
                     for row in connection.execute(
@@ -183,7 +195,13 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     )
                 }
                 self.assertTrue(
-                    {"metadata", "requests", "authorizations", "attempts", "audit_outbox"}
+                    {
+                        "metadata",
+                        "requests",
+                        "authorizations",
+                        "attempts",
+                        "audit_outbox",
+                    }
                     <= tables
                 )
                 connection.execute(
@@ -231,9 +249,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                 audit_path=audit_path, control_ledger_path=ledger_path
             )
             raw = request_json(
-                workstation_case(
-                    first_harness, request_id="P3-STAGE-A-RESTART-REPLAY"
-                )
+                workstation_case(first_harness, request_id="P3-STAGE-A-RESTART-REPLAY")
             )
             first = first_harness.firewall.process_json(
                 raw, credential=first_harness.soc_credential
@@ -315,9 +331,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             assert attempt is not None
             self.assertEqual(attempt["state"], "VERIFIED_EFFECT")
             self.assertEqual(attempt["token_id"], result.authorization.token_id)
-            self.assertEqual(
-                reopened.state(result.authorization.token_id), "CONSUMED"
-            )
+            self.assertEqual(reopened.state(result.authorization.token_id), "CONSUMED")
             event_types = [row["event_type"] for row in reopened.pending_outbox()]
             self.assertEqual(
                 event_types,
@@ -343,6 +357,107 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                         "exported_at",
                     },
                 )
+
+    def test_outbox_deletion_and_malformed_rows_fail_closed_on_reopen(self) -> None:
+        corruptions = {
+            "middle deletion": ("DELETE FROM audit_outbox WHERE event_id=4", ()),
+            "tail deletion": (
+                "DELETE FROM audit_outbox WHERE event_id=(SELECT MAX(event_id) FROM audit_outbox)",
+                (),
+            ),
+            "identifier mutation": (
+                "UPDATE audit_outbox SET event_id=99 WHERE event_id=4",
+                (),
+            ),
+            "empty event type": (
+                "UPDATE audit_outbox SET event_type='' WHERE event_id=1",
+                (),
+            ),
+            "empty subject": (
+                "UPDATE audit_outbox SET subject_id='' WHERE event_id=1",
+                (),
+            ),
+            "invalid payload digest": (
+                "UPDATE audit_outbox SET payload_sha256='invalid' WHERE event_id=1",
+                (),
+            ),
+            "invalid creation time": (
+                "UPDATE audit_outbox SET created_at='invalid' WHERE event_id=1",
+                (),
+            ),
+            "invalid export time": (
+                "UPDATE audit_outbox SET exported_at='invalid' WHERE event_id=1",
+                (),
+            ),
+            "export precedes creation": (
+                "UPDATE audit_outbox SET exported_at='2000-01-01T00:00:00+00:00' WHERE event_id=1",
+                (),
+            ),
+        }
+        for label, (statement, parameters) in corruptions.items():
+            with (
+                self.subTest(corruption=label),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory).resolve()
+                self._completed_durable_case(
+                    root, request_id=f"P3-STAGE-A-OUTBOX-{len(label)}"
+                )
+                path = root / "control.sqlite3"
+                with closing(sqlite3.connect(path)) as connection:
+                    connection.execute("PRAGMA ignore_check_constraints=ON")
+                    connection.execute(statement, parameters)
+                    connection.commit()
+                before = path.read_bytes()
+
+                with self.assertRaises(ControlLedgerError) as raised:
+                    SQLiteControlLedger(path)
+                self.assertEqual(raised.exception.reason_code, "CONTROL_LEDGER_CORRUPT")
+                self.assertEqual(path.read_bytes(), before)
+
+    def test_valid_looking_outbox_forgery_and_reordering_fail_closed(self) -> None:
+        corruptions = {
+            "forged event type": (
+                "UPDATE audit_outbox SET event_type='FORGED_EVENT' WHERE event_id=1",
+            ),
+            "forged subject": (
+                "UPDATE audit_outbox SET subject_id='FORGED_SUBJECT' WHERE event_id=1",
+            ),
+            "valid forged digest": (
+                f"UPDATE audit_outbox SET payload_sha256='{'0' * 64}' WHERE event_id=1",
+            ),
+            "valid mismatched time": (
+                "UPDATE audit_outbox SET created_at='2035-01-01T00:00:00+00:00' WHERE event_id=1",
+            ),
+            "advanced sequence": (
+                "UPDATE sqlite_sequence SET seq=99 WHERE name='audit_outbox'",
+            ),
+            "swapped transition order": (
+                "UPDATE audit_outbox SET event_id=-1 WHERE event_id=3",
+                "UPDATE audit_outbox SET event_id=3 WHERE event_id=4",
+                "UPDATE audit_outbox SET event_id=4 WHERE event_id=-1",
+            ),
+        }
+        for label, statements in corruptions.items():
+            with (
+                self.subTest(corruption=label),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory).resolve()
+                self._completed_durable_case(
+                    root, request_id=f"P3-STAGE-A-OUTBOX-FORGE-{len(label)}"
+                )
+                path = root / "control.sqlite3"
+                with closing(sqlite3.connect(path)) as connection:
+                    for statement in statements:
+                        connection.execute(statement)
+                    connection.commit()
+                before = path.read_bytes()
+
+                with self.assertRaises(ControlLedgerError) as raised:
+                    SQLiteControlLedger(path)
+                self.assertEqual(raised.exception.reason_code, "CONTROL_LEDGER_CORRUPT")
+                self.assertEqual(path.read_bytes(), before)
 
     def test_attempt_idempotency_binding_is_independent_of_attempt_id(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -413,12 +528,8 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             self.assertEqual(
                 conflict.exception.reason_code, "ATTEMPT_IDEMPOTENCY_CONFLICT"
             )
-            self.assertEqual(
-                reopened.state("AUTH-STABLE-IDEMPOTENCY-RETRY"), "ISSUED"
-            )
-            self.assertIsNone(
-                reopened.attempt_snapshot("ATTEMPT-DIFFERENT-RANDOM-ID")
-            )
+            self.assertEqual(reopened.state("AUTH-STABLE-IDEMPOTENCY-RETRY"), "ISSUED")
+            self.assertIsNone(reopened.attempt_snapshot("ATTEMPT-DIFFERENT-RANDOM-ID"))
 
     def test_no_effect_broker_failure_is_not_recorded_as_completed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -429,9 +540,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             )
             result = harness.firewall.process_json(
                 request_json(
-                    workstation_case(
-                        harness, request_id="P3-STAGE-A-FAILED-NO-EFFECT"
-                    )
+                    workstation_case(harness, request_id="P3-STAGE-A-FAILED-NO-EFFECT")
                 ),
                 credential=harness.soc_credential,
             )
@@ -451,7 +560,9 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             assert attempt is not None
             self.assertEqual(attempt["state"], "FAILED_NO_EFFECT")
 
-    def test_incomplete_attempt_recovers_to_unknown_and_never_reopens_token(self) -> None:
+    def test_incomplete_attempt_recovers_to_unknown_and_never_reopens_token(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory).resolve() / "control.sqlite3"
             ledger = SQLiteControlLedger(path)
@@ -470,15 +581,11 @@ class StageADurableControlLedgerTests(unittest.TestCase):
 
             reopened = SQLiteControlLedger(path)
             self.assertEqual(
-                reopened.recover_incomplete_attempts(
-                    operator_asserted_quiesced=True
-                ),
+                reopened.recover_incomplete_attempts(operator_asserted_quiesced=True),
                 1,
             )
             self.assertEqual(
-                reopened.recover_incomplete_attempts(
-                    operator_asserted_quiesced=True
-                ),
+                reopened.recover_incomplete_attempts(operator_asserted_quiesced=True),
                 0,
             )
             attempt = reopened.attempt_snapshot("ATTEMPT-RECOVERY")
@@ -668,12 +775,8 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     for process in processes:
                         process.join(timeout=15)
                         self.assertEqual(process.exitcode, 0)
-                    self.assertTrue(
-                        all(row[0] == "OK" for row in observed), observed
-                    )
-                    self.assertEqual(
-                        len({row[1] for row in observed}), 1, observed
-                    )
+                    self.assertTrue(all(row[0] == "OK" for row in observed), observed)
+                    self.assertEqual(len({row[1] for row in observed}), 1, observed)
 
     def test_process_concurrency_reserves_one_attempt_and_consumes_once(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -727,9 +830,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             alias.symlink_to(real)
             with self.assertRaises(ControlLedgerError) as raised:
                 SQLiteControlLedger(alias)
-            self.assertEqual(
-                raised.exception.reason_code, "CONTROL_LEDGER_PATH_UNSAFE"
-            )
+            self.assertEqual(raised.exception.reason_code, "CONTROL_LEDGER_PATH_UNSAFE")
 
     def test_symlink_database_parent_is_rejected_without_creating_target(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -741,9 +842,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
 
             with self.assertRaises(ControlLedgerError) as raised:
                 SQLiteControlLedger(alias_parent / "control.sqlite3")
-            self.assertEqual(
-                raised.exception.reason_code, "CONTROL_LEDGER_PATH_UNSAFE"
-            )
+            self.assertEqual(raised.exception.reason_code, "CONTROL_LEDGER_PATH_UNSAFE")
             self.assertFalse((real_parent / "control.sqlite3").exists())
 
     def test_audit_and_control_ledger_paths_must_not_alias(self) -> None:
@@ -830,7 +929,8 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
                 attempt = connection.execute(
                     """
-                    SELECT attempt_id, recovery_summary_json
+                    SELECT attempt_id, recovery_summary_json, state,
+                           adapter_receipt_sha256
                     FROM attempts
                     """
                 ).fetchone()
@@ -845,6 +945,9 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                 result = RequestLookupResult.from_dict(result_value)
                 result_json = canonical_json(result.to_dict())
                 result_sha256 = hashlib.sha256(result_json.encode()).hexdigest()
+                outcome_sha256 = terminal_attempt_outcome_sha256(
+                    result, "VERIFIED_EFFECT"
+                )
                 connection.execute(
                     """
                     UPDATE attempts
@@ -855,9 +958,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     (
                         summary_json,
                         hashlib.sha256(summary_json.encode()).hexdigest(),
-                        terminal_attempt_outcome_sha256(
-                            result, "VERIFIED_EFFECT"
-                        ),
+                        outcome_sha256,
                         attempt[0],
                     ),
                 )
@@ -866,6 +967,41 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     UPDATE request_results SET result_json=?, result_sha256=?
                     """,
                     (result_json, result_sha256),
+                )
+                connection.execute(
+                    """
+                    UPDATE audit_outbox SET payload_sha256=?
+                    WHERE event_type='ATTEMPT_TERMINAL' AND subject_id=?
+                    """,
+                    (
+                        _outbox_digest(
+                            "ATTEMPT_TERMINAL",
+                            attempt[0],
+                            {
+                                "state": attempt[2],
+                                "outcome_sha256": outcome_sha256,
+                                "adapter_receipt_sha256": attempt[3],
+                            },
+                        ),
+                        attempt[0],
+                    ),
+                )
+                connection.execute(
+                    """
+                    UPDATE audit_outbox SET payload_sha256=?
+                    WHERE event_type='REQUEST_TERMINAL' AND subject_id=?
+                    """,
+                    (
+                        _outbox_digest(
+                            "REQUEST_TERMINAL",
+                            f"{result.principal_id}:{result.request_id}",
+                            {
+                                "result_sha256": result_sha256,
+                                "disposition": result.disposition,
+                            },
+                        ),
+                        f"{result.principal_id}:{result.request_id}",
+                    ),
                 )
                 connection.commit()
             with self.assertRaises(ControlLedgerError) as raised:
@@ -885,30 +1021,72 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                 root, request_id="P3-STAGE-A-TARGET-SUBSTITUTION"
             )
             with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
-                attempt_id, result_json = connection.execute(
-                    """
-                    SELECT a.attempt_id, x.result_json
+                attempt_id, attempt_state, adapter_receipt_sha256, result_json = (
+                    connection.execute(
+                        """
+                    SELECT a.attempt_id, a.state, a.adapter_receipt_sha256,
+                           x.result_json
                     FROM attempts a CROSS JOIN request_results x
                     """
-                ).fetchone()
+                    ).fetchone()
+                )
                 result_value = json.loads(result_json)
                 result_value["target_state_sha256"] = "d" * 64
                 result = RequestLookupResult.from_dict(result_value)
                 changed_json = canonical_json(result.to_dict())
+                changed_result_sha256 = hashlib.sha256(
+                    changed_json.encode()
+                ).hexdigest()
+                changed_outcome_sha256 = terminal_attempt_outcome_sha256(
+                    result, "VERIFIED_EFFECT"
+                )
                 connection.execute(
                     "UPDATE request_results SET result_json=?, result_sha256=?",
                     (
                         changed_json,
-                        hashlib.sha256(changed_json.encode()).hexdigest(),
+                        changed_result_sha256,
                     ),
                 )
                 connection.execute(
                     "UPDATE attempts SET outcome_sha256=? WHERE attempt_id=?",
                     (
-                        terminal_attempt_outcome_sha256(
-                            result, "VERIFIED_EFFECT"
+                        changed_outcome_sha256,
+                        attempt_id,
+                    ),
+                )
+                connection.execute(
+                    """
+                    UPDATE audit_outbox SET payload_sha256=?
+                    WHERE event_type='ATTEMPT_TERMINAL' AND subject_id=?
+                    """,
+                    (
+                        _outbox_digest(
+                            "ATTEMPT_TERMINAL",
+                            attempt_id,
+                            {
+                                "state": attempt_state,
+                                "outcome_sha256": changed_outcome_sha256,
+                                "adapter_receipt_sha256": adapter_receipt_sha256,
+                            },
                         ),
                         attempt_id,
+                    ),
+                )
+                connection.execute(
+                    """
+                    UPDATE audit_outbox SET payload_sha256=?
+                    WHERE event_type='REQUEST_TERMINAL' AND subject_id=?
+                    """,
+                    (
+                        _outbox_digest(
+                            "REQUEST_TERMINAL",
+                            f"{result.principal_id}:{result.request_id}",
+                            {
+                                "result_sha256": changed_result_sha256,
+                                "disposition": result.disposition,
+                            },
+                        ),
+                        f"{result.principal_id}:{result.request_id}",
                     ),
                 )
                 connection.commit()
@@ -925,9 +1103,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
     def test_cross_store_orphan_receipt_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
-            self._completed_durable_case(
-                root, request_id="P3-STAGE-A-ORPHAN-RECEIPT"
-            )
+            self._completed_durable_case(root, request_id="P3-STAGE-A-ORPHAN-RECEIPT")
             with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
                 connection.execute("PRAGMA foreign_keys=OFF")
                 for table in (
@@ -935,8 +1111,12 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     "attempts",
                     "authorizations",
                     "requests",
+                    "audit_outbox",
                 ):
                     connection.execute(f"DELETE FROM {table}")
+                connection.execute(
+                    "DELETE FROM sqlite_sequence WHERE name='audit_outbox'"
+                )
                 connection.commit()
             with self.assertRaises(ControlLedgerError) as raised:
                 new_harness(
@@ -1007,9 +1187,10 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     raise RuntimeError("injected recovery readback failure")
                 return original_read(logger)
 
-            with patch.object(
-                AuditLogger, "append", new=observe_final_append
-            ), patch.object(AuditLogger, "read_all", new=fail_first_final_readback):
+            with (
+                patch.object(AuditLogger, "append", new=observe_final_append),
+                patch.object(AuditLogger, "read_all", new=fail_first_final_readback),
+            ):
                 with self.assertRaises(RuntimeError):
                     harness.firewall.reconcile_request(
                         raw,
@@ -1018,7 +1199,9 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     )
             with closing(sqlite3.connect(root / "control.sqlite3")) as connection:
                 self.assertEqual(
-                    connection.execute("SELECT count(*) FROM request_results").fetchone()[0],
+                    connection.execute(
+                        "SELECT count(*) FROM request_results"
+                    ).fetchone()[0],
                     0,
                 )
             audit_path = root / "audit.jsonl"
@@ -1048,7 +1231,9 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                     attempt_binding_sha256="a" * 64,
                     consumed_at="2029-01-01T00:00:00+00:00",
                 )
-            self.assertEqual(consume.exception.reason_code, "AUTHORIZATION_TIME_INVALID")
+            self.assertEqual(
+                consume.exception.reason_code, "AUTHORIZATION_TIME_INVALID"
+            )
             self.assertEqual(SQLiteControlLedger(path).state("AUTH-FUTURE"), "ISSUED")
 
             ledger.consume_once(
@@ -1066,14 +1251,10 @@ class StageADurableControlLedgerTests(unittest.TestCase):
                 )
             self.assertEqual(terminal.exception.reason_code, "ATTEMPT_TIME_INVALID")
             with self.assertRaises(ControlLedgerError) as recovery:
-                ledger.recover_incomplete_attempts(
-                    operator_asserted_quiesced=True
-                )
+                ledger.recover_incomplete_attempts(operator_asserted_quiesced=True)
             self.assertEqual(recovery.exception.reason_code, "RECOVERY_TIME_INVALID")
             self.assertEqual(
-                SQLiteControlLedger(path).attempt_snapshot("ATTEMPT-FUTURE")[
-                    "state"
-                ],
+                SQLiteControlLedger(path).attempt_snapshot("ATTEMPT-FUTURE")["state"],
                 "RESERVED",
             )
 

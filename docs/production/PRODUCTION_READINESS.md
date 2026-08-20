@@ -165,6 +165,16 @@ and exact-SHA CI are now recorded below. Broader real power-loss, filesystem and
 storage-failure, hostile-writer, capacity, independent-assessment, and
 operational campaigns remain separate release steps.
 
+The current successor source tree also carries exact-version SHA-256 runtime
+and documentation dependency locks, an unsigned CycloneDX 1.6 runtime SBOM,
+strict lock/SBOM validation, exact Git-tracked manifest coverage validation,
+full-commit Action pins, nonpersistent checkout credentials, binary-only
+hash-enforced workflow installation, warning-fatal tests, and job-scoped Pages
+write/OIDC authority. These are repository-controlled mechanisms. Until a
+clean candidate commit, regenerated complete manifest, exact-commit CI, build
+artifact, provenance, vulnerability disposition, and independent review exist,
+they are not release evidence or production authorization.
+
 ### Exact implementation evidence
 
 On 2026-08-16, the frozen implementation and exact-SHA automation produced the
@@ -272,8 +282,9 @@ open gates:
 - deployment architecture, IaC, secrets procedures, SLOs, monitoring, incident
   response, backup/restore exercises, capacity/load evidence, and intended-
   environment rollback are not operational;
-- SBOM, hash-locked dependencies, signed artifacts, reproducible-build evidence,
-  and provenance attestations are absent; and
+- signed SBOM and release artifacts, hermetic and independently reproduced
+  build evidence, trusted-builder provenance attestations, transparency-log
+  records, and completed vulnerability disposition are absent; and
 - mission, security, data, model, policy, operations, target-system, and
   authorizing-official acceptances are not recorded.
 
