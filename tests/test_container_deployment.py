@@ -90,6 +90,15 @@ class ContainerBuildTests(unittest.TestCase):
             "/opt/adf/contracts/v0.3.0/decision-request.schema.json",
             dockerfile,
         )
+        for name in (
+            "lab-execution-command.schema.json",
+            "lab-executor-receipt.schema.json",
+            "lab-observation.schema.json",
+        ):
+            self.assertIn(
+                f"COPY contracts/v0.4.0/{name} " f"/opt/adf/contracts/v0.4.0/{name}",
+                dockerfile,
+            )
 
     def test_final_image_is_nonroot_and_has_no_network_exposure(self) -> None:
         dockerfile = _read(ROOT / "Dockerfile")
@@ -137,6 +146,9 @@ class ContainerBuildTests(unittest.TestCase):
             "!config/phase3_policy.json",
             "!contracts/v0.3.0/decision-request.schema.json",
             "!contracts/v0.3.0/phase3-policy.schema.json",
+            "!contracts/v0.4.0/lab-execution-command.schema.json",
+            "!contracts/v0.4.0/lab-executor-receipt.schema.json",
+            "!contracts/v0.4.0/lab-observation.schema.json",
             "!artifacts/supply-chain/runtime.cdx.json",
         ):
             self.assertIn(required, rows)

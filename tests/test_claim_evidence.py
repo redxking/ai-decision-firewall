@@ -1240,6 +1240,7 @@ import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
             frozenset(
                 {
                     "src/adf_poc/lab_contracts.py",
+                    "src/adf_poc/lab_transport.py",
                     "src/adf_poc/service.py",
                     "src/adf_poc/service_backup.py",
                     "src/adf_poc/service_secret_stage.py",
