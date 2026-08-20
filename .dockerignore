@@ -3,6 +3,7 @@
 !requirements.lock
 !run_service.py
 !run_preview.py
+!run_lab_node.py
 !src/
 !src/**
 !config/

@@ -193,7 +193,7 @@ boundary. The namespace-local container lab is the smaller falsifiable step.
 2. [x] Implement pure validators and canonical HMAC bindings without sockets.
 3. [x] Implement executor and observer Unix-socket handlers behind an explicit
    opt-in lab flag.
-4. [ ] Add the digest-pinned internal-network container harness.
+4. [x] Add the immutable-local-image internal-network container harness.
 5. [ ] Execute the adversarial and kill matrices.
 6. [ ] Seek independent security and target-owner review before any later
    environment or connector decision.
@@ -228,6 +228,13 @@ explicit opt-in and are directly composable with the peer-checked transport.
 This completes the handler and replay-fence mechanics, not the proposed action.
 The executor intentionally emits a durable `NO_EFFECT` receipt and contains no
 kernel, namespace, firewall-rule, subprocess, container-runtime, or network
-mutation path. The observer currently consumes a code-owned read callback; the
-independent fixed network probes and the digest-pinned disposable container
-harness remain action items 4 and 5.
+mutation path. The disposable harness in
+`scripts/run_phase4_container_lab.py` now gives the observer fixed, code-owned
+management and beacon reachability probes from a target-shared network
+namespace. It validates the exact local image ID, capabilities, mounts, UIDs,
+limits, internal bridge membership, and cleanup inventory before accepting a
+result. The control client has no network and the executor and observer cannot
+mount each other's key volume. This is a local Docker image-ID binding, not
+registry provenance, signature, independent custody, or production evidence.
+The executor still has no mutation primitive; the adversarial and kill matrices
+remain action item 5.

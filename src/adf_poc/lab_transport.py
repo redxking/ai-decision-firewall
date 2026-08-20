@@ -175,7 +175,11 @@ def _peer_credentials(connection: socket.socket) -> tuple[int, int, int]:
             "LAB_PEER_CREDENTIALS_UNAVAILABLE",
             "Unix peer credentials could not be read.",
         ) from exc
-    if pid <= 0 or uid < 0 or gid < 0:
+    # Linux reports pid 0 when the peer process is outside the receiver's PID
+    # namespace. UID and GID remain meaningful and the caller binds the exact
+    # expected UID, so accept only that kernel sentinel in addition to a
+    # positive PID.
+    if pid < 0 or uid < 0 or gid < 0:
         raise LabTransportError(
             "LAB_PEER_CREDENTIALS_INVALID", "Unix peer credentials are invalid."
         )
