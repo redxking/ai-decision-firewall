@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import os
 import secrets
+import signal
 import socket
 import stat
 import sys
@@ -24,6 +25,9 @@ from adf_poc.lab_contracts import (
     validate_lab_message_correlation,
 )
 from adf_poc.lab_services import (
+    EXECUTOR_AFTER_COMPLETION,
+    EXECUTOR_AFTER_RESERVATION,
+    OBSERVER_AFTER_OBSERVATION,
     ExecutorReplayJournal,
     LabExecutorService,
     LabObservedState,
@@ -47,6 +51,11 @@ ADAPTER_CONTRACT_SHA256 = hashlib.sha256(b"ADF-LAB-ADAPTER-V1").hexdigest()
 EXECUTOR_KEY_ID = "LAB_EXECUTOR_KEY_001"
 OBSERVER_KEY_ID = "LAB_OBSERVER_KEY_001"
 MAX_SMALL_FILE = 4096
+FAULT_NONE = "NONE"
+EXECUTOR_FAULT_STAGES = frozenset(
+    {FAULT_NONE, EXECUTOR_AFTER_RESERVATION, EXECUTOR_AFTER_COMPLETION}
+)
+OBSERVER_FAULT_STAGES = frozenset({FAULT_NONE, OBSERVER_AFTER_OBSERVATION})
 
 
 class LabNodeError(RuntimeError):
@@ -111,6 +120,68 @@ def _create_private_file(path: Path, payload: bytes) -> None:
     finally:
         os.close(descriptor)
     _fsync_directory(path.parent)
+
+
+def _create_or_read_private_file(path: Path, payload: bytes) -> bytes:
+    try:
+        _create_private_file(path, payload)
+        return payload
+    except LabNodeError as exc:
+        if not isinstance(exc.__cause__, FileExistsError):
+            raise
+    return _read_private_file(path, expected_uid=os.geteuid())
+
+
+def _fault_hook(expected_stage: str) -> Callable[[str], None] | None:
+    if expected_stage == FAULT_NONE:
+        return None
+
+    def stop_at(observed_stage: str) -> None:
+        if observed_stage != expected_stage:
+            return
+        print(
+            canonical_json({"fault_stage": observed_stage, "status": "FAULT_READY"}),
+            file=sys.stderr,
+            flush=True,
+        )
+        while True:
+            signal.pause()
+
+    return stop_at
+
+
+def recover_stale_socket(
+    private: Path, *, socket_name: str, explicitly_enabled: bool
+) -> None:
+    if explicitly_enabled is not True or socket_name not in (
+        "executor.sock",
+        "observer.sock",
+    ):
+        raise LabNodeError(
+            "LAB_SOCKET_RECOVERY_NOT_AUTHORIZED",
+            "Stale-socket recovery requires an explicit closed target.",
+        )
+    _validate_private_directory(private, expected_uid=os.geteuid())
+    path = private / socket_name
+    try:
+        metadata = path.lstat()
+    except OSError as exc:
+        raise LabNodeError(
+            "LAB_STALE_SOCKET_INVALID", "Expected stale socket is unavailable."
+        ) from exc
+    if (
+        path.is_symlink()
+        or not stat.S_ISSOCK(metadata.st_mode)
+        or metadata.st_nlink != 1
+        or metadata.st_uid != os.geteuid()
+        or stat.S_IMODE(metadata.st_mode) != 0o600
+    ):
+        raise LabNodeError(
+            "LAB_STALE_SOCKET_INVALID",
+            "Stale socket metadata is not the exact safe shape.",
+        )
+    path.unlink()
+    _fsync_directory(private)
 
 
 def _read_private_file(
@@ -276,7 +347,20 @@ def _state_reader(facts_path: Path) -> Callable[[], LabObservedState]:
     return read
 
 
-def run_executor(private: Path, facts_path: Path) -> None:
+def run_executor(
+    private: Path,
+    facts_path: Path,
+    *,
+    fault_stage: str = FAULT_NONE,
+    allow_fault_injection: bool = False,
+) -> None:
+    if fault_stage not in EXECUTOR_FAULT_STAGES or (
+        fault_stage != FAULT_NONE and allow_fault_injection is not True
+    ):
+        raise LabNodeError(
+            "LAB_FAULT_INJECTION_NOT_AUTHORIZED",
+            "Executor fault injection requires an explicit closed stage.",
+        )
     key = _read_private_file(
         private / "channel.key", expected_uid=LAB_UID, exact_size=32
     )
@@ -287,6 +371,7 @@ def run_executor(private: Path, facts_path: Path) -> None:
         key_id=EXECUTOR_KEY_ID,
         key=key,
         read_state=_state_reader(facts_path),
+        failure_hook=_fault_hook(fault_stage),
         enabled=True,
     )
     with LabSeqpacketServer(
@@ -298,7 +383,20 @@ def run_executor(private: Path, facts_path: Path) -> None:
         server.serve_once(service.handle)
 
 
-def run_observer(private: Path, facts_path: Path) -> None:
+def run_observer(
+    private: Path,
+    facts_path: Path,
+    *,
+    fault_stage: str = FAULT_NONE,
+    allow_fault_injection: bool = False,
+) -> None:
+    if fault_stage not in OBSERVER_FAULT_STAGES or (
+        fault_stage != FAULT_NONE and allow_fault_injection is not True
+    ):
+        raise LabNodeError(
+            "LAB_FAULT_INJECTION_NOT_AUTHORIZED",
+            "Observer fault injection requires an explicit closed stage.",
+        )
     key = _read_private_file(
         private / "channel.key", expected_uid=LAB_UID, exact_size=32
     )
@@ -306,6 +404,7 @@ def run_observer(private: Path, facts_path: Path) -> None:
         key_id=OBSERVER_KEY_ID,
         key=key,
         read_state=_state_reader(facts_path),
+        failure_hook=_fault_hook(fault_stage),
         enabled=True,
     )
     with LabSeqpacketServer(
@@ -334,7 +433,10 @@ def _wait_socket(path: Path, *, timeout_seconds: float = 10.0) -> None:
 
 
 def run_control_client(
-    executor_private: Path, observer_private: Path, facts_path: Path
+    executor_private: Path,
+    observer_private: Path,
+    facts_path: Path,
+    control_private: Path | None = None,
 ) -> None:
     executor_key = _read_private_file(
         executor_private / "channel.key", expected_uid=LAB_UID, exact_size=32
@@ -345,7 +447,7 @@ def run_control_client(
     validate_lab_channel_keys(executor_key=executor_key, observer_key=observer_key)
     facts = _target_facts(facts_path)
     now = datetime.now(timezone.utc).replace(microsecond=0)
-    command = sign_lab_message(
+    generated_command = sign_lab_message(
         {
             "schema_version": "0.4.0",
             "message_type": COMMAND,
@@ -375,11 +477,35 @@ def run_control_client(
         key=executor_key,
         now=now,
     )
+    command_raw = canonical_json(generated_command).encode("utf-8")
+    if control_private is not None:
+        _validate_private_directory(control_private, expected_uid=LAB_UID)
+        command_raw = _create_or_read_private_file(
+            control_private / "command.json", command_raw
+        )
+    command = load_authenticated_lab_message(
+        command_raw,
+        message_type=COMMAND,
+        expected_key_id=EXECUTOR_KEY_ID,
+        key=executor_key,
+        now=now,
+        allow_expired=True,
+    )
+    if (
+        command["lab_session_id"] != os.environ["ADF_LAB_SESSION_ID"]
+        or command["target_id"] != TARGET_ID
+        or command["target_boot_id"] != facts["target_boot_id"]
+        or command["prestate_sha256"] != facts["ruleset_sha256"]
+    ):
+        raise LabNodeError(
+            "LAB_CONTROL_COMMAND_MISMATCH",
+            "Persisted command does not match this exact lab target.",
+        )
     executor_socket = executor_private / "executor.sock"
     _wait_socket(executor_socket)
     receipt_raw = lab_seqpacket_exchange(
         executor_socket,
-        canonical_json(command).encode("utf-8"),
+        command_raw,
         expected_server_uid=LAB_UID,
         enabled=True,
         timeout_seconds=10,
@@ -465,13 +591,28 @@ def _parser() -> argparse.ArgumentParser:
     executor = subparsers.add_parser("executor")
     executor.add_argument("--private", type=Path, required=True)
     executor.add_argument("--facts", type=Path, required=True)
+    executor.add_argument(
+        "--fault-stage", choices=sorted(EXECUTOR_FAULT_STAGES), default=FAULT_NONE
+    )
+    executor.add_argument("--allow-fault-injection", action="store_true")
     observer = subparsers.add_parser("observer")
     observer.add_argument("--private", type=Path, required=True)
     observer.add_argument("--facts", type=Path, required=True)
+    observer.add_argument(
+        "--fault-stage", choices=sorted(OBSERVER_FAULT_STAGES), default=FAULT_NONE
+    )
+    observer.add_argument("--allow-fault-injection", action="store_true")
     client = subparsers.add_parser("control-client")
     client.add_argument("--executor-private", type=Path, required=True)
     client.add_argument("--observer-private", type=Path, required=True)
     client.add_argument("--facts", type=Path, required=True)
+    client.add_argument("--control-private", type=Path)
+    recover = subparsers.add_parser("recover-stale-socket")
+    recover.add_argument("--private", type=Path, required=True)
+    recover.add_argument(
+        "--socket", choices=("executor.sock", "observer.sock"), required=True
+    )
+    recover.add_argument("--allow-stale-socket-recovery", action="store_true")
     return parser
 
 
@@ -489,11 +630,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.role == "target":
             run_target(args.facts)
         elif args.role == "executor":
-            run_executor(args.private, args.facts)
+            run_executor(
+                args.private,
+                args.facts,
+                fault_stage=args.fault_stage,
+                allow_fault_injection=args.allow_fault_injection,
+            )
         elif args.role == "observer":
-            run_observer(args.private, args.facts)
+            run_observer(
+                args.private,
+                args.facts,
+                fault_stage=args.fault_stage,
+                allow_fault_injection=args.allow_fault_injection,
+            )
         elif args.role == "control-client":
-            run_control_client(args.executor_private, args.observer_private, args.facts)
+            run_control_client(
+                args.executor_private,
+                args.observer_private,
+                args.facts,
+                args.control_private,
+            )
+        elif args.role == "recover-stale-socket":
+            recover_stale_socket(
+                args.private,
+                socket_name=args.socket,
+                explicitly_enabled=args.allow_stale_socket_recovery,
+            )
         else:  # pragma: no cover - argparse owns the closed role set
             raise LabNodeError("LAB_ROLE_INVALID", "Unsupported lab role.")
     except Exception as exc:
