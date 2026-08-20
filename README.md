@@ -17,12 +17,12 @@ and demonstrated effects are offline and synthetic.
 | Item | Status |
 |---|---|
 | Candidate | `0.4.0-alpha.2` (`0.4.0a2` package metadata), unreleased |
-| Stage A implementation | [`8818d5d2`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4) |
-| Evidence carrier | [`fd6ea593`](https://github.com/redxking/ai-decision-firewall/commit/fd6ea59334ebce8a1c96302f388e9864d7d9780b) |
+| Stage A production-development merge | [`db7d6e6d`](https://github.com/redxking/ai-decision-firewall/commit/db7d6e6d3bea59bc8579c1e198a236a541f65d86) |
+| Bound implementation / carrier | [`91a35145`](https://github.com/redxking/ai-decision-firewall/commit/91a351459610e045ae5de7b9380f8228c157006f) / [`a5046f38`](https://github.com/redxking/ai-decision-firewall/commit/a5046f38b229b5899baf399143b13c20c1101aae) |
 | Production gate | `BLOCKED`: 18 domains, 36 mandatory requirements all blocking, 36/36 owner acceptances `NOT_RECORDED` |
 | Included data and executed effects | Offline and synthetic only |
 | Model promotion | `NOT_AUTHORIZED` |
-| Carrier publication | Code is on `main`; as of 2026-08-16, exact carrier `fd6ea593` had no associated PR, tag, GitHub Release, Pages run, or deployment |
+| Main verification | [CI run 32381074320](https://github.com/redxking/ai-decision-firewall/actions/runs/32381074320) passed Python 3.11, Python 3.12, and the restricted container build at exact merge commit `db7d6e6d`; no tag, GitHub Release, deployment, or production approval was created |
 
 ## What the project does
 
@@ -86,6 +86,14 @@ custody, HA, DR, or a production adapter. See
 [ADR-015](docs/adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md)
 and the [Stage A runbook](docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md) for
 the exact transaction and recovery contract.
+
+The successor development tree also includes a fail-closed cold backup/restore
+mechanism for the exact three-artifact set. It validates a closed digest/size
+manifest, config/policy/secret bindings, store identities, audit continuity,
+and cross-store correlation before creating a new inode-bound service marker.
+It is self-custodied local recoverability mechanics, not DR, rollback
+resistance, trusted time, continuous backup, or RPO/RTO evidence. See the
+[cold backup/restore runbook](docs/operations/STAGE_A_BACKUP_RESTORE_RUNBOOK.md).
 
 ## Quick start
 
@@ -168,7 +176,9 @@ state is `BLOCKED`. Stage A now includes an explicit-create, existing-state-only
 loopback reference service and an offline Kubernetes source baseline. Neither is
 an accepted production transport or deployment. Use the
 [durable-state runbook](docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md) and
-[Kubernetes runbook](docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md); do not add
+[Kubernetes runbook](docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md). Cold state
+copy/restore is separately bounded by the
+[backup/restore runbook](docs/operations/STAGE_A_BACKUP_RESTORE_RUNBOOK.md); do not add
 an ad hoc launcher, network endpoint, connector, credential, or external target.
 
 ## Exact evidence snapshot
@@ -209,7 +219,8 @@ The current repository does not establish:
   semantics;
 - independently custodied command receipts, observation, audit, or trusted time;
 - cross-store atomicity, distributed replay protection, process isolation,
-  failover, backup/restore validity, or production-scale behavior;
+  failover, approved DR/rollback behavior, continuous backup, or
+  production-scale behavior;
 - historical/live model performance, analyst agreement, or operational error
   rates; or
 - suitability for safety-critical, operational-technology, or

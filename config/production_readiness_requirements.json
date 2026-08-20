@@ -2,8 +2,8 @@
   "schema_version": "adf-production-readiness-0.2.0",
   "as_of": "2026-08-20",
   "baseline_commit": "bb6b8f28afba0961bb97b24e6050fccaa94d5702",
-  "candidate_commit": "91a351459610e045ae5de7b9380f8228c157006f",
-  "candidate_manifest_sha256": "7e93e104b6e9e061aed10298db0a065682e40e1871e2033e7059bdf351652fc2",
+  "candidate_commit": "9a1a82f662aa944f316e82293161010574474a7d",
+  "candidate_manifest_sha256": "4f238eb8594e0ad9f1c2d3e5fa33fad089ae7db8f8057c82fdf966bba3dcb850",
   "candidate_label": "PRODUCTION_DEVELOPMENT_CANDIDATE",
   "declared_status": "BLOCKED",
   "requirements": [
@@ -301,9 +301,9 @@
       "acceptance_criteria": "The intended environment demonstrates backup, restore, reconciliation, separately authorized compensation, rollback failure handling, and declared safe state.",
       "accountable_owner": "OPERATIONS_OWNER",
       "owner_acceptance": "NOT_RECORDED",
-      "current_state": "NOT_IMPLEMENTED",
-      "evidence_artifacts": [],
-      "remaining_gate": "No executable rollback orchestration, DR environment, RTO, or RPO is approved.",
+      "current_state": "UNIT_TESTED",
+      "evidence_artifacts": ["src/adf_poc/service_backup.py", "run_service.py", "tests/test_service_backup.py", "docs/operations/STAGE_A_BACKUP_RESTORE_RUNBOOK.md"],
+      "remaining_gate": "A fail-closed local cold backup/restore mechanism now binds the exact audit/control/adapter files, configuration, policy, secret set, store identities, and file digests and revalidates audit/store correlation before rebinding the restored audit inode. It remains self-custodied and unsigned, relies on operator-asserted quiescence and the cooperative same-user lock, and retains partial failure state. No approved rollback selection or compensation orchestration, continuous backup, external custody, DR environment, power-loss/storage campaign, RTO, or RPO exists.",
       "release_gate": "RECOVERY_ACCEPTANCE_GATE",
       "prohibited_inference": "ROLLBACK_REQUIRED is a disposition, not evidence that rollback occurred."
     },
@@ -453,7 +453,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "UNIT_TESTED",
       "evidence_artifacts": ["Dockerfile", ".dockerignore", ".github/workflows/ci.yml", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "docs/adr/016_offline_stage_a_container_boundary.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "tests/test_container_deployment.py", "tests/test_workflow_supply_chain.py"],
-      "remaining_gate": "A digest-pinned non-root image, offline Kubernetes source baseline, projected-secret staging, and non-publishing CI build/smoke mechanism now exist and are statically tested. No exact-candidate container workflow run has yet been observed, and no approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
+      "remaining_gate": "A digest-pinned non-root image, offline Kubernetes source baseline, projected-secret staging, and non-publishing CI build/smoke mechanism exist. Exact main Commit db7d6e6d3bea59bc8579c1e198a236a541f65d86 passed Python 3.11, Python 3.12, and restricted container build/smoke CI in run 32381074320. No approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "Local raw key bytes are not managed secrets or production key custody."
     },
@@ -498,7 +498,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
       "evidence_artifacts": ["tests/", "docs/TEST_AND_EVALUATION_PLAN.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "Exact implementation candidate 91a351459610e045ae5de7b9380f8228c157006f passed 427 warning-fatal local tests and its 337-entry manifest verified against all 338 tracked files except the manifest itself. The dependency-corrected predecessor completed Python 3.11, Python 3.12, and restricted non-publishing container CI; this candidate additionally advances the pinned official actions to Node.js 24 and has not yet completed remote CI. Resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
+      "remaining_gate": "Exact implementation candidate 9a1a82f662aa944f316e82293161010574474a7d passed 436 warning-fatal local tests and its 340-entry manifest verified against all 341 tracked files except the manifest itself. The existing durable-ledger concurrency case additionally passed 10/10 isolated repetitions after one non-reproduced full-suite failure, and the candidate image built locally and passed its non-root/package/CLI smoke check. Exact-candidate remote CI, resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
       "release_gate": "VERIFICATION_ACCEPTANCE_GATE",
       "prohibited_inference": "Green CI is implementation evidence, not operational effectiveness."
     },
@@ -528,7 +528,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "UNIT_TESTED",
       "evidence_artifacts": ["MANIFEST.sha256", "config/production_readiness_requirements.json", "scripts/validate_production_readiness.py", "tests/test_production_readiness_gate.py", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "docs/adr/016_offline_stage_a_container_boundary.md", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "tests/test_container_deployment.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 91a351459610e045ae5de7b9380f8228c157006f and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
+      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 9a1a82f662aa944f316e82293161010574474a7d and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
       "release_gate": "RELEASE_LIFECYCLE_ACCEPTANCE_GATE",
       "prohibited_inference": "A local commit does not mean pushed, merged, tagged, released, or deployed, and source rollback is not operational rollback."
     },

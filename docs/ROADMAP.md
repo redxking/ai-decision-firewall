@@ -198,6 +198,15 @@ same-project evidence, not independent target verification. External identity,
 connectors, targets, representative data, and deployment remain separately
 authorized activities.
 
+The first bounded increment in that gate is a fail-closed cold backup/restore
+mechanism for the correlated three-artifact state. It uses the cooperative
+durable/audit lock, refuses active SQLite sidecars and invalid/incomplete state,
+publishes an atomic digest/size-bound backup directory, and restores only into
+the exact empty configured path before regenerating the inode-bound service
+marker. This is local recoverability mechanics only; power-loss behavior,
+continuous backup, rollback selection, external custody, DR, RPO, and RTO
+remain open.
+
 ## Phase 3.1B — Approved read-only evidence realism
 
 After the external Gate B package and an offline historical pilot, evaluate an
