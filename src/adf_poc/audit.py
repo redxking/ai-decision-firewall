@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 from threading import RLock
@@ -43,6 +44,8 @@ class AuditLogger:
         self._rows: list[dict[str, Any]] = []
         self.previous_hash = "0" * 64
         self.sequence = 0
+        self._bound_fd: int | None = None
+        self._bound_identity: tuple[int, int] | None = None
         if self.path is None:
             return
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -53,9 +56,7 @@ class AuditLogger:
                 or not stat.S_ISREG(metadata.st_mode)
                 or metadata.st_nlink != 1
             ):
-                raise ValueError(
-                    "Audit path must be a singly linked regular file."
-                )
+                raise ValueError("Audit path must be a singly linked regular file.")
         if self.path.exists() and self.path.stat().st_size:
             rows = self.read_all()
             valid, errors = self.verify_rows(rows)
@@ -66,6 +67,43 @@ class AuditLogger:
             last = rows[-1]
             self.previous_hash = str(last["record_hash"])
             self.sequence = int(last["sequence"]) + 1
+
+    def _assert_bound_identity(self) -> None:
+        if self._bound_fd is None or self._bound_identity is None or self.path is None:
+            raise RuntimeError("Audit descriptor binding is unavailable.")
+        try:
+            opened = os.fstat(self._bound_fd)
+            current = self.path.lstat()
+        except OSError as exc:
+            raise RuntimeError("Audit path identity changed while locked.") from exc
+        expected = self._bound_identity
+        if (
+            (opened.st_dev, opened.st_ino) != expected
+            or (current.st_dev, current.st_ino) != expected
+            or not stat.S_ISREG(current.st_mode)
+            or current.st_nlink != 1
+        ):
+            raise RuntimeError("Audit path identity changed while locked.")
+
+    @contextmanager
+    def bind_descriptor(self, descriptor: int, *, expected_identity: tuple[int, int]):
+        """Route all path-backed reads and appends through one locked descriptor."""
+
+        with self._lock:
+            if self.path is None or self._bound_fd is not None:
+                raise RuntimeError("Audit descriptor binding is invalid.")
+            duplicate = os.dup(descriptor)
+            os.set_inheritable(duplicate, False)
+            self._bound_fd = duplicate
+            self._bound_identity = expected_identity
+            try:
+                self._assert_bound_identity()
+                yield
+                self._assert_bound_identity()
+            finally:
+                self._bound_fd = None
+                self._bound_identity = None
+                os.close(duplicate)
 
     def append(self, record_type: str, payload: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
@@ -79,6 +117,17 @@ class AuditLogger:
             body["record_hash"] = sha256_json(body)
             if self.path is None:
                 self._rows.append(deepcopy(body))
+            elif self._bound_fd is not None:
+                self._assert_bound_identity()
+                encoded = (canonical_json(body) + "\n").encode("utf-8")
+                view = memoryview(encoded)
+                while view:
+                    written = os.write(self._bound_fd, view)
+                    if written <= 0:
+                        raise OSError("Audit append made no forward progress.")
+                    view = view[written:]
+                os.fsync(self._bound_fd)
+                self._assert_bound_identity()
             else:
                 with self.path.open("a", encoding="utf-8") as handle:
                     handle.write(canonical_json(body) + "\n")
@@ -92,6 +141,18 @@ class AuditLogger:
         with self._lock:
             if self.path is None:
                 return deepcopy(self._rows)
+            if self._bound_fd is not None:
+                self._assert_bound_identity()
+                os.lseek(self._bound_fd, 0, os.SEEK_SET)
+                raw = bytearray()
+                while chunk := os.read(self._bound_fd, 1024 * 1024):
+                    raw.extend(chunk)
+                self._assert_bound_identity()
+                try:
+                    lines = bytes(raw).decode("utf-8").splitlines()
+                except UnicodeDecodeError as exc:
+                    raise ValueError("Audit log is not valid UTF-8.") from exc
+                return [_decode_audit_row(line) for line in lines if line.strip()]
             if not self.path.exists():
                 return []
             return [

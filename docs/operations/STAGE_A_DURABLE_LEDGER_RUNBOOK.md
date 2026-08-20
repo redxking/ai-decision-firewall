@@ -13,7 +13,15 @@ Stage A has no production or test-tenant connector, operational credential, vend
 
 The durable adapter is `SQLiteSyntheticAdapterStore`: a repository-controlled, same-process, offline synthetic component. Its `SyntheticAdapterReceipt` is adapter-reported only. The separate observer reads the same durable adapter state under the same project custody and is not independent verification. A `RequestLookupResult` is a closed, sanitized replay envelope, not a serialized `Phase3Result` and not authority to execute.
 
-The repository demonstration does not constitute a supported Stage A service launcher. The opt-in path is available only through the reviewed library integration configured with pairwise-distinct `control_ledger_path`, `synthetic_adapter_path`, and `audit_path`. Do not create an ad hoc launcher or connect it to a network, credential, connector, or external target.
+The successor source tree includes `run_service.py` as the reviewed,
+synthetic-only integration for explicit empty-state initialization and
+existing-state-only loopback serving. Its standard-library HTTP server is a
+reference transport, not a production network boundary. The underlying
+library integration still requires pairwise-distinct `control_ledger_path`,
+`synthetic_adapter_path`, and `audit_path`. Do not create another launcher or
+connect either path to an external network, operational credential, connector,
+or target. Container/Kubernetes source procedures are separate in
+[`STAGE_A_KUBERNETES_RUNBOOK.md`](STAGE_A_KUBERNETES_RUNBOOK.md).
 
 ## Transaction and recovery boundaries
 
@@ -38,7 +46,7 @@ do not fence a noncooperating same-user process, another host, or modified code.
 ## Safety invariants
 
 1. Only `execution_mode=synthetic_simulation` and the offline repository-controlled synthetic target are permitted.
-2. No processing begins until both databases, the audit, exact code/configuration, path/sidecar separation, safe ownership, semantic/chronological validation, and cross-store correlation pass preflight under cooperative startup ownership.
+2. No processing begins until both databases, the audit, exact code/configuration, path/sidecar separation, safe ownership and bound file/store identities, semantic/chronological validation, bidirectional audit/control coverage, and cross-store correlation pass preflight under cooperative startup ownership.
 3. Reconciliation is never run automatically in a constructor. Use `reconcile_request(operator_asserted_quiesced=True)` only after independently establishing exclusive, quiesced ownership.
 4. Reconciliation never invokes an adapter command, creates a decision, mints a token, reopens authority, fabricates verification, or claims rollback.
 5. An exact affirmative `NO_EFFECT` receipt may close `FAILED_NO_EFFECT`. `APPLIED`, `PARTIAL`, or `AMBIGUOUS` without separately durable verification closes `UNKNOWN_EFFECT`. No receipt also closes `UNKNOWN_EFFECT`. Corrupt, mismatched, or unavailable adapter evidence halts with no state transition.
@@ -48,7 +56,7 @@ do not fence a noncooperating same-user process, another host, or modified code.
 9. Backup availability does not authorize restoration. Older or mismatched snapshots can omit consumed authority or committed target state and re-enable unsafe replay.
 10. Preserve the control DB, adapter DB, audit, WAL/SHM companions, backups, checksums, and incident evidence. Do not delete, truncate, merge, edit, or repair them in place.
 11. Existing artifacts are preflighted read-only before any missing artifact is created. A zero-byte, unsafe, unsupported, corrupt, or semantically impossible existing store is preserved and refused.
-12. The control store, adapter store, and audit are correlated at startup and before durable use. An orphan/missing receipt, overlapping provenance substitution, receipt/disposition mismatch, or terminal target-state mismatch fails closed; correlation does not make the artifacts atomic.
+12. The control store, adapter store, and audit are correlated at startup and before durable use. Every durable request requires exactly one ordinary audit lifecycle, and every complete durable decision/recovery lifecycle requires its exact control binding. Main database inode and immutable store ID are bound for the life of the process. An orphan/missing receipt, historical rollback, regular-file replacement, overlapping provenance substitution, receipt/disposition mismatch, or terminal target-state mismatch fails closed; correlation does not make the artifacts atomic or provide an external rollback anchor.
 13. Recovery audit is exactly `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, `RECOVERY_FINALIZED` before T3. A pending exact prefix or completed trio fences other request/approval audit writers with `RECOVERY_AUDIT_PENDING`; only exact recovery may resume it.
 14. Any unknown, inconsistent, or unverified state keeps processing disabled.
 

@@ -127,17 +127,23 @@ def _assert_finite_json_numbers(value: Any) -> None:
             pending.extend(current)
 
 
-POST_CAMPAIGN_ISOLATED_SOURCES = frozenset({"src/adf_poc/stage_a.py"})
+POST_CAMPAIGN_ISOLATED_SOURCES = frozenset(
+    {
+        "src/adf_poc/service.py",
+        "src/adf_poc/service_secret_stage.py",
+        "src/adf_poc/stage_a.py",
+    }
+)
 
 
 def _package_source_paths() -> dict[str, str]:
     """Bind the Phase 2.4 package surface and its transitive imports.
 
-    The later Stage A module is an authorization/attempt-ledger boundary that
-    the fixed feature-only campaign cannot import or invoke.  Keeping it outside
-    this historical campaign surface preserves both the no-authorization claim
-    and the published schema's bounded source registry.  Stage A has separate
-    exact-commit and manifest evidence.
+    The later Stage A ledger and service modules are authorization/runtime
+    boundaries that the fixed feature-only campaign cannot import or invoke.
+    Keeping them outside this historical campaign surface preserves both the
+    no-authorization claim and the published schema's bounded source registry.
+    Stage A has separate exact-commit and manifest evidence.
     """
 
     paths: dict[str, str] = {}

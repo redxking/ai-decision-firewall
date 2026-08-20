@@ -9,6 +9,31 @@ GitHub Release was created, no deployment occurred, and no exact-SHA Pages run
 was observed. Exact evidence and limitations are recorded in
 [`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
+- Pinned every external GitHub Action in CI and Pages to a full commit SHA and
+  added a regression that rejects tags, branches, and short SHAs.
+- Advanced the official CI and Pages actions to immutable Node.js 24 releases
+  after GitHub reported that the earlier Node.js 20 actions were deprecated and
+  being force-run on Node.js 24.
+- Added exact-version, SHA-256 hash-locked runtime and documentation dependency
+  graphs, a reproducible CycloneDX 1.6 runtime SBOM, closed lock/SBOM
+  validation, and `--require-hashes` CI installation. A clean temporary runtime
+  environment installed the lock successfully and passed 23 representative
+  contract tests. This is project-controlled dependency integrity evidence,
+  not trusted-builder provenance, vulnerability disposition, or a signed
+  release.
+- Corrected the runtime lock after CI proved the original graph was not closed
+  across the supported interpreter matrix: NumPy `2.5.2` had no Python 3.11
+  wheel and `referencing` required conditional `typing-extensions` on Python
+  3.11/3.12. The runtime range now resolves to NumPy `2.4.6`, the conditional
+  package is hash locked, and the SBOM validator requires every reviewed
+  transitive edge rather than only root edges. Clean binary-only hash installs
+  and import smoke checks passed locally on Python 3.11 and 3.12.
+- Removed reliance on jsonschema's process-global optional date-time format
+  registry. Installing SBOM tooling registered an optional validator and
+  changed malformed timestamp classification from the code-owned stable reason
+  code to a generic schema error. Timestamp semantics now remain in the
+  offset-aware code-owned validation path regardless of unrelated installed
+  format extras.
 - Reproduced a critical restart replay on the published Phase 3.1 baseline:
   two newly constructed firewall instances sharing the same valid audit path
   accepted the same authenticated request and each reported one synthetic

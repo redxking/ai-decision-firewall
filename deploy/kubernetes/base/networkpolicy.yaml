@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  labels:
+    app.kubernetes.io/name: ai-decision-firewall
+    app.kubernetes.io/component: stage-a-network-boundary
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress

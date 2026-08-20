@@ -8,7 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator, FormatChecker
+from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 from adf_poc.utils import (
@@ -515,7 +515,11 @@ def validate_decision_request_dict(
         )
 
     schema = _load_request_schema(schema_path)
-    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    # Date-time semantics are validated below by the code-owned offset-aware
+    # parser. Do not delegate them to jsonschema's process-global optional
+    # format registry: installing an unrelated package can register additional
+    # validators and otherwise change stable reason-code classification.
+    validator = Draft202012Validator(schema)
     errors = sorted(
         validator.iter_errors(value),
         key=lambda error: (

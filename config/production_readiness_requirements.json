@@ -1,7 +1,9 @@
 {
-  "schema_version": "adf-production-readiness-0.1.0",
-  "as_of": "2026-08-16",
+  "schema_version": "adf-production-readiness-0.2.0",
+  "as_of": "2026-08-20",
   "baseline_commit": "bb6b8f28afba0961bb97b24e6050fccaa94d5702",
+  "candidate_commit": "91a351459610e045ae5de7b9380f8228c157006f",
+  "candidate_manifest_sha256": "7e93e104b6e9e061aed10298db0a065682e40e1871e2033e7059bdf351652fc2",
   "candidate_label": "PRODUCTION_DEVELOPMENT_CANDIDATE",
   "declared_status": "BLOCKED",
   "requirements": [
@@ -435,8 +437,8 @@
       "accountable_owner": "RELEASE_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["pyproject.toml", ".github/workflows/ci.yml", "MANIFEST.sha256", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "There is no control-schema migrator. Preserve any v1 evidence and create a distinct reviewed v2 ledger. Exact implementation Commit 8818d5d2d40faebced66a254d58b1f0d04c9f8b4 passed its bound manifest, CI run 31953570779, and Dependency Graph run 31953572482. The separate ER-002 evidence carrier regenerates and verifies a manifest that covers the record; its exact carrier SHA is reported outside the necessarily non-self-referential record. SBOM, reproducible-build evidence, provenance, dependency lock, and signed artifacts remain absent.",
+      "evidence_artifacts": ["pyproject.toml", "requirements.lock", "requirements-docs.lock", "artifacts/supply-chain/runtime.cdx.json", "scripts/validate_supply_chain.py", "tests/test_supply_chain_artifacts.py", ".github/workflows/ci.yml", "MANIFEST.sha256", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md", "docs/production/SUPPLY_CHAIN.md"],
+      "remaining_gate": "The runtime and documentation graphs are exact-version and SHA-256 hash locked, the runtime CycloneDX 1.6 SBOM is closed against the runtime lock, and CI installs the runtime graph with --require-hashes. There is no control-schema migrator; preserve any v1 evidence and create a distinct reviewed v2 ledger. Reproducible cross-platform wheel-build evidence, signed provenance, vulnerability disposition, trusted builder custody, and signed release artifacts remain absent.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "A SHA-256 inventory is not an SBOM, signature, or reproducible-build proof."
     },
@@ -449,9 +451,9 @@
       "acceptance_criteria": "The intended environment deploys immutable artifacts through reviewed IaC with managed secrets and keys, locked dependencies, SBOM, signed provenance, rotation, and rollback tests.",
       "accountable_owner": "PLATFORM_AND_SUPPLY_CHAIN_OWNERS",
       "owner_acceptance": "NOT_RECORDED",
-      "current_state": "NOT_IMPLEMENTED",
-      "evidence_artifacts": [],
-      "remaining_gate": "No service container, IaC, deployment lock, KMS, SBOM, signature, or provenance attestation exists.",
+      "current_state": "UNIT_TESTED",
+      "evidence_artifacts": ["Dockerfile", ".dockerignore", ".github/workflows/ci.yml", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "docs/adr/016_offline_stage_a_container_boundary.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "tests/test_container_deployment.py", "tests/test_workflow_supply_chain.py"],
+      "remaining_gate": "A digest-pinned non-root image, offline Kubernetes source baseline, projected-secret staging, and non-publishing CI build/smoke mechanism now exist and are statically tested. No exact-candidate container workflow run has yet been observed, and no approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "Local raw key bytes are not managed secrets or production key custody."
     },
@@ -496,7 +498,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
       "evidence_artifacts": ["tests/", "docs/TEST_AND_EVALUATION_PLAN.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "Exact implementation Commit 8818d5d2d40faebced66a254d58b1f0d04c9f8b4 passed the recorded focused and complete local suites and CI run 31953570779 succeeded for the exact SHA on Python 3.11 and 3.12. Resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
+      "remaining_gate": "Exact implementation candidate 91a351459610e045ae5de7b9380f8228c157006f passed 427 warning-fatal local tests and its 337-entry manifest verified against all 338 tracked files except the manifest itself. The dependency-corrected predecessor completed Python 3.11, Python 3.12, and restricted non-publishing container CI; this candidate additionally advances the pinned official actions to Node.js 24 and has not yet completed remote CI. Resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
       "release_gate": "VERIFICATION_ACCEPTANCE_GATE",
       "prohibited_inference": "Green CI is implementation evidence, not operational effectiveness."
     },
@@ -524,9 +526,9 @@
       "acceptance_criteria": "An exact commit passes focused and full verification with manifest and evidence binding, and the intended environment demonstrates canary deployment, schema upgrade, artifact rollback, policy and model compatibility, patching, and immediate disable.",
       "accountable_owner": "RELEASE_AND_OPERATIONS_OWNERS",
       "owner_acceptance": "NOT_RECORDED",
-      "current_state": "NOT_IMPLEMENTED",
-      "evidence_artifacts": ["MANIFEST.sha256", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Preserve the separately regenerated ER-002 carrier manifest and report that carrier SHA outside its necessarily non-self-referential contents. Demonstrate approved deployment, upgrade, rollback, patch, compatibility, backup/restore, and withdrawal lifecycles.",
+      "current_state": "UNIT_TESTED",
+      "evidence_artifacts": ["MANIFEST.sha256", "config/production_readiness_requirements.json", "scripts/validate_production_readiness.py", "tests/test_production_readiness_gate.py", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "docs/adr/016_offline_stage_a_container_boundary.md", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "tests/test_container_deployment.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 91a351459610e045ae5de7b9380f8228c157006f and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
       "release_gate": "RELEASE_LIFECYCLE_ACCEPTANCE_GATE",
       "prohibited_inference": "A local commit does not mean pushed, merged, tagged, released, or deployed, and source rollback is not operational rollback."
     },

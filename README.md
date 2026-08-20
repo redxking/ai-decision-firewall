@@ -99,9 +99,14 @@ cd ai-decision-firewall
 
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
 ```
+
+The install is intentionally fail closed: it accepts only distributions whose
+SHA-256 digests are in the reviewed runtime lock, and it will not execute an
+sdist build. If the lock has no compatible wheel for the selected interpreter
+and platform, stop and review the dependency set rather than weakening either
+flag. The Python/pip bootstrap itself remains outside this runtime lock.
 
 Run the Phase 3 synthetic demonstrations:
 
@@ -118,6 +123,18 @@ PYTHONWARNINGS=error PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. \
   python3 -m unittest discover -s tests
 ```
 
+Validate the dependency locks, runtime SBOM, and exact tracked-file manifest:
+
+```bash
+python3 scripts/validate_supply_chain.py
+python3 scripts/validate_manifest.py
+```
+
+The manifest validator requires one sorted, canonical entry for every tracked
+regular file except `MANIFEST.sha256` itself, rejects duplicate or unsafe
+paths, and then verifies every recorded digest. It is an integrity inventory,
+not a signature or independently custodied attestation.
+
 Validate the offline Phase 2 package without invoking the decision engine:
 
 ```bash
@@ -132,10 +149,27 @@ python3 scripts/validate_production_readiness.py \
   --repo-root .
 ```
 
+Once a separate schema `0.2.0` metadata carrier names an immutable candidate
+commit and that candidate's verified manifest digest, validate the clean carrier
+with the stricter ceremony check:
+
+```bash
+python3 scripts/validate_production_readiness.py --release-mode \
+  --config config/production_readiness_requirements.json \
+  --repo-root .
+```
+
+Release mode permits the carrier to differ from the named candidate only in the
+readiness descriptor and regenerated repository manifest. It still returns
+status `2` while mandatory external or owner gates remain blocked.
+
 The readiness command intentionally exits with status `2` while the derived
-state is `BLOCKED`. Stage A has no standalone service or launcher; its operator
-procedures and focused verification commands are in the
-[runbook](docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md).
+state is `BLOCKED`. Stage A now includes an explicit-create, existing-state-only
+loopback reference service and an offline Kubernetes source baseline. Neither is
+an accepted production transport or deployment. Use the
+[durable-state runbook](docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md) and
+[Kubernetes runbook](docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md); do not add
+an ad hoc launcher, network endpoint, connector, credential, or external target.
 
 ## Exact evidence snapshot
 
@@ -191,7 +225,9 @@ The complete control status is maintained in
 - [Stage A exact evidence record](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md)
 - [Production readiness and blocking gates](docs/production/PRODUCTION_READINESS.md)
 - [ADR-015: durable synthetic receipt and result lookup](docs/adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md)
+- [ADR-016: offline Stage A container boundary](docs/adr/016_offline_stage_a_container_boundary.md)
 - [Stage A inspection and recovery runbook](docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md)
+- [Offline Stage A Kubernetes runbook](docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md)
 - [Architecture diagrams and build instructions](docs/architecture/README.md)
 - [Phase 2 documentation](docs/phase2/README.md)
 - [Phase 3 documentation](docs/phase3/README.md)

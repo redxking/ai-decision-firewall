@@ -5,6 +5,7 @@ import hmac
 import os
 import stat
 import uuid
+from collections import Counter
 from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -79,6 +80,24 @@ def _deterministic_failure_id(prefix: str, *bindings: str) -> str:
 
 def _fallback_utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(microsecond=0)
+
+
+def _fsync_directory(path: Path) -> None:
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    flags |= getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags)
+    try:
+        opened = os.fstat(descriptor)
+        current = path.lstat()
+        if (
+            not stat.S_ISDIR(opened.st_mode)
+            or opened.st_dev != current.st_dev
+            or opened.st_ino != current.st_ino
+        ):
+            raise OSError("directory identity changed during sync")
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 @contextmanager
@@ -201,24 +220,262 @@ def _validate_durable_store_correlation(
             )
             or adapter["binding_sha256"] != control["binding_sha256"]
             or adapter["idempotency_key"] != control["idempotency_key"]
-            or (
-                state != "RESERVED"
-                and adapter["receipt_sha256"] != receipt_sha256
-            )
+            or (state != "RESERVED" and adapter["receipt_sha256"] != receipt_sha256)
             or (
                 state in terminal_statuses
                 and adapter["status"] not in terminal_statuses[state]
             )
             or (
                 state in terminal_statuses
-                and adapter["state_after_sha256"]
-                != control["target_state_sha256"]
+                and adapter["state_after_sha256"] != control["target_state_sha256"]
             )
         ):
             raise ControlLedgerError(
                 "DURABLE_STORE_CORRELATION_INVALID",
                 "Control and synthetic-adapter receipt bindings differ.",
             )
+
+
+def _audit_continuity_error(message: str) -> ControlLedgerError:
+    return ControlLedgerError("AUDIT_CONTINUITY_REQUIRED", message)
+
+
+def _validate_durable_audit_continuity(
+    rows: list[dict[str, Any]],
+    control_rows: tuple[dict[str, str | None], ...],
+    adapter_rows: tuple[dict[str, str], ...],
+    control_activity: dict[str, int] | None = None,
+) -> bool:
+    """Bind durable request state to complete decision or recovery lifecycles.
+
+    Returns True when an unresolved, nonterminal ordinary lifecycle is present;
+    callers may permit only the explicit recovery path in that state.
+    """
+
+    activity = control_activity or {}
+    if activity.get("unbound_authorizations", 0) or activity.get("unbound_attempts", 0):
+        raise _audit_continuity_error(
+            "Unbound durable authority activity has no request lifecycle audit binding."
+        )
+    if (control_rows or adapter_rows or any(activity.values())) and not rows:
+        raise _audit_continuity_error(
+            "Durable authority or adapter activity exists without lifecycle audit evidence."
+        )
+
+    complete: list[dict[str, str]] = []
+    incomplete: list[dict[str, str]] = []
+    recovered: list[dict[str, str]] = []
+    base_by_intake: dict[str, list[dict[str, Any]]] = {}
+    index = 0
+    while index < len(rows):
+        record_type = str(rows[index].get("record_type", ""))
+        if record_type == "REQUEST_RECEIVED":
+            start = index
+            index += 1
+            while index < len(rows) and str(rows[index].get("record_type", "")) not in {
+                "REQUEST_RECEIVED",
+                "RECOVERY_STARTED",
+                "APPROVAL_RECORDED",
+            }:
+                index += 1
+                if (
+                    str(rows[index - 1].get("record_type", ""))
+                    == "FINAL_STATE_RECORDED"
+                ):
+                    break
+            lifecycle = rows[start:index]
+            intake_id = str(lifecycle[0].get("payload", {}).get("intake_id", ""))
+            validated = next(
+                (
+                    row.get("payload", {})
+                    for row in lifecycle
+                    if row.get("record_type") == "REQUEST_VALIDATED"
+                ),
+                {},
+            )
+            decision = next(
+                (
+                    row.get("payload", {})
+                    for row in lifecycle
+                    if row.get("record_type") == "DECISION_PRODUCED"
+                ),
+                {},
+            )
+            binding = {
+                "request_id": str(validated.get("request_id", "")),
+                "request_sha256": str(validated.get("request_sha256", "")),
+                "decision_id": str(decision.get("decision_id", "")),
+            }
+            if lifecycle[-1].get("record_type") == "FINAL_STATE_RECORDED":
+                valid, errors = validate_phase3_lifecycle(lifecycle)
+                if not valid:
+                    raise _audit_continuity_error(
+                        "Closed lifecycle validation failed: " + "; ".join(errors)
+                    )
+                lifecycle_types = {str(row.get("record_type", "")) for row in lifecycle}
+                if (
+                    "REQUEST_REJECTED" not in lifecycle_types
+                    and "POLICY_EVALUATION_FAILED" not in lifecycle_types
+                    and lifecycle_types
+                    & {
+                        "EVIDENCE_EVALUATED",
+                        "POLICY_EVALUATED",
+                        "CONTROL_PLANE_FAILURE",
+                    }
+                ):
+                    complete.append(binding)
+                base_by_intake[intake_id] = lifecycle
+            else:
+                if not binding["request_id"] or not binding["request_sha256"]:
+                    raise _audit_continuity_error(
+                        "Incomplete lifecycle lacks a durable request binding."
+                    )
+                incomplete.append(binding)
+            continue
+
+        if record_type == "APPROVAL_RECORDED":
+            payload = rows[index].get("payload", {})
+            intake_id = str(payload.get("intake_id", ""))
+            base = base_by_intake.get(intake_id)
+            if base is None:
+                raise _audit_continuity_error(
+                    "Approval audit suffix lacks its complete base lifecycle."
+                )
+            valid, errors = validate_phase3_lifecycle([*base, rows[index]])
+            if not valid:
+                raise _audit_continuity_error(
+                    "Approval lifecycle validation failed: " + "; ".join(errors)
+                )
+            index += 1
+            continue
+
+        if record_type == "RECOVERY_STARTED":
+            recovery: list[dict[str, Any]] = []
+            while index < len(rows) and str(
+                rows[index].get("record_type", "")
+            ).startswith("RECOVERY_"):
+                recovery.append(rows[index])
+                index += 1
+            expected = (
+                "RECOVERY_STARTED",
+                "RECOVERY_EVIDENCE_ASSESSED",
+                "RECOVERY_FINALIZED",
+            )
+            types = tuple(str(row.get("record_type", "")) for row in recovery)
+            if types != expected[: len(types)] or len(recovery) > len(expected):
+                raise _audit_continuity_error(
+                    "Recovery lifecycle is not an exact prefix."
+                )
+            payloads = [row.get("payload", {}) for row in recovery]
+            binding_values = {
+                (
+                    str(payload.get("request_id", "")),
+                    str(payload.get("request_sha256", "")),
+                    str(payload.get("decision_id", "")),
+                    str(payload.get("recovery_id", "")),
+                )
+                for payload in payloads
+            }
+            if len(binding_values) != 1 or any(
+                not item for item in next(iter(binding_values))
+            ):
+                raise _audit_continuity_error(
+                    "Recovery lifecycle binding is inconsistent."
+                )
+            if len(recovery) == len(expected):
+                request_id, request_sha256, decision_id, _recovery_id = next(
+                    iter(binding_values)
+                )
+                recovered.append(
+                    {
+                        "request_id": request_id,
+                        "request_sha256": request_sha256,
+                        "decision_id": decision_id,
+                    }
+                )
+            elif index != len(rows):
+                raise _audit_continuity_error(
+                    "Incomplete recovery lifecycle is not the audit tail."
+                )
+            continue
+
+        raise _audit_continuity_error(
+            f"Unexpected top-level audit record {record_type or '<empty>'}."
+        )
+
+    complete_counts = Counter(
+        (row["request_id"], row["request_sha256"], row["decision_id"])
+        for row in complete
+        if all(row.values())
+    )
+    recovered_counts = Counter(
+        (row["request_id"], row["request_sha256"], row["decision_id"])
+        for row in recovered
+        if all(row.values())
+    )
+    ordinary_by_pair = Counter(
+        (row["request_id"], row["request_sha256"])
+        for row in [*complete, *incomplete]
+        if row["request_id"] and row["request_sha256"]
+    )
+    control_by_pair = {
+        (str(row["request_id"]), str(row["request_sha256"])): row
+        for row in control_rows
+    }
+    for binding, count in [*complete_counts.items(), *recovered_counts.items()]:
+        if count != 1:
+            raise _audit_continuity_error(
+                "A durable request binding has duplicate lifecycle audit mappings."
+            )
+    if sum(complete_counts.values()) != len(complete) or sum(
+        recovered_counts.values()
+    ) != len(recovered):
+        raise _audit_continuity_error(
+            "A durable lifecycle lacks a complete request and decision binding."
+        )
+    for lifecycle_kind, mappings in (
+        ("ordinary", complete_counts),
+        ("recovery", recovered_counts),
+    ):
+        for binding in mappings:
+            pair = binding[:2]
+            control = control_by_pair.get(pair)
+            if control is None or (
+                control.get("decision_id") is not None
+                and str(control["decision_id"]) != binding[2]
+            ):
+                raise _audit_continuity_error(
+                    f"A complete {lifecycle_kind} audit lifecycle lacks its exact durable control binding."
+                )
+    for row in incomplete:
+        pair = (row["request_id"], row["request_sha256"])
+        if pair not in control_by_pair:
+            raise _audit_continuity_error(
+                "An incomplete ordinary lifecycle lacks its exact durable request."
+            )
+
+    recovery_only = False
+    for row in control_rows:
+        pair = (str(row["request_id"]), str(row["request_sha256"]))
+        if ordinary_by_pair[pair] != 1:
+            raise _audit_continuity_error(
+                "Durable control state lacks exactly one bound ordinary lifecycle."
+            )
+        if row["state"] != "TERMINAL":
+            recovery_only = True
+            continue
+        binding = (
+            pair[0],
+            pair[1],
+            str(row["decision_id"] or ""),
+        )
+        complete_count = complete_counts[binding]
+        recovery_count = recovered_counts[binding]
+        if complete_count + recovery_count != 1:
+            raise _audit_continuity_error(
+                "Terminal control state requires exactly one complete bound decision or recovery audit."
+            )
+    return recovery_only
 
 
 class Phase3DecisionFirewall:
@@ -244,9 +501,7 @@ class Phase3DecisionFirewall:
     ) -> dict[str, Any] | None:
         """Return an uncommitted exact recovery tail, or fail on malformed recovery rows."""
 
-        if not rows or not str(rows[-1].get("record_type", "")).startswith(
-            "RECOVERY_"
-        ):
+        if not rows or not str(rows[-1].get("record_type", "")).startswith("RECOVERY_"):
             return None
         end = len(rows)
         start = end - 1
@@ -328,6 +583,7 @@ class Phase3DecisionFirewall:
         *,
         allow_pending_recovery: bool = False,
         validate_store_correlation: bool = True,
+        allow_incomplete_lifecycle: bool = False,
     ):
         """Serialize a complete audit lifecycle across local processes."""
 
@@ -343,13 +599,15 @@ class Phase3DecisionFirewall:
             metadata = ancestor.lstat()
             if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
                 raise RuntimeError("Audit ownership parent path is unsafe.")
-        flags = os.O_RDWR | os.O_APPEND | os.O_CREAT
+        flags = os.O_RDWR | os.O_APPEND | getattr(os, "O_CLOEXEC", 0)
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
         try:
             descriptor = os.open(audit_path, flags, 0o600)
         except OSError as exc:
-            raise RuntimeError("Audit ownership path could not be opened safely.") from exc
+            raise RuntimeError(
+                "Audit ownership path could not be opened safely."
+            ) from exc
         with os.fdopen(descriptor, "a+b") as ownership:
             descriptor_metadata = os.fstat(ownership.fileno())
             path_metadata = audit_path.lstat()
@@ -357,35 +615,73 @@ class Phase3DecisionFirewall:
                 stat.S_ISLNK(path_metadata.st_mode)
                 or not stat.S_ISREG(path_metadata.st_mode)
                 or path_metadata.st_nlink != 1
+                or path_metadata.st_uid != os.geteuid()
+                or stat.S_IMODE(path_metadata.st_mode) & 0o077
+                or descriptor_metadata.st_uid != os.geteuid()
+                or stat.S_IMODE(descriptor_metadata.st_mode) & 0o077
                 or descriptor_metadata.st_dev != path_metadata.st_dev
                 or descriptor_metadata.st_ino != path_metadata.st_ino
+                or (descriptor_metadata.st_dev, descriptor_metadata.st_ino)
+                != self._audit_identity
             ):
                 raise RuntimeError("Audit ownership path identity is unsafe.")
-            _fcntl.flock(ownership.fileno(), _fcntl.LOCK_EX)
+            deadline = perf_counter() + (self._startup_timeout_ms / 1000.0)
+            while True:
+                try:
+                    _fcntl.flock(ownership.fileno(), _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    remaining = deadline - perf_counter()
+                    if remaining <= 0:
+                        raise ControlLedgerError(
+                            "DURABLE_AUDIT_BUSY",
+                            "Durable audit ownership timed out.",
+                        ) from None
+                    sleep(min(0.01, remaining))
             try:
-                rows = self._audit.read_all()
-                valid, errors = validate_phase3_audit_chain(rows)
-                if not valid:
-                    raise RuntimeError(
-                        "Existing Phase 3 audit chain is invalid: "
-                        + "; ".join(errors)
-                    )
-                if validate_store_correlation:
-                    self._assert_durable_store_correlation()
-                if rows:
-                    self._audit.previous_hash = str(rows[-1]["record_hash"])
-                    self._audit.sequence = int(rows[-1]["sequence"]) + 1
-                else:
-                    self._audit.previous_hash = "0" * 64
-                    self._audit.sequence = 0
-                pending = self._pending_recovery_tail(rows)
-                if pending is not None and not allow_pending_recovery:
-                    raise ControlLedgerError(
-                        "RECOVERY_AUDIT_PENDING",
-                        "An exact recovery lifecycle must reach its control commit "
-                        "before another audit writer may proceed.",
-                    )
-                yield
+                with self._audit.bind_descriptor(
+                    ownership.fileno(), expected_identity=self._audit_identity
+                ):
+                    rows = self._audit.read_all()
+                    valid, errors = validate_phase3_audit_chain(rows)
+                    if not valid:
+                        raise RuntimeError(
+                            "Existing Phase 3 audit chain is invalid: "
+                            + "; ".join(errors)
+                        )
+                    pending = self._pending_recovery_tail(rows)
+                    if pending is not None and not allow_pending_recovery:
+                        raise ControlLedgerError(
+                            "RECOVERY_AUDIT_PENDING",
+                            "An exact recovery lifecycle must reach its control commit "
+                            "before another audit writer may proceed.",
+                        )
+                    unresolved = False
+                    if type(self._control_ledger) is SQLiteControlLedger:
+                        unresolved = _validate_durable_audit_continuity(
+                            rows,
+                            self._control_ledger.audit_continuity_snapshot(),
+                            (
+                                self._adapter_store.correlation_snapshot()
+                                if self._adapter_store is not None
+                                and validate_store_correlation
+                                else ()
+                            ),
+                            self._control_ledger.audit_activity_snapshot(),
+                        )
+                    if unresolved and not allow_incomplete_lifecycle:
+                        raise _audit_continuity_error(
+                            "An incomplete durable lifecycle permits only exact reconciliation."
+                        )
+                    if validate_store_correlation:
+                        self._assert_durable_store_correlation()
+                    if rows:
+                        self._audit.previous_hash = str(rows[-1]["record_hash"])
+                        self._audit.sequence = int(rows[-1]["sequence"]) + 1
+                    else:
+                        self._audit.previous_hash = "0" * 64
+                        self._audit.sequence = 0
+                    yield
             finally:
                 _fcntl.flock(ownership.fileno(), _fcntl.LOCK_UN)
 
@@ -395,6 +691,7 @@ class Phase3DecisionFirewall:
         *,
         allow_pending_recovery: bool = False,
         validate_store_correlation: bool = True,
+        allow_incomplete_lifecycle: bool = False,
     ):
         """Serialize startup/preflight and every durable audit/store operation."""
 
@@ -404,6 +701,7 @@ class Phase3DecisionFirewall:
             with self._exclusive_audit_file_execution(
                 allow_pending_recovery=allow_pending_recovery,
                 validate_store_correlation=validate_store_correlation,
+                allow_incomplete_lifecycle=allow_incomplete_lifecycle,
             ):
                 yield
 
@@ -417,7 +715,11 @@ class Phase3DecisionFirewall:
         synthetic_adapter_busy_timeout_ms: int,
         fault_modes: dict[str, str] | None,
         startup_at: str,
-    ) -> tuple[AuditLogger, SQLiteControlLedger | InMemoryControlLedger, SQLiteSyntheticAdapterStore | None]:
+    ) -> tuple[
+        AuditLogger,
+        SQLiteControlLedger | InMemoryControlLedger,
+        SQLiteSyntheticAdapterStore | None,
+    ]:
         """Preflight all existing artifacts, then open them as one startup unit."""
 
         control_preflight: tuple[dict[str, str | None], ...] = ()
@@ -427,9 +729,7 @@ class Phase3DecisionFirewall:
                 control_ledger_path,
                 busy_timeout_ms=control_ledger_busy_timeout_ms,
             )
-        if synthetic_adapter_path is not None and Path(
-            synthetic_adapter_path
-        ).exists():
+        if synthetic_adapter_path is not None and Path(synthetic_adapter_path).exists():
             adapter_preflight = SQLiteSyntheticAdapterStore.preflight_existing(
                 synthetic_adapter_path,
                 target_inventory=self._policy.target_inventory,
@@ -437,24 +737,20 @@ class Phase3DecisionFirewall:
                 busy_timeout_ms=synthetic_adapter_busy_timeout_ms,
             )
         if synthetic_adapter_path is not None:
-            _validate_durable_store_correlation(
-                control_preflight, adapter_preflight
-            )
+            _validate_durable_store_correlation(control_preflight, adapter_preflight)
 
-        preflight_audit = (
-            AuditLogger(audit_path)
-            if audit_path is not None and Path(audit_path).exists()
-            else None
+        configured_artifacts = tuple(
+            Path(path).absolute()
+            for path in (audit_path, control_ledger_path, synthetic_adapter_path)
+            if path is not None
         )
-        audit = preflight_audit or AuditLogger(audit_path)
-        existing_audit_valid, existing_audit_errors = validate_phase3_audit_chain(
-            audit.read_all()
-        )
-        if not existing_audit_valid:
-            raise ValueError(
-                "Existing Phase 3 audit chain is invalid: "
-                + "; ".join(existing_audit_errors)
-            )
+        if configured_artifacts:
+            artifact_presence = tuple(path.exists() for path in configured_artifacts)
+            if any(artifact_presence) and not all(artifact_presence):
+                raise _audit_continuity_error(
+                    "A durable state set cannot be initialized from a partial authoritative artifact set."
+                )
+
         control_ledger: SQLiteControlLedger | InMemoryControlLedger = (
             SQLiteControlLedger(
                 control_ledger_path,
@@ -485,6 +781,71 @@ class Phase3DecisionFirewall:
                 control_ledger.correlation_snapshot(),
                 adapter_store.correlation_snapshot(),
             )
+        if audit_path is not None:
+            audit_target = Path(audit_path).absolute()
+            control_continuity = (
+                control_ledger.audit_continuity_snapshot()
+                if type(control_ledger) is SQLiteControlLedger
+                else ()
+            )
+            adapter_continuity = (
+                adapter_store.correlation_snapshot()
+                if adapter_store is not None
+                else ()
+            )
+            if not audit_target.exists():
+                if control_continuity or adapter_continuity:
+                    raise _audit_continuity_error(
+                        "Established durable state is missing its lifecycle audit file."
+                    )
+                audit_target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                flags = os.O_RDWR | os.O_CREAT | os.O_EXCL
+                if hasattr(os, "O_CLOEXEC"):
+                    flags |= os.O_CLOEXEC
+                if hasattr(os, "O_NOFOLLOW"):
+                    flags |= os.O_NOFOLLOW
+                try:
+                    descriptor = os.open(audit_target, flags, 0o600)
+                    try:
+                        os.fchmod(descriptor, 0o600)
+                        os.fsync(descriptor)
+                        opened = os.fstat(descriptor)
+                        current = audit_target.lstat()
+                        if (
+                            not stat.S_ISREG(opened.st_mode)
+                            or opened.st_nlink != 1
+                            or opened.st_uid != os.geteuid()
+                            or stat.S_IMODE(opened.st_mode) != 0o600
+                            or opened.st_dev != current.st_dev
+                            or opened.st_ino != current.st_ino
+                        ):
+                            raise OSError("Audit identity changed during creation.")
+                        _fsync_directory(audit_target.parent)
+                    finally:
+                        os.close(descriptor)
+                except OSError as exc:
+                    raise _audit_continuity_error(
+                        "Initial lifecycle audit file could not be created safely."
+                    ) from exc
+            audit = AuditLogger(audit_target)
+            existing_rows = audit.read_all()
+            existing_audit_valid, existing_audit_errors = validate_phase3_audit_chain(
+                existing_rows
+            )
+            if not existing_audit_valid:
+                raise ValueError(
+                    "Existing Phase 3 audit chain is invalid: "
+                    + "; ".join(existing_audit_errors)
+                )
+            if type(control_ledger) is SQLiteControlLedger:
+                _validate_durable_audit_continuity(
+                    existing_rows,
+                    control_continuity,
+                    adapter_continuity,
+                    control_ledger.audit_activity_snapshot(),
+                )
+        else:
+            audit = AuditLogger(None)
         return audit, control_ledger, adapter_store
 
     def __init__(
@@ -528,7 +889,9 @@ class Phase3DecisionFirewall:
         self._policy = Phase3PolicyConfig.from_dict(Phase3PolicyConfig.to_dict(policy))
         self._policy_sha256 = sha256_json(Phase3PolicyConfig.to_dict(self._policy))
         self.__principal_resolver = principal_resolver.immutable_snapshot()
-        self.clock = clock or (lambda: datetime.now(timezone.utc))
+        self.clock = clock or (
+            lambda: datetime.now(timezone.utc).replace(microsecond=0)
+        )
         self.id_factory = id_factory or (lambda prefix: f"{prefix}-{uuid.uuid4()}")
         if audit_path is not None and _fcntl is None:
             raise ValueError(
@@ -565,9 +928,7 @@ class Phase3DecisionFirewall:
                     metadata = ancestor.lstat()
                 except FileNotFoundError:
                     continue
-                if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(
-                    metadata.st_mode
-                ):
+                if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
                     raise ValueError(
                         "Durable state parent chains cannot contain symbolic "
                         "links or non-directories."
@@ -578,9 +939,11 @@ class Phase3DecisionFirewall:
                     stat.S_ISLNK(metadata.st_mode)
                     or not stat.S_ISREG(metadata.st_mode)
                     or metadata.st_nlink != 1
+                    or metadata.st_uid != os.geteuid()
+                    or stat.S_IMODE(metadata.st_mode) & 0o077
                 ):
                     raise ValueError(
-                        "Durable state paths must be singly linked regular files."
+                        "Durable state paths must be owner-private singly linked regular files."
                     )
         labels = tuple(resolved_paths)
         for index, left_label in enumerate(labels):
@@ -606,8 +969,7 @@ class Phase3DecisionFirewall:
                             for suffix in ("-wal", "-shm", "-journal")
                         }
                         paths_collide = (
-                            right_resolved in left_names
-                            or left_resolved in right_names
+                            right_resolved in left_names or left_resolved in right_names
                         )
                 except (OSError, RuntimeError) as exc:
                     raise ValueError(
@@ -651,6 +1013,14 @@ class Phase3DecisionFirewall:
                     fault_modes=fault_modes,
                     startup_at=startup_at,
                 )
+                if self._audit.path is not None:
+                    audit_metadata = self._audit.path.lstat()
+                    self._audit_identity = (
+                        audit_metadata.st_dev,
+                        audit_metadata.st_ino,
+                    )
+                else:
+                    self._audit_identity = None
         self._metrics = Phase3Metrics()
         self._process_lock = Lock()
         self.__evidence_attestation_verifier = EvidenceAttestationVerifier(
@@ -773,7 +1143,11 @@ class Phase3DecisionFirewall:
                 dict.fromkeys(
                     [
                         *result.decision.reason_codes,
-                        *(verification.reason_codes if verification is not None else ()),
+                        *(
+                            verification.reason_codes
+                            if verification is not None
+                            else ()
+                        ),
                     ]
                 )
             ),
@@ -806,7 +1180,9 @@ class Phase3DecisionFirewall:
         )
         if snapshot is None or snapshot["state"] == "TERMINAL":
             return
-        terminal_at = self.clock().astimezone(timezone.utc).replace(microsecond=0).isoformat()
+        terminal_at = (
+            self.clock().astimezone(timezone.utc).replace(microsecond=0).isoformat()
+        )
         attempt_id = snapshot.get("attempt_id")
         if attempt_id is None:
             if snapshot["state"] == "CLAIMED":
@@ -866,13 +1242,10 @@ class Phase3DecisionFirewall:
             disposition = "COMPLETED_VERIFIED"
             attempt_state = "VERIFIED_EFFECT"
             recovery_required = False
-        elif (
-            (receipt is not None and receipt.status == "NO_EFFECT")
-            or (
-                receipt is None
-                and result.broker_result is not None
-                and not result.broker_result.reported_success
-            )
+        elif (receipt is not None and receipt.status == "NO_EFFECT") or (
+            receipt is None
+            and result.broker_result is not None
+            and not result.broker_result.reported_success
         ):
             disposition = "FAILED_NO_EFFECT"
             attempt_state = "FAILED_NO_EFFECT"
@@ -1338,7 +1711,10 @@ class Phase3DecisionFirewall:
                 type(self._control_ledger) is InMemoryControlLedger
                 and result.broker_result is not None
             ):
-                if result.verification is not None and result.verification.status == "VERIFIED":
+                if (
+                    result.verification is not None
+                    and result.verification.status == "VERIFIED"
+                ):
                     process_state = "VERIFIED_EFFECT"
                 elif not result.broker_result.reported_success:
                     process_state = "FAILED_NO_EFFECT"
@@ -1362,10 +1738,22 @@ class Phase3DecisionFirewall:
                     .replace(microsecond=0)
                     .isoformat(),
                 )
-            self._persist_durable_terminal_result(
-                result, principal_id=principal.id
-            )
+            self._persist_durable_terminal_result(result, principal_id=principal.id)
             return result
+
+    def authenticate_transport_credential(
+        self, credential: bytes
+    ) -> AuthenticatedPrincipal:
+        """Authenticate one opaque transport credential without durable mutation."""
+
+        try:
+            resolution = self.__principal_resolver.resolve(credential)
+            return self.__principal_resolver.verify_resolution(resolution)
+        except PrincipalAuthenticationError as exc:
+            raise ControlLedgerError(
+                "TRANSPORT_AUTHENTICATION_FAILED",
+                "Transport access requires a trusted invocation identity.",
+            ) from exc
 
     def _authenticated_request_binding(
         self, raw_request: str | bytes, *, credential: bytes
@@ -1397,7 +1785,10 @@ class Phase3DecisionFirewall:
     ) -> RequestLookupResult | None:
         """Authenticated read-only lookup; it makes no decision or execution attempt."""
 
-        if self._adapter_store is None or type(self._control_ledger) is not SQLiteControlLedger:
+        if (
+            self._adapter_store is None
+            or type(self._control_ledger) is not SQLiteControlLedger
+        ):
             raise ControlLedgerError(
                 "REQUEST_LOOKUP_DURABILITY_NOT_CONFIGURED",
                 "Stable request-result lookup requires both durable Stage A stores.",
@@ -1407,7 +1798,7 @@ class Phase3DecisionFirewall:
         )
         with self._exclusive_audit_execution(
             allow_pending_recovery=True,
-            validate_store_correlation=False,
+            allow_incomplete_lifecycle=True,
         ):
             result = self._control_ledger.lookup_request_result(
                 principal_id, request.request_id, request_sha256
@@ -1424,15 +1815,16 @@ class Phase3DecisionFirewall:
             if row.get("payload", {}).get("recovery_id") == recovery_id
         ]
         if not matches:
-            return self.clock().astimezone(timezone.utc).replace(microsecond=0).isoformat()
+            return (
+                self.clock().astimezone(timezone.utc).replace(microsecond=0).isoformat()
+            )
         expected_types = (
             "RECOVERY_STARTED",
             "RECOVERY_EVIDENCE_ASSESSED",
             "RECOVERY_FINALIZED",
         )
         if (
-            [index for index, _row in matches]
-            != list(range(matches[0][0], len(rows)))
+            [index for index, _row in matches] != list(range(matches[0][0], len(rows)))
             or len(matches) > len(expected_types)
             or tuple(row.get("record_type") for _index, row in matches)
             != expected_types[: len(matches)]
@@ -1481,16 +1873,14 @@ class Phase3DecisionFirewall:
             groups.append(current)
 
         def payloads(group: list[dict[str, Any]]) -> list[dict[str, Any]]:
-            return [
-                row["payload"]
-                for row in group
-                if type(row.get("payload")) is dict
-            ]
+            return [row["payload"] for row in group if type(row.get("payload")) is dict]
 
         candidates = [
             group
             for group in groups
-            if any(payload.get("request_id") == request_id for payload in payloads(group))
+            if any(
+                payload.get("request_id") == request_id for payload in payloads(group)
+            )
             and (
                 decision_id is None
                 or any(
@@ -1643,11 +2033,9 @@ class Phase3DecisionFirewall:
                 "decision_id": result.decision_id,
                 **extra,
             }
-            if (
-                row.get("record_type") != record_type
-                or canonical_json(row.get("payload"))
-                != canonical_json(expected_payload)
-            ):
+            if row.get("record_type") != record_type or canonical_json(
+                row.get("payload")
+            ) != canonical_json(expected_payload):
                 raise ControlLedgerError(
                     "RECOVERY_AUDIT_CONFLICT",
                     "Recovery audit prefix differs from the exact recovery result.",
@@ -1677,9 +2065,13 @@ class Phase3DecisionFirewall:
         credential: bytes,
         operator_asserted_quiesced: bool,
     ) -> RequestLookupResult | None:
-        with self._exclusive_audit_execution(
-            allow_pending_recovery=True
-        ), self._process_lock:
+        with (
+            self._exclusive_audit_execution(
+                allow_pending_recovery=True,
+                allow_incomplete_lifecycle=True,
+            ),
+            self._process_lock,
+        ):
             return self._reconcile_request_owned(
                 raw_request,
                 credential=credential,
@@ -1704,7 +2096,10 @@ class Phase3DecisionFirewall:
                 "RECOVERY_QUIESCENCE_REQUIRED",
                 "Exact-request recovery requires an operator quiescence assertion.",
             )
-        if self._adapter_store is None or type(self._control_ledger) is not SQLiteControlLedger:
+        if (
+            self._adapter_store is None
+            or type(self._control_ledger) is not SQLiteControlLedger
+        ):
             raise ControlLedgerError(
                 "REQUEST_LOOKUP_DURABILITY_NOT_CONFIGURED",
                 "Recovery requires both durable Stage A stores.",
@@ -1750,9 +2145,7 @@ class Phase3DecisionFirewall:
                 decision_id=None,
                 attempt_id=None,
             )
-            original_audit_reason = (
-                f"ORIGINAL_EXECUTION_AUDIT_{original_audit_status}"
-            )
+            original_audit_reason = f"ORIGINAL_EXECUTION_AUDIT_{original_audit_status}"
             self._control_ledger.revoke_issued_for_request(
                 principal_id,
                 request.request_id,
@@ -3063,8 +3456,50 @@ class Phase3DecisionFirewall:
     def metrics_snapshot(self) -> dict[str, Any]:
         return self._metrics.snapshot()
 
+    def readiness_snapshot(self) -> dict[str, Any]:
+        """Read-only integrity check for the bounded durable service profile."""
+
+        with (
+            self._exclusive_audit_execution(allow_pending_recovery=True),
+            self._process_lock,
+        ):
+            policy_valid = (
+                sha256_json(Phase3PolicyConfig.to_dict(self._policy))
+                == self._policy_sha256
+            )
+            rows = self._audit.read_all()
+            audit_valid, _audit_errors = validate_phase3_audit_chain(rows)
+            pending_recovery = self._pending_recovery_tail(rows) is not None
+            durable = (
+                type(self._control_ledger) is SQLiteControlLedger
+                and self._adapter_store is not None
+                and self._audit.path is not None
+            )
+            if durable:
+                self._assert_durable_store_correlation()
+            ready = policy_valid and audit_valid and durable and not pending_recovery
+            return {
+                "status": "READY" if ready else "NOT_READY",
+                "runtime_profile": "STAGE_A_SYNTHETIC_ONLY",
+                "execution_mode": self.execution_mode,
+                "live_actions_enabled": False,
+                "durable_state_configured": durable,
+                "policy_integrity_valid": policy_valid,
+                "audit_chain_valid": audit_valid,
+                "pending_recovery": pending_recovery,
+            }
+
     def read_audit(self) -> tuple[dict[str, Any], ...]:
-        return tuple(self._audit.read_all())
+        if self._audit.path is None:
+            return tuple(self._audit.read_all())
+        with (
+            self._exclusive_audit_execution(
+                allow_pending_recovery=True,
+                allow_incomplete_lifecycle=True,
+            ),
+            self._process_lock,
+        ):
+            return tuple(self._audit.read_all())
 
     def approve_for_reevaluation(
         self,

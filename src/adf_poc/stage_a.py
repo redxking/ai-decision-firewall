@@ -59,9 +59,7 @@ _ATTEMPT_STATES = frozenset(
     }
 )
 _TERMINAL_ATTEMPT_STATES = _ATTEMPT_STATES - {"RESERVED", "RECEIPT_RECORDED"}
-_REQUEST_STATES = frozenset(
-    {"CLAIMED", "AUTHORIZED", "ATTEMPT_RESERVED", "TERMINAL"}
-)
+_REQUEST_STATES = frozenset({"CLAIMED", "AUTHORIZED", "ATTEMPT_RESERVED", "TERMINAL"})
 _REQUEST_DISPOSITIONS = frozenset(
     {
         "COMPLETED_VERIFIED",
@@ -83,9 +81,7 @@ _REQUIRED_TABLES = frozenset(
         "audit_outbox",
     }
 )
-_ADAPTER_REQUIRED_TABLES = frozenset(
-    {"metadata", "target_states", "command_receipts"}
-)
+_ADAPTER_REQUIRED_TABLES = frozenset({"metadata", "target_states", "command_receipts"})
 _AUTHORITY_BEARING_KEYS = frozenset(
     {
         "authorization_token",
@@ -258,6 +254,7 @@ def _exclusive_store_startup(
             _fcntl.flock(descriptor, _fcntl.LOCK_UN)
         finally:
             os.close(descriptor)
+
 
 _CONTROL_SCHEMA_SQL = """
 BEGIN IMMEDIATE;
@@ -501,7 +498,9 @@ def _require_identifier(
     name: str,
     value: object,
     *,
-    error_type: type[ControlLedgerError] | type[SyntheticAdapterError] = ControlLedgerError,
+    error_type: (
+        type[ControlLedgerError] | type[SyntheticAdapterError]
+    ) = ControlLedgerError,
     reason_code: str = "CONTROL_LEDGER_BINDING_INVALID",
 ) -> str:
     if type(value) is not str or not value or len(value) > 512:
@@ -516,7 +515,9 @@ def _require_sha256(
     name: str,
     value: object,
     *,
-    error_type: type[ControlLedgerError] | type[SyntheticAdapterError] = ControlLedgerError,
+    error_type: (
+        type[ControlLedgerError] | type[SyntheticAdapterError]
+    ) = ControlLedgerError,
     reason_code: str = "CONTROL_LEDGER_BINDING_INVALID",
 ) -> str:
     candidate = _require_identifier(
@@ -668,9 +669,11 @@ def _assert_sqlite_runtime_integrity(
             schema_reason,
             f"{label} application schema does not exactly match the supported contract.",
         )
-    if verify_journal_mode and str(
-        connection.execute("PRAGMA journal_mode").fetchone()[0]
-    ).lower() != "wal":
+    if (
+        verify_journal_mode
+        and str(connection.execute("PRAGMA journal_mode").fetchone()[0]).lower()
+        != "wal"
+    ):
         raise error_type(durability_reason, f"{label} journal mode is not WAL.")
     if int(connection.execute("PRAGMA synchronous").fetchone()[0]) != 2:
         raise error_type(durability_reason, f"{label} synchronous mode is not FULL.")
@@ -695,9 +698,7 @@ def _reject_authority_bearing_keys(
         current, depth = stack.pop()
         nodes += 1
         if depth > 32 or nodes > 4_096:
-            raise error_type(
-                reason_code, "Persisted JSON exceeds structural bounds."
-            )
+            raise error_type(reason_code, "Persisted JSON exceeds structural bounds.")
         if type(current) is dict:
             for key, child in current.items():
                 if type(key) is not str:
@@ -788,7 +789,9 @@ def _require_offset_timestamp(
     name: str,
     value: object,
     *,
-    error_type: type[ControlLedgerError] | type[SyntheticAdapterError] = ControlLedgerError,
+    error_type: (
+        type[ControlLedgerError] | type[SyntheticAdapterError]
+    ) = ControlLedgerError,
     reason_code: str = "CONTROL_LEDGER_BINDING_INVALID",
 ) -> str:
     if not _is_offset_timestamp(value):
@@ -807,6 +810,311 @@ def _validate_control_metadata(metadata: Mapping[str, str]) -> None:
             "CONTROL_LEDGER_SCHEMA_UNSUPPORTED",
             "Control-ledger immutable metadata is not the exact supported contract.",
         )
+
+
+def _validate_control_outbox_projection(
+    connection: sqlite3.Connection, outbox: list[sqlite3.Row]
+) -> None:
+    """Require outbox rows to be the exact projection of durable transitions."""
+
+    expected: dict[tuple[str, str], tuple[str | None, str | None]] = {}
+    required: set[tuple[str, str]] = set()
+    unknown_terminal_groups: list[set[tuple[str, str]]] = []
+
+    def add(
+        event_type: str,
+        subject_id: str,
+        payload: dict[str, Any] | None,
+        created_at: str | None,
+        *,
+        required_event: bool = True,
+    ) -> tuple[str, str]:
+        key = (event_type, subject_id)
+        if key in expected:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Durable transitions produce an ambiguous outbox subject.",
+            )
+        expected[key] = (
+            (
+                _event_digest(event_type, subject_id, payload)
+                if payload is not None
+                else None
+            ),
+            created_at,
+        )
+        if required_event:
+            required.add(key)
+        return key
+
+    requests = connection.execute(
+        """
+        SELECT principal_id, request_id, request_sha256, state, claimed_at
+        FROM requests
+        """
+    ).fetchall()
+    for row in requests:
+        subject = f"{row['principal_id']}:{row['request_id']}"
+        add(
+            "REQUEST_CLAIMED",
+            subject,
+            {"request_sha256": row["request_sha256"]},
+            row["claimed_at"],
+        )
+
+    attempts = connection.execute(
+        """
+        SELECT attempt_id, token_id, principal_id, request_id, state, outcome_sha256,
+               adapter_receipt_sha256, idempotency_key, binding_sha256,
+               reserved_at, completed_at
+        FROM attempts
+        """
+    ).fetchall()
+    attempt_by_token = {str(row["token_id"]): row for row in attempts}
+    for row in attempts:
+        attempt_id = str(row["attempt_id"])
+        add(
+            "ATTEMPT_RESERVED",
+            attempt_id,
+            {
+                "token_id_sha256": hashlib.sha256(
+                    str(row["token_id"]).encode("utf-8")
+                ).hexdigest(),
+                "binding_sha256": row["binding_sha256"],
+                "idempotency_key": row["idempotency_key"],
+            },
+            row["reserved_at"],
+        )
+        state = str(row["state"])
+        if state == "RECEIPT_RECORDED":
+            add(
+                "ADAPTER_RECEIPT_RECORDED",
+                attempt_id,
+                {
+                    "adapter_receipt_sha256": row["adapter_receipt_sha256"],
+                    "receipt_outcome_sha256": row["outcome_sha256"],
+                },
+                None,
+            )
+        elif state in _TERMINAL_ATTEMPT_STATES:
+            if row["adapter_receipt_sha256"] is not None:
+                add(
+                    "ADAPTER_RECEIPT_RECORDED",
+                    attempt_id,
+                    None,
+                    None,
+                    required_event=state != "UNKNOWN_EFFECT",
+                )
+            terminal_payload = {
+                "state": state,
+                "outcome_sha256": row["outcome_sha256"],
+                "adapter_receipt_sha256": row["adapter_receipt_sha256"],
+            }
+            if state == "UNKNOWN_EFFECT" and row["principal_id"] is None:
+                terminal_key = add(
+                    "ATTEMPT_TERMINAL",
+                    attempt_id,
+                    terminal_payload,
+                    row["completed_at"],
+                    required_event=False,
+                )
+                recovered_key = add(
+                    "ATTEMPT_RECOVERED_UNKNOWN",
+                    attempt_id,
+                    {"state": "UNKNOWN_EFFECT"},
+                    row["completed_at"],
+                    required_event=False,
+                )
+                unknown_terminal_groups.append({terminal_key, recovered_key})
+            else:
+                add(
+                    "ATTEMPT_TERMINAL",
+                    attempt_id,
+                    terminal_payload,
+                    row["completed_at"],
+                )
+
+    authorizations = connection.execute(
+        """
+        SELECT token_id, verification_id, decision_id, principal_id, request_id,
+               request_sha256, state, issued_at, consumed_at, revoked_at
+        FROM authorizations
+        """
+    ).fetchall()
+    for row in authorizations:
+        token_id = str(row["token_id"])
+        add(
+            "AUTHORIZATION_ISSUED",
+            token_id,
+            {
+                "verification_id_sha256": hashlib.sha256(
+                    str(row["verification_id"]).encode("utf-8")
+                ).hexdigest(),
+                "decision_id_sha256": hashlib.sha256(
+                    str(row["decision_id"]).encode("utf-8")
+                ).hexdigest(),
+                "request_sha256": row["request_sha256"],
+            },
+            row["issued_at"],
+        )
+        if row["state"] == "CONSUMED":
+            attempt = attempt_by_token.get(token_id)
+            add(
+                "AUTHORIZATION_CONSUMED",
+                token_id,
+                {"attempt_id": attempt["attempt_id"] if attempt is not None else None},
+                row["consumed_at"],
+            )
+        elif row["state"] == "REVOKED":
+            add(
+                "AUTHORIZATION_REVOKED",
+                token_id,
+                {"reason_code": "QUIESCED_RECOVERY"},
+                row["revoked_at"],
+            )
+
+    results = connection.execute(
+        """
+        SELECT principal_id, request_id, result_json, result_sha256, terminal_at
+        FROM request_results
+        """
+    ).fetchall()
+    for row in results:
+        result = RequestLookupResult.from_dict(
+            _load_json_object(
+                row["result_json"],
+                error_type=ControlLedgerError,
+                reason_code="CONTROL_LEDGER_CORRUPT",
+            )
+        )
+        add(
+            "REQUEST_TERMINAL",
+            f"{row['principal_id']}:{row['request_id']}",
+            {
+                "result_sha256": row["result_sha256"],
+                "disposition": result.disposition,
+            },
+            row["terminal_at"],
+        )
+
+    observed: dict[tuple[str, str], sqlite3.Row] = {}
+    for row in outbox:
+        key = (str(row["event_type"]), str(row["subject_id"]))
+        if key in observed or key not in expected:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox event taxonomy, subject, or cardinality is invalid.",
+            )
+        observed[key] = row
+        expected_digest, expected_at = expected[key]
+        if expected_digest is not None and row["payload_sha256"] != expected_digest:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox payload digest does not match its durable transition.",
+            )
+        if expected_at is not None and row["created_at"] != expected_at:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox timestamp does not match its durable transition.",
+            )
+        if key[0] == "ADAPTER_RECEIPT_RECORDED":
+            attempt = next(
+                item for item in attempts if str(item["attempt_id"]) == key[1]
+            )
+            created = datetime.fromisoformat(str(row["created_at"]))
+            if created < datetime.fromisoformat(str(attempt["reserved_at"])) or (
+                attempt["completed_at"] is not None
+                and created > datetime.fromisoformat(str(attempt["completed_at"]))
+            ):
+                raise ControlLedgerError(
+                    "CONTROL_LEDGER_CORRUPT",
+                    "Adapter-receipt outbox chronology is invalid.",
+                )
+
+    observed_keys = set(observed)
+    if not required <= observed_keys or any(
+        len(group & observed_keys) != 1 for group in unknown_terminal_groups
+    ):
+        raise ControlLedgerError(
+            "CONTROL_LEDGER_CORRUPT",
+            "Audit-outbox events do not exactly cover durable transitions.",
+        )
+
+    event_ids = {key: int(row["event_id"]) for key, row in observed.items()}
+    for row in authorizations:
+        token_id = str(row["token_id"])
+        issued = event_ids[("AUTHORIZATION_ISSUED", token_id)]
+        if row["principal_id"] is not None:
+            request_key = f"{row['principal_id']}:{row['request_id']}"
+            if event_ids[("REQUEST_CLAIMED", request_key)] >= issued:
+                raise ControlLedgerError(
+                    "CONTROL_LEDGER_CORRUPT",
+                    "Audit-outbox request/authorization order is invalid.",
+                )
+        if row["state"] == "CONSUMED":
+            consumed = event_ids[("AUTHORIZATION_CONSUMED", token_id)]
+            attempt = attempt_by_token.get(token_id)
+            if issued >= consumed or (
+                attempt is not None
+                and event_ids[("ATTEMPT_RESERVED", str(attempt["attempt_id"]))]
+                >= consumed
+            ):
+                raise ControlLedgerError(
+                    "CONTROL_LEDGER_CORRUPT",
+                    "Audit-outbox authorization order is invalid.",
+                )
+        elif (
+            row["state"] == "REVOKED"
+            and issued >= event_ids[("AUTHORIZATION_REVOKED", token_id)]
+        ):
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox revocation order is invalid.",
+            )
+    for row in requests:
+        request_key = f"{row['principal_id']}:{row['request_id']}"
+        claimed = event_ids[("REQUEST_CLAIMED", request_key)]
+        terminal_key = ("REQUEST_TERMINAL", request_key)
+        if terminal_key in event_ids and claimed >= event_ids[terminal_key]:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox request order is invalid.",
+            )
+    for row in attempts:
+        attempt_id = str(row["attempt_id"])
+        reserved = event_ids[("ATTEMPT_RESERVED", attempt_id)]
+        receipt_key = ("ADAPTER_RECEIPT_RECORDED", attempt_id)
+        terminal_keys = (
+            ("ATTEMPT_TERMINAL", attempt_id),
+            ("ATTEMPT_RECOVERED_UNKNOWN", attempt_id),
+        )
+        receipt_id = event_ids.get(receipt_key)
+        terminal_id = next(
+            (event_ids[key] for key in terminal_keys if key in event_ids), None
+        )
+        if (receipt_id is not None and reserved >= receipt_id) or (
+            terminal_id is not None
+            and (
+                reserved >= terminal_id
+                or (receipt_id is not None and receipt_id >= terminal_id)
+            )
+        ):
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox attempt order is invalid.",
+            )
+        if row["principal_id"] is not None and terminal_id is not None:
+            request_terminal = event_ids.get(
+                (
+                    "REQUEST_TERMINAL",
+                    f"{row['principal_id']}:{row['request_id']}",
+                )
+            )
+            if request_terminal is not None and terminal_id >= request_terminal:
+                raise ControlLedgerError(
+                    "CONTROL_LEDGER_CORRUPT",
+                    "Audit-outbox attempt/request terminal order is invalid.",
+                )
 
 
 def _validate_control_relations(connection: sqlite3.Connection) -> None:
@@ -836,9 +1144,7 @@ def _validate_control_relations(connection: sqlite3.Connection) -> None:
         try:
             principal_id = _require_identifier("principal_id", row["principal_id"])
             request_id = _require_identifier("request_id", row["request_id"])
-            request_sha256 = _require_sha256(
-                "request_sha256", row["request_sha256"]
-            )
+            request_sha256 = _require_sha256("request_sha256", row["request_sha256"])
             claimed_at = _require_offset_timestamp("claimed_at", row["claimed_at"])
             updated_at = _require_offset_timestamp("updated_at", row["updated_at"])
             if datetime.fromisoformat(updated_at) < datetime.fromisoformat(claimed_at):
@@ -965,9 +1271,11 @@ def _validate_control_relations(connection: sqlite3.Connection) -> None:
                 terminal_auth_at = (
                     authorization["consumed_at"]
                     if authorization["state"] == "CONSUMED"
-                    else authorization["revoked_at"]
-                    if authorization["state"] == "REVOKED"
-                    else None
+                    else (
+                        authorization["revoked_at"]
+                        if authorization["state"] == "REVOKED"
+                        else None
+                    )
                 )
                 if terminal_auth_at is not None and (
                     not _is_offset_timestamp(terminal_auth_at)
@@ -1046,8 +1354,7 @@ def _validate_control_relations(connection: sqlite3.Connection) -> None:
                     or summary["decision_id"] != authorization["decision_id"]
                     or summary["decision_sha256"]
                     != authorization["decision_authorization_sha256"]
-                    or summary["decision_outcome"]
-                    not in {"ALLOW", "ALLOW_CONSTRAINED"}
+                    or summary["decision_outcome"] not in {"ALLOW", "ALLOW_CONSTRAINED"}
                     or datetime.fromisoformat(summary["decided_at"])
                     < datetime.fromisoformat(claimed_at)
                     or datetime.fromisoformat(summary["decided_at"])
@@ -1189,9 +1496,11 @@ def _validate_control_relations(connection: sqlite3.Connection) -> None:
             terminal_at = (
                 authorization["consumed_at"]
                 if authorization["state"] == "CONSUMED"
-                else authorization["revoked_at"]
-                if authorization["state"] == "REVOKED"
-                else None
+                else (
+                    authorization["revoked_at"]
+                    if authorization["state"] == "REVOKED"
+                    else None
+                )
             )
             if terminal_at is not None and (
                 not _is_offset_timestamp(terminal_at)
@@ -1260,6 +1569,53 @@ def _validate_control_relations(connection: sqlite3.Connection) -> None:
             "Unlinked control-ledger row semantics are invalid.",
         ) from exc
 
+    try:
+        outbox = connection.execute(
+            """
+            SELECT event_id, event_type, subject_id, payload_sha256,
+                   created_at, exported_at
+            FROM audit_outbox ORDER BY event_id
+            """
+        ).fetchall()
+        event_ids = [int(row["event_id"]) for row in outbox]
+        if event_ids != list(range(1, len(outbox) + 1)):
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox identifiers are not contiguous from one.",
+            )
+        sequence_row = connection.execute(
+            "SELECT seq FROM sqlite_sequence WHERE name='audit_outbox'"
+        ).fetchone()
+        sequence = int(sequence_row[0]) if sequence_row is not None else 0
+        if sequence != len(outbox):
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_CORRUPT",
+                "Audit-outbox sequence high-water differs from retained rows.",
+            )
+        for row in outbox:
+            _require_identifier("event_type", row["event_type"])
+            _require_identifier("subject_id", row["subject_id"])
+            _require_sha256("payload_sha256", row["payload_sha256"])
+            created_at = _require_offset_timestamp("created_at", row["created_at"])
+            exported_at = row["exported_at"]
+            if exported_at is not None and (
+                not _is_offset_timestamp(exported_at)
+                or datetime.fromisoformat(exported_at)
+                < datetime.fromisoformat(created_at)
+            ):
+                raise ControlLedgerError(
+                    "CONTROL_LEDGER_CORRUPT",
+                    "Audit-outbox export chronology is invalid.",
+                )
+        _validate_control_outbox_projection(connection, outbox)
+    except ControlLedgerError as exc:
+        if exc.reason_code == "CONTROL_LEDGER_CORRUPT":
+            raise
+        raise ControlLedgerError(
+            "CONTROL_LEDGER_CORRUPT",
+            "Audit-outbox row semantics are invalid.",
+        ) from exc
+
 
 def _control_correlation_snapshot(
     connection: sqlite3.Connection,
@@ -1303,31 +1659,33 @@ def _control_correlation_snapshot(
                 )
             )
             target_state_sha256 = result.target_state_sha256
-        snapshot.append({
-            "principal_id": str(row["principal_id"]),
-            "request_id": str(row["request_id"]),
-            "attempt_id": str(row["attempt_id"]),
-            "request_sha256": str(row["request_sha256"]),
-            "token_id": str(row["token_id"]),
-            "unsigned_token_sha256": str(row["unsigned_token_sha256"]),
-            "issuer_instance_id": str(row["issuer_instance_id"]),
-            "authorization_key_domain_id": str(row["key_domain_id"]),
-            "decision_id": str(row["decision_id"]),
-            "decision_authorization_sha256": str(
-                row["decision_authorization_sha256"]
-            ),
-            "decision_context_sha256": str(summary["decision_context_sha256"]),
-            "policy_sha256": str(summary["policy_sha256"]),
-            "idempotency_key": str(row["idempotency_key"]),
-            "binding_sha256": str(row["binding_sha256"]),
-            "state": str(row["state"]),
-            "target_state_sha256": target_state_sha256,
-            "adapter_receipt_sha256": (
-                str(row["adapter_receipt_sha256"])
-                if row["adapter_receipt_sha256"] is not None
-                else None
-            ),
-        })
+        snapshot.append(
+            {
+                "principal_id": str(row["principal_id"]),
+                "request_id": str(row["request_id"]),
+                "attempt_id": str(row["attempt_id"]),
+                "request_sha256": str(row["request_sha256"]),
+                "token_id": str(row["token_id"]),
+                "unsigned_token_sha256": str(row["unsigned_token_sha256"]),
+                "issuer_instance_id": str(row["issuer_instance_id"]),
+                "authorization_key_domain_id": str(row["key_domain_id"]),
+                "decision_id": str(row["decision_id"]),
+                "decision_authorization_sha256": str(
+                    row["decision_authorization_sha256"]
+                ),
+                "decision_context_sha256": str(summary["decision_context_sha256"]),
+                "policy_sha256": str(summary["policy_sha256"]),
+                "idempotency_key": str(row["idempotency_key"]),
+                "binding_sha256": str(row["binding_sha256"]),
+                "state": str(row["state"]),
+                "target_state_sha256": target_state_sha256,
+                "adapter_receipt_sha256": (
+                    str(row["adapter_receipt_sha256"])
+                    if row["adapter_receipt_sha256"] is not None
+                    else None
+                ),
+            }
+        )
     return tuple(snapshot)
 
 
@@ -1377,13 +1735,71 @@ def _assert_safe_path(
             path.is_symlink()
             or not stat.S_ISREG(metadata.st_mode)
             or metadata.st_nlink != 1
+            or metadata.st_uid != os.geteuid()
+            or stat.S_IMODE(metadata.st_mode) & 0o077
         ):
             raise error_type(
                 unsafe_reason,
-                f"{label} path must be a singly linked regular file.",
+                f"{label} path must be an owner-private singly linked regular file.",
             )
     elif not allow_missing:
         raise error_type(unavailable_reason, f"{label} file is unavailable.")
+
+
+def _create_owner_private_file(
+    path: Path,
+    *,
+    error_type: type[ControlLedgerError] | type[SyntheticAdapterError],
+    reason_code: str,
+    label: str,
+) -> None:
+    """Atomically create an exact owner-private regular file without following links."""
+
+    flags = os.O_RDWR | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(path, flags, 0o600)
+        os.fchmod(descriptor, 0o600)
+        os.fsync(descriptor)
+        opened = os.fstat(descriptor)
+        current = path.lstat()
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or opened.st_nlink != 1
+            or opened.st_uid != os.geteuid()
+            or stat.S_IMODE(opened.st_mode) != 0o600
+            or opened.st_dev != current.st_dev
+            or opened.st_ino != current.st_ino
+        ):
+            raise error_type(
+                reason_code,
+                f"{label} could not be bound to an owner-private file identity.",
+            )
+        directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+        directory_flags |= getattr(os, "O_DIRECTORY", 0)
+        directory_flags |= getattr(os, "O_NOFOLLOW", 0)
+        parent_descriptor = os.open(path.parent, directory_flags)
+        try:
+            opened_parent = os.fstat(parent_descriptor)
+            current_parent = path.parent.lstat()
+            if (
+                not stat.S_ISDIR(opened_parent.st_mode)
+                or opened_parent.st_dev != current_parent.st_dev
+                or opened_parent.st_ino != current_parent.st_ino
+            ):
+                raise OSError("parent directory identity changed during sync")
+            os.fsync(parent_descriptor)
+        finally:
+            os.close(parent_descriptor)
+    except OSError as exc:
+        raise error_type(reason_code, f"{label} could not be created safely.") from exc
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
 
 
 def _assert_safe_sqlite_sidecars(
@@ -1485,20 +1901,24 @@ class RequestLookupResult:
                 "REQUEST_RESULT_INVALID", "Decision outcome is not closed."
             )
         if (
-            self.disposition == "DENIED_NO_EFFECT"
-            and self.decision_outcome not in {"DENY", "ESCALATE"}
-        ) or (
-            self.disposition == "ABORTED_NO_EFFECT"
-            and self.decision_outcome != "NOT_DURABLY_RECORDED"
-        ) or (
-            self.disposition
-            in {
-                "COMPLETED_VERIFIED",
-                "FAILED_NO_EFFECT",
-                "RECOVERY_REQUIRED",
-                "UNKNOWN_EFFECT",
-            }
-            and self.decision_outcome not in {"ALLOW", "ALLOW_CONSTRAINED"}
+            (
+                self.disposition == "DENIED_NO_EFFECT"
+                and self.decision_outcome not in {"DENY", "ESCALATE"}
+            )
+            or (
+                self.disposition == "ABORTED_NO_EFFECT"
+                and self.decision_outcome != "NOT_DURABLY_RECORDED"
+            )
+            or (
+                self.disposition
+                in {
+                    "COMPLETED_VERIFIED",
+                    "FAILED_NO_EFFECT",
+                    "RECOVERY_REQUIRED",
+                    "UNKNOWN_EFFECT",
+                }
+                and self.decision_outcome not in {"ALLOW", "ALLOW_CONSTRAINED"}
+            )
         ):
             raise ControlLedgerError(
                 "REQUEST_RESULT_INVALID",
@@ -1535,9 +1955,7 @@ class RequestLookupResult:
             type(self.reason_codes) is not tuple
             or len(self.reason_codes) > 32
             or any(
-                type(reason) is not str
-                or not reason
-                or len(reason) > 128
+                type(reason) is not str or not reason or len(reason) > 128
                 for reason in self.reason_codes
             )
         ):
@@ -1677,7 +2095,9 @@ class RequestLookupResult:
                 "REQUEST_RESULT_AUTHORITY_PROHIBITED",
                 "Request-result authorization must be absent.",
             )
-        inspectable = {key: child for key, child in value.items() if key != "authorization"}
+        inspectable = {
+            key: child for key, child in value.items() if key != "authorization"
+        }
         _reject_authority_bearing_keys(
             inspectable,
             error_type=ControlLedgerError,
@@ -1709,9 +2129,13 @@ def terminal_attempt_outcome_sha256(
 ) -> str:
     """Canonical digest binding a terminal attempt to its sanitized result."""
 
-    if type(result) is not RequestLookupResult or attempt_state not in _TERMINAL_ATTEMPT_STATES:
+    if (
+        type(result) is not RequestLookupResult
+        or attempt_state not in _TERMINAL_ATTEMPT_STATES
+    ):
         raise ControlLedgerError(
-            "REQUEST_RESULT_BINDING_INVALID", "Terminal attempt digest input is invalid."
+            "REQUEST_RESULT_BINDING_INVALID",
+            "Terminal attempt digest input is invalid.",
         )
     stored = replace(
         result,
@@ -1755,9 +2179,7 @@ def _validate_recovery_summary(value: object) -> dict[str, Any]:
         "decision_id",
     ):
         _require_identifier(name, value[name])
-    if value["decision_outcome"] not in _DECISION_OUTCOMES - {
-        "NOT_DURABLY_RECORDED"
-    }:
+    if value["decision_outcome"] not in _DECISION_OUTCOMES - {"NOT_DURABLY_RECORDED"}:
         raise ControlLedgerError(
             "CONTROL_LEDGER_RECOVERY_SUMMARY_INVALID",
             "Recovery summary decision outcome is not closed.",
@@ -1852,7 +2274,10 @@ class SyntheticAdapterReceipt:
                 error_type=SyntheticAdapterError,
                 reason_code="SYNTHETIC_ADAPTER_BINDING_INVALID",
             )
-        if self.status not in _ADAPTER_STATUSES or type(self.reported_success) is not bool:
+        if (
+            self.status not in _ADAPTER_STATUSES
+            or type(self.reported_success) is not bool
+        ):
             raise SyntheticAdapterError(
                 "SYNTHETIC_ADAPTER_BINDING_INVALID",
                 "Synthetic receipt disposition is invalid.",
@@ -1885,9 +2310,7 @@ class SyntheticAdapterReceipt:
             ) from exc
 
     def to_dict(self) -> dict[str, Any]:
-        value = {
-            name: getattr(self, name) for name in self.__dataclass_fields__
-        }
+        value = {name: getattr(self, name) for name in self.__dataclass_fields__}
         _reject_authority_bearing_keys(
             value,
             error_type=SyntheticAdapterError,
@@ -1999,7 +2422,10 @@ class InMemoryControlLedger:
                     "AUTHORIZATION_ID_COLLISION",
                     "Authorization token identifier already exists.",
                 )
-            if verification_id in self._verification_ids or decision_id in self._decision_ids:
+            if (
+                verification_id in self._verification_ids
+                or decision_id in self._decision_ids
+            ):
                 raise ControlLedgerError(
                     "AUTHORIZATION_DECISION_REPLAY",
                     "This verified decision already issued an authorization.",
@@ -2191,9 +2617,7 @@ class InMemoryControlLedger:
             row = self._attempts.get(attempt_id)
             return dict(row) if row is not None else None
 
-    def recover_incomplete_attempts(
-        self, *, operator_asserted_quiesced: bool
-    ) -> int:
+    def recover_incomplete_attempts(self, *, operator_asserted_quiesced: bool) -> int:
         _assert_quiesced(operator_asserted_quiesced)
         recovered = 0
         with self._lock:
@@ -2225,7 +2649,9 @@ class InMemoryControlLedger:
 
     def pending_outbox(self) -> tuple[dict[str, Any], ...]:
         with self._lock:
-            return tuple(dict(row) for row in self._outbox if row["exported_at"] is None)
+            return tuple(
+                dict(row) for row in self._outbox if row["exported_at"] is None
+            )
 
 
 class _SQLiteControlLedgerBase:
@@ -2247,9 +2673,12 @@ class _SQLiteControlLedgerBase:
             raise ValueError("Control-ledger busy timeout must be within 25..30000 ms.")
         self.path = Path(path).absolute()
         self.busy_timeout_ms = busy_timeout_ms
+        self._bound_file_identity: tuple[int, int] | None = None
+        self._bound_store_id: str | None = None
         self._created_at = _require_offset_timestamp(
             "created_at", created_at if created_at is not None else utc_now_iso()
         )
+
         def initialize_and_identify() -> str:
             self._initialize()
             return self._metadata("ledger_id")
@@ -2266,6 +2695,7 @@ class _SQLiteControlLedgerBase:
                 label="Control-ledger",
             ):
                 ledger_id = initialize_and_identify()
+        self._bind_runtime_identity(ledger_id)
         self.issuer_instance_id = f"stage-a-ledger-{ledger_id}"
 
     @classmethod
@@ -2349,8 +2779,44 @@ class _SQLiteControlLedgerBase:
             label="Control-ledger",
         )
 
+    def _bind_runtime_identity(self, ledger_id: str) -> None:
+        self._assert_safe_path(allow_missing=False)
+        try:
+            metadata = self.path.lstat()
+        except OSError as exc:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_IDENTITY_CHANGED",
+                "Control-ledger identity could not be bound after construction.",
+            ) from exc
+        self._bound_file_identity = (metadata.st_dev, metadata.st_ino)
+        self._bound_store_id = ledger_id
+
+    def _assert_runtime_identity(self) -> None:
+        expected = self._bound_file_identity
+        if expected is None:
+            return
+        try:
+            metadata = self.path.lstat()
+        except OSError as exc:
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_IDENTITY_CHANGED",
+                "Control-ledger identity changed after construction.",
+            ) from exc
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_nlink != 1
+            or metadata.st_uid != os.geteuid()
+            or stat.S_IMODE(metadata.st_mode) & 0o077
+            or (metadata.st_dev, metadata.st_ino) != expected
+        ):
+            raise ControlLedgerError(
+                "CONTROL_LEDGER_IDENTITY_CHANGED",
+                "Control-ledger identity changed after construction.",
+            )
+
     def _raw_connect(self) -> sqlite3.Connection:
         self._assert_safe_path(allow_missing=False)
+        self._assert_runtime_identity()
         connection = sqlite3.connect(
             self.path,
             timeout=self.busy_timeout_ms / 1000.0,
@@ -2360,6 +2826,7 @@ class _SQLiteControlLedgerBase:
         connection.execute(f"PRAGMA busy_timeout={self.busy_timeout_ms}")
         connection.execute("PRAGMA foreign_keys=ON")
         connection.execute("PRAGMA synchronous=FULL")
+        self._assert_runtime_identity()
         return connection
 
     def _connect(self) -> sqlite3.Connection:
@@ -2375,10 +2842,18 @@ class _SQLiteControlLedgerBase:
                 durability_reason="CONTROL_LEDGER_DURABILITY_UNAVAILABLE",
                 label="Control-ledger",
             )
-            _validate_control_metadata(
-                dict(connection.execute("SELECT key, value FROM metadata"))
-            )
+            metadata = dict(connection.execute("SELECT key, value FROM metadata"))
+            _validate_control_metadata(metadata)
+            if (
+                self._bound_store_id is not None
+                and metadata.get("ledger_id") != self._bound_store_id
+            ):
+                raise ControlLedgerError(
+                    "CONTROL_LEDGER_IDENTITY_CHANGED",
+                    "Control-ledger store identity changed after construction.",
+                )
             _validate_control_relations(connection)
+            self._assert_runtime_identity()
             return connection
         except ControlLedgerError:
             if connection is not None:
@@ -2395,10 +2870,18 @@ class _SQLiteControlLedgerBase:
         connection: sqlite3.Connection | None = None
         try:
             self._assert_safe_parent_chain(allow_missing=True)
-            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             self._assert_safe_parent_chain(allow_missing=False)
             self._assert_safe_path(allow_missing=True)
             existing_file = self.path.exists()
+            if not existing_file:
+                _create_owner_private_file(
+                    self.path,
+                    error_type=ControlLedgerError,
+                    reason_code="CONTROL_LEDGER_PATH_UNSAFE",
+                    label="Control-ledger",
+                )
+                self._assert_safe_path(allow_missing=False)
             connection = sqlite3.connect(
                 self.path,
                 timeout=self.busy_timeout_ms / 1000.0,
@@ -2428,7 +2911,9 @@ class _SQLiteControlLedgerBase:
                     )
                 journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
             else:
-                journal_mode = connection.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+                journal_mode = connection.execute("PRAGMA journal_mode=WAL").fetchone()[
+                    0
+                ]
             if str(journal_mode).lower() != "wal":
                 raise ControlLedgerError(
                     "CONTROL_LEDGER_DURABILITY_UNAVAILABLE",
@@ -2463,7 +2948,6 @@ class _SQLiteControlLedgerBase:
             _validate_control_relations(connection)
             connection.close()
             connection = None
-            os.chmod(self.path, 0o600)
             self._assert_safe_path(allow_missing=False)
         except ControlLedgerError:
             raise
@@ -2500,6 +2984,88 @@ class _SQLiteControlLedgerBase:
         finally:
             connection.close()
 
+    def audit_continuity_snapshot(self) -> tuple[dict[str, str | None], ...]:
+        """Return request bindings needed to prove lifecycle-audit continuity."""
+
+        connection = self._connect()
+        try:
+            rows = connection.execute(
+                """
+                SELECT r.principal_id, r.request_id, r.request_sha256, r.state,
+                       z.decision_id AS authorization_decision_id,
+                       x.result_json
+                FROM requests r
+                LEFT JOIN authorizations z
+                  ON z.principal_id=r.principal_id AND z.request_id=r.request_id
+                LEFT JOIN request_results x
+                  ON x.principal_id=r.principal_id AND x.request_id=r.request_id
+                ORDER BY r.principal_id, r.request_id
+                """
+            ).fetchall()
+            snapshot: list[dict[str, str | None]] = []
+            for row in rows:
+                result_decision_id: str | None = None
+                if row["result_json"] is not None:
+                    result = RequestLookupResult.from_dict(
+                        _load_json_object(
+                            row["result_json"],
+                            error_type=ControlLedgerError,
+                            reason_code="CONTROL_LEDGER_CORRUPT",
+                        )
+                    )
+                    result_decision_id = result.decision_id
+                snapshot.append(
+                    {
+                        "principal_id": str(row["principal_id"]),
+                        "request_id": str(row["request_id"]),
+                        "request_sha256": str(row["request_sha256"]),
+                        "state": str(row["state"]),
+                        "decision_id": (
+                            result_decision_id
+                            or (
+                                str(row["authorization_decision_id"])
+                                if row["authorization_decision_id"] is not None
+                                else None
+                            )
+                        ),
+                    }
+                )
+            return tuple(snapshot)
+        finally:
+            connection.close()
+
+    def audit_activity_snapshot(self) -> dict[str, int]:
+        """Return bounded counts that prevent unbound authority from hiding."""
+
+        connection = self._connect()
+        try:
+            names = (
+                "requests",
+                "request_results",
+                "authorizations",
+                "attempts",
+                "audit_outbox",
+            )
+            snapshot = {
+                name: int(
+                    connection.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
+                )
+                for name in names
+            }
+            snapshot["unbound_authorizations"] = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM authorizations WHERE principal_id IS NULL"
+                ).fetchone()[0]
+            )
+            snapshot["unbound_attempts"] = int(
+                connection.execute(
+                    "SELECT COUNT(*) FROM attempts WHERE principal_id IS NULL"
+                ).fetchone()[0]
+            )
+            return snapshot
+        finally:
+            connection.close()
+
 
 class SQLiteSyntheticAdapterStore:
     """Separate SQLite owner for offline synthetic state and immutable receipts."""
@@ -2523,6 +3089,8 @@ class SQLiteSyntheticAdapterStore:
             )
         self.path = Path(path).absolute()
         self.busy_timeout_ms = busy_timeout_ms
+        self._bound_file_identity: tuple[int, int] | None = None
+        self._bound_store_id: str | None = None
         self._created_at = _require_offset_timestamp(
             "created_at",
             created_at if created_at is not None else utc_now_iso(),
@@ -2530,11 +3098,12 @@ class SQLiteSyntheticAdapterStore:
             reason_code="SYNTHETIC_ADAPTER_BINDING_INVALID",
         )
         self._fault_modes = dict(fault_modes or {})
-        if (
-            set(self._fault_modes.values())
-            - {"NONE", "FAILED", "PARTIAL", "UNEXPECTED_EFFECT"}
-            or set(self._fault_modes) - set(target_inventory)
-        ):
+        if set(self._fault_modes.values()) - {
+            "NONE",
+            "FAILED",
+            "PARTIAL",
+            "UNEXPECTED_EFFECT",
+        } or set(self._fault_modes) - set(target_inventory):
             raise ValueError(
                 "Synthetic adapter fault configuration is not closed and valid."
             )
@@ -2558,6 +3127,7 @@ class SQLiteSyntheticAdapterStore:
             }
         self._inventory_sha256 = sha256_json(self._initial_states)
         self._fault_modes_sha256 = sha256_json(self._fault_modes)
+
         def initialize_and_identify() -> str:
             self._initialize()
             connection = self._connect()
@@ -2575,7 +3145,7 @@ class SQLiteSyntheticAdapterStore:
                 connection.close()
 
         if _store_startup_lock_held():
-            self.adapter_store_id = initialize_and_identify()
+            adapter_store_id = initialize_and_identify()
         else:
             with _exclusive_store_startup(
                 self.path,
@@ -2585,7 +3155,9 @@ class SQLiteSyntheticAdapterStore:
                 path_reason="SYNTHETIC_ADAPTER_PATH_UNSAFE",
                 label="Synthetic-adapter store",
             ):
-                self.adapter_store_id = initialize_and_identify()
+                adapter_store_id = initialize_and_identify()
+        self._bind_runtime_identity(adapter_store_id)
+        self.adapter_store_id = adapter_store_id
 
     @classmethod
     def preflight_existing(
@@ -2610,11 +3182,12 @@ class SQLiteSyntheticAdapterStore:
         instance.path = Path(path).absolute()
         instance.busy_timeout_ms = busy_timeout_ms
         instance._fault_modes = dict(fault_modes or {})
-        if (
-            set(instance._fault_modes.values())
-            - {"NONE", "FAILED", "PARTIAL", "UNEXPECTED_EFFECT"}
-            or set(instance._fault_modes) - set(target_inventory)
-        ):
+        if set(instance._fault_modes.values()) - {
+            "NONE",
+            "FAILED",
+            "PARTIAL",
+            "UNEXPECTED_EFFECT",
+        } or set(instance._fault_modes) - set(target_inventory):
             raise ValueError(
                 "Synthetic adapter fault configuration is not closed and valid."
             )
@@ -2696,6 +3269,41 @@ class SQLiteSyntheticAdapterStore:
             label="Synthetic-adapter store",
         )
 
+    def _bind_runtime_identity(self, adapter_store_id: str) -> None:
+        self._safe(allow_missing=False)
+        try:
+            metadata = self.path.lstat()
+        except OSError as exc:
+            raise SyntheticAdapterError(
+                "SYNTHETIC_ADAPTER_IDENTITY_CHANGED",
+                "Synthetic-adapter identity could not be bound after construction.",
+            ) from exc
+        self._bound_file_identity = (metadata.st_dev, metadata.st_ino)
+        self._bound_store_id = adapter_store_id
+
+    def _assert_runtime_identity(self) -> None:
+        expected = self._bound_file_identity
+        if expected is None:
+            return
+        try:
+            metadata = self.path.lstat()
+        except OSError as exc:
+            raise SyntheticAdapterError(
+                "SYNTHETIC_ADAPTER_IDENTITY_CHANGED",
+                "Synthetic-adapter identity changed after construction.",
+            ) from exc
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_nlink != 1
+            or metadata.st_uid != os.geteuid()
+            or stat.S_IMODE(metadata.st_mode) & 0o077
+            or (metadata.st_dev, metadata.st_ino) != expected
+        ):
+            raise SyntheticAdapterError(
+                "SYNTHETIC_ADAPTER_IDENTITY_CHANGED",
+                "Synthetic-adapter identity changed after construction.",
+            )
+
     def _validate_metadata_and_inventory(
         self, connection: sqlite3.Connection
     ) -> dict[str, str]:
@@ -2750,9 +3358,10 @@ class SQLiteSyntheticAdapterStore:
             )
             current_state_sha256[str(row["target_id"])] = str(row["state_sha256"])
             current_updated_at[str(row["target_id"])] = str(row["updated_at"])
-            if state["target_type"] != self._initial_states[str(row["target_id"])][
-                "target_type"
-            ]:
+            if (
+                state["target_type"]
+                != self._initial_states[str(row["target_id"])]["target_type"]
+            ):
                 raise SyntheticAdapterError(
                     "SYNTHETIC_ADAPTER_SCHEMA_UNSUPPORTED",
                     "Synthetic-adapter target type binding has drifted.",
@@ -2772,18 +3381,16 @@ class SQLiteSyntheticAdapterStore:
             for target_id, state in self._initial_states.items()
         }
         chained_updated_at = {
-            target_id: str(metadata["created_at"])
-            for target_id in self._initial_states
+            target_id: str(metadata["created_at"]) for target_id in self._initial_states
         }
         for receipt_row in receipt_rows:
             receipt = self._validated_receipt_row(
                 receipt_row, idempotency_key=str(receipt_row["idempotency_key"])
             )
-            if (
-                receipt.state_before_sha256
-                != chained_state_sha256[receipt.target_id]
-                or datetime.fromisoformat(receipt.attempted_at)
-                < datetime.fromisoformat(chained_updated_at[receipt.target_id])
+            if receipt.state_before_sha256 != chained_state_sha256[
+                receipt.target_id
+            ] or datetime.fromisoformat(receipt.attempted_at) < datetime.fromisoformat(
+                chained_updated_at[receipt.target_id]
             ):
                 raise SyntheticAdapterError(
                     "SYNTHETIC_ADAPTER_CORRUPT",
@@ -2805,6 +3412,7 @@ class SQLiteSyntheticAdapterStore:
         connection: sqlite3.Connection | None = None
         try:
             self._safe(allow_missing=False)
+            self._assert_runtime_identity()
             connection = sqlite3.connect(
                 self.path,
                 timeout=self.busy_timeout_ms / 1000.0,
@@ -2823,7 +3431,16 @@ class SQLiteSyntheticAdapterStore:
                 durability_reason="SYNTHETIC_ADAPTER_DURABILITY_UNAVAILABLE",
                 label="Synthetic-adapter store",
             )
-            self._validate_metadata_and_inventory(connection)
+            metadata = self._validate_metadata_and_inventory(connection)
+            if (
+                self._bound_store_id is not None
+                and metadata.get("adapter_store_id") != self._bound_store_id
+            ):
+                raise SyntheticAdapterError(
+                    "SYNTHETIC_ADAPTER_IDENTITY_CHANGED",
+                    "Synthetic-adapter store identity changed after construction.",
+                )
+            self._assert_runtime_identity()
             return connection
         except SyntheticAdapterError:
             if connection is not None:
@@ -2847,7 +3464,7 @@ class SQLiteSyntheticAdapterStore:
                 reason_code="SYNTHETIC_ADAPTER_PATH_UNSAFE",
                 label="Synthetic-adapter store",
             )
-            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             _assert_safe_parent_chain(
                 self.path,
                 allow_missing=False,
@@ -2857,6 +3474,14 @@ class SQLiteSyntheticAdapterStore:
             )
             self._safe(allow_missing=True)
             existing_file = self.path.exists()
+            if not existing_file:
+                _create_owner_private_file(
+                    self.path,
+                    error_type=SyntheticAdapterError,
+                    reason_code="SYNTHETIC_ADAPTER_PATH_UNSAFE",
+                    label="Synthetic-adapter store",
+                )
+                self._safe(allow_missing=False)
             connection = sqlite3.connect(
                 self.path,
                 timeout=self.busy_timeout_ms / 1000.0,
@@ -2888,7 +3513,9 @@ class SQLiteSyntheticAdapterStore:
                     )
                 journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
             else:
-                journal_mode = connection.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+                journal_mode = connection.execute("PRAGMA journal_mode=WAL").fetchone()[
+                    0
+                ]
             if str(journal_mode).lower() != "wal":
                 raise SyntheticAdapterError(
                     "SYNTHETIC_ADAPTER_DURABILITY_UNAVAILABLE",
@@ -2945,7 +3572,6 @@ class SQLiteSyntheticAdapterStore:
             self._validate_metadata_and_inventory(connection)
             connection.close()
             connection = None
-            os.chmod(self.path, 0o600)
             self._safe(allow_missing=False)
         except SyntheticAdapterError:
             raise
@@ -2972,10 +3598,8 @@ class SQLiteSyntheticAdapterStore:
         )
         if (
             value["adapter_id"] != SYNTHETIC_ADAPTER_ID
-            or value["adapter_contract_version"]
-            != SYNTHETIC_ADAPTER_CONTRACT_VERSION
-            or value["adapter_contract_sha256"]
-            != SYNTHETIC_ADAPTER_CONTRACT_SHA256
+            or value["adapter_contract_version"] != SYNTHETIC_ADAPTER_CONTRACT_VERSION
+            or value["adapter_contract_sha256"] != SYNTHETIC_ADAPTER_CONTRACT_SHA256
             or value["execution_mode"] != SYNTHETIC_EXECUTION_MODE
         ):
             raise SyntheticAdapterError(
@@ -3204,9 +3828,7 @@ class SQLiteSyntheticAdapterStore:
         snapshot: list[dict[str, str]] = []
         for row in rows:
             idempotency_key = str(row["idempotency_key"])
-            receipt = self._validated_receipt_row(
-                row, idempotency_key=idempotency_key
-            )
+            receipt = self._validated_receipt_row(row, idempotency_key=idempotency_key)
             binding = self._validate_binding(
                 _load_json_object(
                     row["binding_json"],
@@ -3225,9 +3847,7 @@ class SQLiteSyntheticAdapterStore:
                     "status": receipt.status,
                     "request_sha256": str(binding["request_sha256"]),
                     "token_id": str(binding["token_id"]),
-                    "unsigned_token_sha256": str(
-                        binding["unsigned_token_sha256"]
-                    ),
+                    "unsigned_token_sha256": str(binding["unsigned_token_sha256"]),
                     "issuer_instance_id": str(binding["issuer_instance_id"]),
                     "authorization_key_domain_id": str(
                         binding["authorization_key_domain_id"]
@@ -3236,9 +3856,7 @@ class SQLiteSyntheticAdapterStore:
                     "decision_authorization_sha256": str(
                         binding["decision_authorization_sha256"]
                     ),
-                    "decision_context_sha256": str(
-                        binding["decision_context_sha256"]
-                    ),
+                    "decision_context_sha256": str(binding["decision_context_sha256"]),
                     "policy_sha256": str(binding["policy_sha256"]),
                     "state_after_sha256": receipt.state_after_sha256,
                 }
@@ -3276,7 +3894,6 @@ class SQLiteSyntheticAdapterStore:
             ) from exc
         finally:
             connection.close()
-
 
     def execute_once(
         self,
@@ -3401,8 +4018,7 @@ class SQLiteSyntheticAdapterStore:
             else:
                 parameters = command["parameters"]
                 if (
-                    set(parameters)
-                    != {"duration_seconds", "preserve_management"}
+                    set(parameters) != {"duration_seconds", "preserve_management"}
                     or type(parameters["duration_seconds"]) is not int
                     or parameters["duration_seconds"] <= 0
                     or type(parameters["preserve_management"]) is not bool
@@ -3423,13 +4039,15 @@ class SQLiteSyntheticAdapterStore:
                         after["isolation_expires_at"] = None
                         message = "Injected partial transition in the synthetic target."
                     else:
-                        after["management_channel"] = parameters[
-                            "preserve_management"
-                        ]
+                        after["management_channel"] = parameters["preserve_management"]
                         after["isolation_expires_at"] = (
-                            executed_at
-                            + timedelta(seconds=parameters["duration_seconds"])
-                        ).replace(microsecond=0).isoformat()
+                            (
+                                executed_at
+                                + timedelta(seconds=parameters["duration_seconds"])
+                            )
+                            .replace(microsecond=0)
+                            .isoformat()
+                        )
                         if fault_mode == "UNEXPECTED_EFFECT":
                             status = "AMBIGUOUS"
                             after["service_health"] = "degraded"
@@ -3472,9 +4090,7 @@ class SQLiteSyntheticAdapterStore:
                     "SYNTHETIC_ADAPTER_RECEIPT_INVALID",
                     "Synthetic receipt exceeds the durable size bound.",
                 )
-            receipt_sha256 = hashlib.sha256(
-                receipt_json.encode("utf-8")
-            ).hexdigest()
+            receipt_sha256 = hashlib.sha256(receipt_json.encode("utf-8")).hexdigest()
             updated = connection.execute(
                 """
                 UPDATE target_states
@@ -3539,9 +4155,9 @@ class SQLiteSyntheticAdapterStore:
         connection = self._connect()
         try:
             return int(
-                connection.execute(
-                    "SELECT COUNT(*) FROM command_receipts"
-                ).fetchone()[0]
+                connection.execute("SELECT COUNT(*) FROM command_receipts").fetchone()[
+                    0
+                ]
             )
         finally:
             connection.close()
@@ -3565,6 +4181,8 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
         event_type: str,
         subject_id: str,
         payload: dict[str, Any],
+        *,
+        created_at: str,
     ) -> None:
         connection.execute(
             """
@@ -3576,7 +4194,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                 event_type,
                 subject_id,
                 _event_digest(event_type, subject_id, payload),
-                utc_now_iso(),
+                created_at,
             ),
         )
 
@@ -3628,6 +4246,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                 "REQUEST_CLAIMED",
                 f"{principal_id}:{request_id}",
                 {"request_sha256": request_sha256},
+                created_at=claimed_at,
             )
             connection.commit()
             return "NEW"
@@ -3705,8 +4324,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     summary["principal_id"] != principal_id
                     or summary["request_id"] != request_id
                     or summary["request_sha256"] != request_sha256
-                    or summary["decision_id"]
-                    != value["authorization_decision_id"]
+                    or summary["decision_id"] != value["authorization_decision_id"]
                 ):
                     raise ControlLedgerError(
                         "CONTROL_LEDGER_CORRUPT",
@@ -3837,6 +4455,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     ).hexdigest(),
                     "request_sha256": request_sha256,
                 },
+                created_at=issued_at,
             )
             connection.commit()
         except ControlLedgerError:
@@ -3851,7 +4470,9 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                 ).fetchone()
                 else "AUTHORIZATION_DECISION_REPLAY"
             )
-            raise ControlLedgerError(reason, "Authorization issuance conflicted.") from exc
+            raise ControlLedgerError(
+                reason, "Authorization issuance conflicted."
+            ) from exc
         except (OSError, sqlite3.Error) as exc:
             connection.rollback()
             raise ControlLedgerError(
@@ -3931,16 +4552,13 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                 raise ControlLedgerError(
                     "AUTHORIZATION_REPLAY", "Authorization is not in ISSUED state."
                 )
-            if (
-                datetime.fromisoformat(consumed_at)
-                < datetime.fromisoformat(row["issued_at"])
-                or (
-                    row["principal_id"] is not None
-                    and
-                    row["request_updated_at"] is not None
-                    and datetime.fromisoformat(consumed_at)
-                    < datetime.fromisoformat(row["request_updated_at"])
-                )
+            if datetime.fromisoformat(consumed_at) < datetime.fromisoformat(
+                row["issued_at"]
+            ) or (
+                row["principal_id"] is not None
+                and row["request_updated_at"] is not None
+                and datetime.fromisoformat(consumed_at)
+                < datetime.fromisoformat(row["request_updated_at"])
             ):
                 raise ControlLedgerError(
                     "AUTHORIZATION_TIME_INVALID",
@@ -4030,6 +4648,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                         "binding_sha256": attempt_binding_sha256,
                         "idempotency_key": idempotency_key,
                     },
+                    created_at=consumed_at,
                 )
             updated = connection.execute(
                 """
@@ -4048,6 +4667,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                 "AUTHORIZATION_CONSUMED",
                 token_id,
                 {"attempt_id": attempt_id},
+                created_at=consumed_at,
             )
             connection.commit()
         except ControlLedgerError:
@@ -4178,6 +4798,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     "adapter_receipt_sha256": adapter_receipt_sha256,
                     "receipt_outcome_sha256": receipt_outcome_sha256,
                 },
+                created_at=recorded_at,
             )
             connection.commit()
         except ControlLedgerError:
@@ -4248,8 +4869,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     and row["completed_at"] == completed_at
                     and (
                         adapter_receipt_sha256 is None
-                        or row["adapter_receipt_sha256"]
-                        == adapter_receipt_sha256
+                        or row["adapter_receipt_sha256"] == adapter_receipt_sha256
                     )
                 ):
                     connection.commit()
@@ -4283,6 +4903,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     "outcome_sha256": outcome_sha256,
                     "adapter_receipt_sha256": adapter_receipt_sha256,
                 },
+                created_at=completed_at,
             )
             connection.commit()
         except ControlLedgerError:
@@ -4342,8 +4963,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     summary["principal_id"] != value["principal_id"]
                     or summary["request_id"] != value["request_id"]
                     or summary["request_sha256"] != value["request_sha256"]
-                    or summary["decision_id"]
-                    != value["authorization_decision_id"]
+                    or summary["decision_id"] != value["authorization_decision_id"]
                 ):
                     raise ControlLedgerError(
                         "CONTROL_LEDGER_CORRUPT",
@@ -4569,8 +5189,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     if paired_attempt and (
                         attempt["state"] != attempt_state
                         or attempt["outcome_sha256"] != attempt_outcome_sha256
-                        or attempt["adapter_receipt_sha256"]
-                        != adapter_receipt_sha256
+                        or attempt["adapter_receipt_sha256"] != adapter_receipt_sha256
                     ):
                         raise ControlLedgerError(
                             "ATTEMPT_OUTCOME_CONFLICT",
@@ -4604,7 +5223,10 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     """,
                     (stored.principal_id, stored.request_id),
                 ).fetchone()
-                if stored.disposition == "DENIED_NO_EFFECT" and authorization_row is not None:
+                if (
+                    stored.disposition == "DENIED_NO_EFFECT"
+                    and authorization_row is not None
+                ):
                     raise ControlLedgerError(
                         "REQUEST_RESULT_BINDING_INVALID",
                         "A denied request cannot retain an authorization row.",
@@ -4649,13 +5271,9 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                             "REQUEST_RESULT_BINDING_INVALID",
                             "A RESERVED attempt cannot claim an unrecorded receipt.",
                         )
-                    if (
-                        attempt["state"] == "RECEIPT_RECORDED"
-                        and (
-                            adapter_receipt_sha256 is None
-                            or attempt["adapter_receipt_sha256"]
-                            != adapter_receipt_sha256
-                        )
+                    if attempt["state"] == "RECEIPT_RECORDED" and (
+                        adapter_receipt_sha256 is None
+                        or attempt["adapter_receipt_sha256"] != adapter_receipt_sha256
                     ):
                         raise ControlLedgerError(
                             "REQUEST_RESULT_BINDING_INVALID",
@@ -4687,6 +5305,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                             "outcome_sha256": attempt_outcome_sha256,
                             "adapter_receipt_sha256": adapter_receipt_sha256,
                         },
+                        created_at=stored.terminal_at,
                     )
                 elif attempt["state"] in {"RESERVED", "RECEIPT_RECORDED"}:
                     raise ControlLedgerError(
@@ -4698,8 +5317,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     or attempt["outcome_sha256"] != attempt_outcome_sha256
                     or (
                         adapter_receipt_sha256 is not None
-                        and attempt["adapter_receipt_sha256"]
-                        != adapter_receipt_sha256
+                        and attempt["adapter_receipt_sha256"] != adapter_receipt_sha256
                     )
                 ):
                     raise ControlLedgerError(
@@ -4741,6 +5359,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     "result_sha256": result_sha256,
                     "disposition": stored.disposition,
                 },
+                created_at=stored.terminal_at,
             )
             connection.commit()
         except ControlLedgerError:
@@ -4854,19 +5473,16 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                 attempt is None
                 or attempt["attempt_id"] != result.attempt_id
                 or attempt["state"] != expected_state
-                or attempt["adapter_receipt_sha256"]
-                != result.adapter_receipt_sha256
+                or attempt["adapter_receipt_sha256"] != result.adapter_receipt_sha256
             ):
                 raise ControlLedgerError(
                     "CONTROL_LEDGER_CORRUPT",
                     "Terminal result and attempt state are inconsistent.",
                 )
             if attempt is not None:
-                if (
-                    attempt["completed_at"] != result.terminal_at
-                    or attempt["outcome_sha256"]
-                    != terminal_attempt_outcome_sha256(result, str(expected_state))
-                ):
+                if attempt["completed_at"] != result.terminal_at or attempt[
+                    "outcome_sha256"
+                ] != terminal_attempt_outcome_sha256(result, str(expected_state)):
                     raise ControlLedgerError(
                         "CONTROL_LEDGER_CORRUPT",
                         "Terminal result and attempt outcome binding are inconsistent.",
@@ -4907,16 +5523,14 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                         "Terminal result provenance does not match its recovery summary.",
                     )
             if result.disposition == "COMPLETED_VERIFIED" and (
-                result.verification_status != "VERIFIED"
-                or result.recovery_required
+                result.verification_status != "VERIFIED" or result.recovery_required
             ):
                 raise ControlLedgerError(
                     "CONTROL_LEDGER_CORRUPT",
                     "Verified terminal-result semantics are inconsistent.",
                 )
             if result.disposition in {"RECOVERY_REQUIRED", "UNKNOWN_EFFECT"} and (
-                not result.recovery_required
-                or result.verification_status == "VERIFIED"
+                not result.recovery_required or result.verification_status == "VERIFIED"
             ):
                 raise ControlLedgerError(
                     "CONTROL_LEDGER_CORRUPT",
@@ -4982,6 +5596,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     "AUTHORIZATION_REVOKED",
                     row["token_id"],
                     {"reason_code": "QUIESCED_RECOVERY"},
+                    created_at=revoked_at,
                 )
             connection.commit()
             return len(rows)
@@ -4994,9 +5609,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
         finally:
             connection.close()
 
-    def recover_incomplete_attempts(
-        self, *, operator_asserted_quiesced: bool
-    ) -> int:
+    def recover_incomplete_attempts(self, *, operator_asserted_quiesced: bool) -> int:
         _assert_quiesced(operator_asserted_quiesced)
         connection = self._connect()
         try:
@@ -5052,6 +5665,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     "ATTEMPT_RECOVERED_UNKNOWN",
                     attempt_id,
                     {"state": "UNKNOWN_EFFECT"},
+                    created_at=recovery_at,
                 )
             issued = connection.execute(
                 """
@@ -5082,6 +5696,7 @@ class SQLiteControlLedger(_SQLiteControlLedgerBase):
                     "AUTHORIZATION_REVOKED",
                     row["token_id"],
                     {"reason_code": "QUIESCED_RECOVERY"},
+                    created_at=revoked_at,
                 )
             connection.commit()
             return len(rows)

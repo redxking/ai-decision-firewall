@@ -165,6 +165,28 @@ and exact-SHA CI are now recorded below. Broader real power-loss, filesystem and
 storage-failure, hostile-writer, capacity, independent-assessment, and
 operational campaigns remain separate release steps.
 
+The current successor source tree also carries exact-version SHA-256 runtime
+and documentation dependency locks, an unsigned CycloneDX 1.6 runtime SBOM,
+strict lock/SBOM validation, exact Git-tracked manifest coverage validation,
+full-commit Action pins, nonpersistent checkout credentials, binary-only
+hash-enforced workflow installation, warning-fatal tests, and job-scoped Pages
+write/OIDC authority. It additionally carries a non-publishing CI container
+build, immutable-configuration inspection, and no-network/read-only smoke-run
+mechanism for the digest-pinned Stage A image. These are repository-controlled
+mechanisms. Until a clean candidate commit, regenerated complete manifest,
+exact-commit CI, build
+artifact, provenance, vulnerability disposition, and independent review exist,
+they are not release evidence or production authorization.
+
+Readiness schema `0.2.0` adds a two-commit evidence discipline: an immutable
+implementation candidate must first contain a complete validating
+`MANIFEST.sha256`; a later metadata-only carrier may then name that exact commit
+and the SHA-256 of its manifest. Release-mode validation rejects a dirty carrier
+or any carrier difference beyond the readiness descriptor and its necessarily
+regenerated repository manifest. This prevents a repository-authored readiness
+record from silently floating to the carrier's newer source. It does not create
+a signature, independent custody, approval, or release.
+
 ### Exact implementation evidence
 
 On 2026-08-16, the frozen implementation and exact-SHA automation produced the
@@ -269,11 +291,13 @@ open gates:
 - no representative or historical validation is authorized; label independence,
   owner thresholds, operational error costs, OOD/shift gates, signed promotion,
   rollback, and revocation remain open;
-- deployment architecture, IaC, secrets procedures, SLOs, monitoring, incident
-  response, backup/restore exercises, capacity/load evidence, and intended-
-  environment rollback are not operational;
-- SBOM, hash-locked dependencies, signed artifacts, reproducible-build evidence,
-  and provenance attestations are absent; and
+- container and Kubernetes source, secret-staging procedures, and local
+  runbooks now exist, but no intended-environment deployment, CSI/CNI/admission
+  validation, SLOs, monitoring, incident exercise, backup/restore exercise,
+  capacity/load evidence, or operational rollback is established;
+- signed SBOM and release artifacts, hermetic and independently reproduced
+  build evidence, trusted-builder provenance attestations, transparency-log
+  records, and completed vulnerability disposition are absent; and
 - mission, security, data, model, policy, operations, target-system, and
   authorizing-official acceptances are not recorded.
 

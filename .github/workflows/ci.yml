@@ -18,17 +18,20 @@ jobs:
         python-version: ["3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: 'python -m pip install --require-hashes --only-binary=:all: -r requirements.lock'
+      - name: Validate locked dependencies and runtime SBOM
+        run: python scripts/validate_supply_chain.py
       - name: Run unit tests
-        run: PYTHONPATH=src python -m unittest discover -s tests -v
+        run: PYTHONWARNINGS=error PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python -m unittest discover -s tests -v
       - name: Run Phase 3 simulation-only SOC demonstrations
         run: |
           phase3_demo_root="$(mktemp -d)"
@@ -71,4 +74,40 @@ jobs:
           --record contracts/v0.2.0/examples/phase2-feature-assurance-ce2-evidence-record.json
           --profile P2-CE-004
       - name: Verify repository manifest
-        run: shasum -a 256 -c MANIFEST.sha256
+        run: python scripts/validate_manifest.py
+
+  container-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      ADF_IMAGE_TAG: adf-stage-a:${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify repository manifest before build
+        run: python3 scripts/validate_manifest.py
+      - name: Build the digest-pinned Stage A image without publishing
+        run: >-
+          docker build --pull
+          --build-arg ADF_IMAGE_CREATED=1970-01-01T00:00:00Z
+          --build-arg ADF_IMAGE_REVISION=${GITHUB_SHA}
+          --build-arg ADF_IMAGE_VERSION=0.4.0a2
+          --tag "${ADF_IMAGE_TAG}" .
+      - name: Verify immutable image configuration
+        run: |
+          test "$(docker image inspect --format '{{.Config.User}}' "${ADF_IMAGE_TAG}")" = "10001:10001"
+          test "$(docker image inspect --format '{{json .Config.Entrypoint}}' "${ADF_IMAGE_TAG}")" = '["python","/opt/adf/run_service.py"]'
+          test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "${ADF_IMAGE_TAG}")" = "${GITHUB_SHA}"
+      - name: Smoke-run the image with production restrictions
+        run: >-
+          docker run --rm
+          --network=none
+          --read-only
+          --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m
+          --user 10001:10001
+          "${ADF_IMAGE_TAG}" --help
