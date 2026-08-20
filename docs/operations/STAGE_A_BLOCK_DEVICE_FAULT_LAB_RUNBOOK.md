@@ -140,6 +140,20 @@ device-mapper flakey target`. That is a verified environment limitation, not a
 passing flakey result; the run must be repeated on a capable disposable Linux
 kernel.
 
+That repetition completed on the GitHub-hosted Ubuntu 24.04 runner in
+[run 32423745805](https://github.com/redxking/ai-decision-firewall/actions/runs/32423745805)
+against exact candidate `662cb668f193667af37eddddf2040e666d188d76` and
+unpublished image ID
+`sha256:09b123a2fcfddd0b2ddbb86805728cb03a438c056646f9bd0fa0fe32062f2215`.
+All five `dm-flakey error_writes` boundaries passed: T1 recovered with zero
+receipts; observation, T2, and audit closure recovered with one receipt and
+`UNKNOWN_EFFECT`; T3 reopened as `COMPLETED_VERIFIED`; every recovery reported
+no new effect. The 30-day GitHub artifact
+`stage-a-storage-lab-32423745805-1` was recorded as
+`sha256:ae56b62e799f7b335e8972b3ad4409aa5b116805a5b001b3280d1de3032bc7b3`.
+This remains repository-controlled development evidence, not independent or
+intended-environment validation.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Required response |

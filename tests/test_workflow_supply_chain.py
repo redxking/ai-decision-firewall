@@ -205,6 +205,9 @@ class WorkflowSupplyChainTests(unittest.TestCase):
         self.assertIn("--allow-privileged-lab", workflow)
         self.assertIn("retention-days: 30", workflow)
         self.assertIn("permissions:\n  contents: read", workflow)
+        pre_steps = workflow.split("    steps:\n", 1)[0]
+        self.assertNotIn("${{ runner.", pre_steps)
+        self.assertIn('mktemp -d "${RUNNER_TEMP}/adf-stage-a-storage-evidence.', workflow)
         self.assertNotIn("secrets.", workflow)
         self.assertNotIn("docker push", workflow)
 

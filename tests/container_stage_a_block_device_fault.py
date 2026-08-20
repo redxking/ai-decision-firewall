@@ -143,8 +143,7 @@ class _BlockDevice:
         self._swap(self.linear_table)
         self.fault_active = False
         before = self._artifact_digests()
-        _run("umount", str(MOUNT_ROOT))
-        self.mounted = False
+        self._unmount(required=True)
         self.pre_repair_image_sha256 = self._image_sha256()
         checked = _run("e2fsck", "-fy", self.device, capture=True, check=False)
         if checked.returncode not in {0, 1}:
@@ -163,6 +162,25 @@ class _BlockDevice:
                 if before.get(path) != after.get(path)
             )
         )
+
+    def _unmount(self, *, required: bool) -> None:
+        last_error = "unmount was not attempted"
+        for _attempt in range(20):
+            completed = _run(
+                "umount",
+                str(MOUNT_ROOT),
+                capture=True,
+                check=False,
+            )
+            if completed.returncode == 0:
+                self.mounted = False
+                return
+            last_error = completed.stderr or completed.stdout or "no diagnostics"
+            if completed.returncode != 32 or "busy" not in last_error.lower():
+                break
+            time.sleep(0.05)
+        if required:
+            raise AssertionError(f"bounded ordinary unmount failed: {last_error}")
 
     @staticmethod
     def _artifact_digests() -> dict[str, str]:
@@ -187,14 +205,13 @@ class _BlockDevice:
             self._swap(self.linear_table)
             self.fault_active = False
         if self.mounted:
-            _run("umount", str(MOUNT_ROOT), check=False)
-            self.mounted = False
-        if self.mapped:
+            self._unmount(required=False)
+        if self.mapped and not self.mounted:
             _run("dmsetup", "remove", "--force", self.name, check=False)
             self.mapped = False
-        if self.loop:
+        if self.loop and not self.mounted:
             _run("losetup", "--detach", self.loop, check=False)
-        if self.image.exists():
+        if self.image.exists() and not self.mounted:
             self.image.unlink()
 
 
@@ -310,9 +327,9 @@ class StageABlockDeviceFaultTests(unittest.TestCase):
             raised = exc
 
         self.assertTrue(device.fault_active)
+        chain: list[BaseException] = []
         if boundary != "T3":
             self.assertIsNotNone(raised)
-            chain: list[BaseException] = []
             current = raised
             while current is not None and current not in chain:
                 chain.append(current)
@@ -329,12 +346,20 @@ class StageABlockDeviceFaultTests(unittest.TestCase):
                         in {
                             "attempt to write a readonly database",
                             "disk I/O error",
+                            "unable to open database file",
                         }
                     )
                     for error in chain
                 ),
                 [repr(error) for error in chain],
             )
+
+        for error in chain:
+            error.__traceback__ = None
+            error.__context__ = None
+            error.__cause__ = None
+        chain.clear()
+        raised = None
 
         del first
         gc.collect()

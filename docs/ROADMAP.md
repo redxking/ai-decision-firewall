@@ -257,10 +257,10 @@ complete-row `fsync` ambiguity, and post-effect `ENOSPC`. The container layer
 kills whole containers externally at the same seven boundaries. An isolated
 ext4 loopback layer has verified full-device `dm-error` at the original five
 effect-adjacent boundaries, with raw pre/post-repair image hashes and exact
-application-level restart oracles. A separately selectable `dm-flakey
-error_writes` mode is implemented but awaits a kernel exposing that target. A
-manual exact-SHA GitHub-hosted Linux carrier now provides the next bounded
-execution path without adding publish authority. These cases require zero
+application-level restart oracles. The separately selectable `dm-flakey
+error_writes` mode also passed all five boundaries through a manual exact-SHA
+GitHub-hosted Ubuntu 24.04 carrier without adding publish authority. These
+cases require zero
 duplicate effect and explicit
 recovery. They do not stand in for torn writes, lost flushes, an intended CSI
 implementation, hostile storage, or physical power loss. See the

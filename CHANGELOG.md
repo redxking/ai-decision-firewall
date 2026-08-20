@@ -36,6 +36,25 @@
   20 seconds, below its existing 30-second per-operation deadline, after an
   exact-SHA Python 3.11 run exposed scheduler-dependent starvation at the
   earlier 5-second test setting.
+- Corrected the manual storage-lab workflow so runner-scoped temporary storage
+  is resolved inside a step, where GitHub permits that context, and added a
+  regression excluding runner expressions from the job-level definition.
+- Extended the block-device failure oracle to recognize SQLite's bounded
+  `unable to open database file` result after an injected flakey write error;
+  the outer control-ledger error remains fail-closed and recovery still must
+  prove exact receipt count, correlated history, and no second effect.
+- Advanced the evidence upload action to immutable v7.0.1 after the hosted run
+  reported the v4 Node 20 runtime deprecation; the new official action uses
+  Node 24 and retains the same bounded artifact inputs.
+- Released failed-operation traceback references before block-device repair and
+  added a one-second bounded ordinary-unmount retry. The lab never uses lazy
+  unmount; persistent open handles still fail the campaign and are left to the
+  disposable container boundary for cleanup.
+- Recorded the successful exact-SHA hosted `dm-flakey error_writes` campaign:
+  five of five boundaries passed against candidate `662cb668`, with exact
+  receipt/disposition oracles, no duplicate effect, unpublished image identity,
+  and a bounded GitHub artifact digest. This is repository-controlled
+  development evidence, not independent or intended-environment validation.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 
