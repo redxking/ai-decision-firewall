@@ -275,6 +275,7 @@ The complete control status is maintained in
 - [Production readiness and blocking gates](docs/production/PRODUCTION_READINESS.md)
 - [ADR-015: durable synthetic receipt and result lookup](docs/adr/015_durable_synthetic_adapter_receipt_and_result_lookup.md)
 - [ADR-016: offline Stage A container boundary](docs/adr/016_offline_stage_a_container_boundary.md)
+- [ADR-017: process-isolated non-production adapter lab](docs/adr/017_process_isolated_nonproduction_adapter_lab.md)
 - [Stage A inspection and recovery runbook](docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md)
 - [Offline Stage A Kubernetes runbook](docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md)
 - [Architecture diagrams and build instructions](docs/architecture/README.md)

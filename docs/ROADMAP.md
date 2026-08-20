@@ -198,6 +198,14 @@ same-project evidence, not independent target verification. External identity,
 connectors, targets, representative data, and deployment remain separately
 authorized activities.
 
+The proposed next trust-boundary increment is defined in
+[ADR-017](adr/017_process_isolated_nonproduction_adapter_lab.md): an explicitly
+opt-in Linux container lab that keeps the firewall unprivileged and networkless,
+places `CAP_NET_ADMIN` only in a disposable target namespace, separates command
+and observation processes and keys, and exposes neither a container-runtime
+socket nor an external route. The ADR is a design boundary, not implementation
+evidence or Stage 4 authorization.
+
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative
 durable/audit lock, refuses active SQLite sidecars and invalid/incomplete state,

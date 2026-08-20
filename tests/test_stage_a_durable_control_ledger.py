@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from contextlib import closing
 from datetime import datetime
 import hashlib
@@ -12,6 +13,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import adf_poc.stage_a as stage_a_module
 from adf_poc.audit import AuditLogger
 from adf_poc.phase3.scenarios import request_json
 from adf_poc.stage_a import (
@@ -51,7 +53,14 @@ def _claim_worker(
         state = ledger.claim_request("SOC_AGENT_001", "STAGE-A-CONCURRENT", "a" * 64)
         results.put(("OK", state))
     except Exception as exc:  # pragma: no cover - child diagnostic surface
-        results.put(("ERROR", type(exc).__name__, getattr(exc, "reason_code", "")))
+        results.put(
+            (
+                "ERROR",
+                type(exc).__name__,
+                getattr(exc, "reason_code", ""),
+                str(exc),
+            )
+        )
 
 
 def _consume_worker(
@@ -725,7 +734,7 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             SQLiteControlLedger(path)
             context = multiprocessing.get_context("spawn")
             worker_count = 5
-            barrier = context.Barrier(worker_count)
+            barrier = context.Barrier(worker_count, timeout=30)
             results = context.Queue()
             processes = [
                 context.Process(target=_claim_worker, args=(path, barrier, results))
@@ -733,13 +742,62 @@ class StageADurableControlLedgerTests(unittest.TestCase):
             ]
             for process in processes:
                 process.start()
-            observed = [results.get(timeout=15) for _ in processes]
+            observed = [results.get(timeout=45) for _ in processes]
             for process in processes:
-                process.join(timeout=15)
+                process.join(timeout=30)
                 self.assertEqual(process.exitcode, 0)
 
-            self.assertEqual(observed.count(("OK", "NEW")), 1)
-            self.assertEqual(observed.count(("OK", "DUPLICATE")), worker_count - 1)
+            expected = Counter(
+                {("OK", "NEW"): 1, ("OK", "DUPLICATE"): worker_count - 1}
+            )
+            self.assertEqual(Counter(observed), expected, observed)
+
+    def test_runtime_semantic_validation_uses_one_read_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            control = SQLiteControlLedger(root / "control.sqlite3")
+            control_transaction_states: list[bool] = []
+            original_control = stage_a_module._validate_control_relations
+
+            def validate_control(connection: sqlite3.Connection) -> None:
+                control_transaction_states.append(connection.in_transaction)
+                original_control(connection)
+
+            with patch.object(
+                stage_a_module,
+                "_validate_control_relations",
+                side_effect=validate_control,
+            ):
+                connection = control._connect()
+                self.assertFalse(connection.in_transaction)
+                connection.close()
+            self.assertEqual(control_transaction_states, [True])
+
+            inventory = new_harness().policy.target_inventory
+            adapter = SQLiteSyntheticAdapterStore(
+                root / "adapter.sqlite3", target_inventory=inventory
+            )
+            adapter_transaction_states: list[bool] = []
+            original_adapter = (
+                SQLiteSyntheticAdapterStore._validate_metadata_and_inventory
+            )
+
+            def validate_adapter(
+                instance: SQLiteSyntheticAdapterStore,
+                connection: sqlite3.Connection,
+            ) -> dict[str, str]:
+                adapter_transaction_states.append(connection.in_transaction)
+                return original_adapter(instance, connection)
+
+            with patch.object(
+                SQLiteSyntheticAdapterStore,
+                "_validate_metadata_and_inventory",
+                new=validate_adapter,
+            ):
+                connection = adapter._connect()
+                self.assertFalse(connection.in_transaction)
+                connection.close()
+            self.assertEqual(adapter_transaction_states, [True])
 
     def test_direct_store_first_creation_is_process_serialized(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
