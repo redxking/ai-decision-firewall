@@ -16,6 +16,11 @@
   boundary explicit. Added repeated short-write, partial-row-plus-write-`EIO`,
   and transient read-`EIO` audit cases with exact no-duplicate-effect and
   restart dispositions.
+- Added the first bounded Stage A load/resource campaign: 16 durable requests
+  and terminal lookups across four workers with exact receipt/outbox counts,
+  audit validation, reopen, deadline and artifact-growth bounds, and basic
+  thread/descriptor leak checks. This is regression-scale evidence, not an
+  operational capacity or SLO claim.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 
