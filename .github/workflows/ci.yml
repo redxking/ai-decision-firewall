@@ -121,6 +121,22 @@ jobs:
           --entrypoint python
           "${ADF_IMAGE_TAG}"
           -c "from adf_poc.phase3.config import Phase3PolicyConfig; Phase3PolicyConfig.load('/opt/adf/config/phase3_policy.json')"
+      - name: Run the networkless Stage A developer preview
+        run: >-
+          docker run --rm
+          --network=none
+          --read-only
+          --cap-drop=ALL
+          --security-opt=no-new-privileges
+          --pids-limit=64
+          --memory=512m
+          --cpus=2
+          --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m,uid=10001,gid=10001,mode=0700
+          --tmpfs /preview:rw,noexec,nosuid,nodev,size=32m,uid=10001,gid=10001,mode=0700
+          --user 10001:10001
+          --entrypoint python
+          "${ADF_IMAGE_TAG}"
+          /opt/adf/run_preview.py demo --root /preview
       - name: Run bounded storage-fault campaigns in the image
         run: >-
           docker run --rm

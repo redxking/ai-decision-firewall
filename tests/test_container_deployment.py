@@ -132,6 +132,7 @@ class ContainerBuildTests(unittest.TestCase):
             "!Dockerfile",
             "!requirements.lock",
             "!run_service.py",
+            "!run_preview.py",
             "!src/**",
             "!config/phase3_policy.json",
             "!contracts/v0.3.0/decision-request.schema.json",

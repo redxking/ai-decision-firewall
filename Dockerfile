@@ -47,6 +47,7 @@ COPY contracts/v0.3.0/decision-request.schema.json /opt/adf/contracts/v0.3.0/dec
 COPY contracts/v0.3.0/phase3-policy.schema.json /opt/adf/contracts/v0.3.0/phase3-policy.schema.json
 COPY artifacts/supply-chain/runtime.cdx.json /opt/adf/artifacts/supply-chain/runtime.cdx.json
 COPY run_service.py /opt/adf/run_service.py
+COPY run_preview.py /opt/adf/run_preview.py
 RUN mkdir -p /etc/adf
 
 USER 10001:10001
