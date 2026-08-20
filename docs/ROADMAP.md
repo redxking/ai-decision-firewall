@@ -207,9 +207,12 @@ socket nor an external route. Its first contract-only increment is now
 implemented: three closed v0.4.0 schemas plus duplicate-safe, bounded,
 offset-aware validators; domain-separated canonical HMAC bindings; exact
 command/receipt/observation correlation; and executor/observer key-separation
-checks. The socket services, peer-credential enforcement, target mutation,
-independent probe, and container harness remain unimplemented. This is not
-Stage 4 authorization.
+checks. A subsequent transport-only increment adds explicit opt-in Linux
+`SOCK_SEQPACKET` framing, exact `SO_PEERCRED` UID checks, owner-private socket
+paths, inode revalidation, bounded deadlines, and one-packet request/response
+limits. Contract-specific executor/observer handlers, durable replay state,
+target mutation, independent probes, and the container harness remain
+unimplemented. This is not Stage 4 authorization.
 
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative

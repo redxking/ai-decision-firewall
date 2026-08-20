@@ -207,3 +207,13 @@ receipt and observation records. This is contract-level implementation
 evidence only. No Unix socket, peer-credential check, executor mutation,
 observer probe, container topology, or non-production action has been
 implemented or authorized.
+
+The transport foundation is implemented separately in
+`src/adf_poc/lab_transport.py`. It is Linux-only, requires an explicit true
+opt-in, carries one bounded request and response per `SOCK_SEQPACKET`
+connection, checks exact peer UIDs with `SO_PEERCRED`, requires an owner-private
+`0700` directory and `0600` socket, revalidates inode identity, and refuses to
+replace or clean up an unexpected path. Real Linux tests run without network or
+capabilities. Action item 3 remains open because the contract-specific
+executor and observer service handlers, durable replay fence, and any target
+behavior are not implemented.

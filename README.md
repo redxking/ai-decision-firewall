@@ -55,7 +55,7 @@ execution path.
 | [Phase 3](docs/phase3/README.md) | Raw request-to-effect simulation, scoped authorization, broker, and readback | In-memory synthetic target only; no live connector |
 | [Phase 3.1](docs/phase31/README.md) | Synthetic temporal model evaluation and calibration comparison | Promotion remains `NOT_AUTHORIZED` |
 | Stage A | Durable request, authorization, receipt, recovery, and sanitized result lookup | Opt-in, same-host, offline synthetic mechanism; production remains `BLOCKED` |
-| [Phase 4 contract foundation](contracts/v0.4.0/README.md) | Closed authenticated command, executor-receipt, and independent-observation messages for the proposed isolated lab | Pure schemas and validators only; no socket, privileged executor, container harness, live connector, or action authority |
+| [Phase 4 lab foundation](contracts/v0.4.0/README.md) | Closed authenticated messages plus explicit opt-in Linux `SOCK_SEQPACKET` framing and peer-UID checks | No executor/observer service handler, target mutation, container harness, live connector, or action authority |
 
 ## Stage A architecture
 

@@ -14,5 +14,10 @@ production target, external network, or operational action.
 The code-owned validator in `adf_poc.lab_contracts` adds strict duplicate-safe
 JSON parsing, size/depth limits, offset-aware time checks, cross-field outcome
 rules, canonical SHA-256 bindings, domain-separated HMAC authentication, and
-executor/observer key-separation checks. Sockets, peer credentials, executor
-mutation, and container orchestration are deliberately outside this increment.
+executor/observer key-separation checks. `adf_poc.lab_transport` adds an
+explicit opt-in Linux-only `SOCK_SEQPACKET` transport with one-packet framing,
+bounded deadlines, exact `SO_PEERCRED` UID checks, owner-private `0700`/`0600`
+filesystem checks, inode binding, and non-destructive cleanup on replacement.
+It contains no executor or observer behavior. Contract-specific service
+handlers, replay state, target mutation, and container orchestration remain
+outside this increment.
