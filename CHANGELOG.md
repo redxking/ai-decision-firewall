@@ -36,6 +36,9 @@
   20 seconds, below its existing 30-second per-operation deadline, after an
   exact-SHA Python 3.11 run exposed scheduler-dependent starvation at the
   earlier 5-second test setting.
+- Corrected the manual storage-lab workflow so runner-scoped temporary storage
+  is resolved inside a step, where GitHub permits that context, and added a
+  regression excluding runner expressions from the job-level definition.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 
