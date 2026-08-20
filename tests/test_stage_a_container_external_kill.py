@@ -11,7 +11,15 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKER = "/opt/adf/tests/container_stage_a_external_kill.py"
-BOUNDARIES = ("T1", "OBSERVATION", "T2", "AUDIT", "T3")
+BOUNDARIES = (
+    "CLAIM",
+    "AUTHORIZATION",
+    "T1",
+    "OBSERVATION",
+    "T2",
+    "AUDIT",
+    "T3",
+)
 
 
 def _run(
@@ -182,7 +190,7 @@ class StageAContainerExternalKillTests(unittest.TestCase):
                 self.assertEqual(boundary, payload["boundary"])
                 self.assertTrue(payload["audit_chain_valid"])
                 self.assertEqual(
-                    0 if boundary == "T1" else 1,
+                    0 if boundary in {"CLAIM", "AUTHORIZATION", "T1"} else 1,
                     payload["receipts_before"],
                 )
                 self.assertEqual(payload["receipts_before"], payload["receipts_after"])

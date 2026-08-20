@@ -248,12 +248,15 @@ marker. This is local recoverability mechanics only; power-loss behavior,
 continuous backup, rollback selection, external custody, DR, RPO, and RTO
 remain open.
 
-The second bounded increment is a layered storage-fault campaign. Its initial
-repository-controlled cases use uncatchable process loss at T1, observation,
-T2, audit closure, and T3, plus deterministic audit `fsync` ambiguity and
-post-effect `ENOSPC`. The next layer now kills whole containers externally at
-the same five boundaries and uses an isolated ext4 loopback device switched to
-`dm-error`, with raw pre/post-repair image hashes and exact application-level
+The second bounded increment is a layered storage-fault campaign. Its
+repository-controlled cases now use uncatchable process loss at request claim,
+authorization issuance, T1, observation, T2, audit closure, and T3; T3 also
+models response loss after durable terminal commit. Deterministic audit cases
+cover repeated short writes, partial-row write `EIO`, transient read `EIO`,
+complete-row `fsync` ambiguity, and post-effect `ENOSPC`. The container layer
+kills whole containers externally at the same seven boundaries. An isolated
+ext4 loopback layer switches to `dm-error` at the original five effect-adjacent
+boundaries, with raw pre/post-repair image hashes and exact application-level
 restart oracles. These cases require zero duplicate effect and explicit
 recovery. They do not stand in for torn writes, lost flushes, an intended CSI
 implementation, hostile storage, or physical power loss. See the

@@ -31,7 +31,29 @@ def _terminate_after_committed_boundary(
         synthetic_adapter_path=root / "adapter.sqlite3",
     )
 
-    if boundary == "T1":
+    if boundary == "CLAIM":
+        original = SQLiteControlLedger.claim_request
+
+        def after_claim(self, *args, **kwargs):
+            result = original(self, *args, **kwargs)
+            os.kill(os.getpid(), signal.SIGKILL)
+            return result  # pragma: no cover - SIGKILL is uncatchable
+
+        target = SQLiteControlLedger
+        attribute = "claim_request"
+        replacement = after_claim
+    elif boundary == "AUTHORIZATION":
+        original = SQLiteControlLedger.register
+
+        def after_authorization(self, *args, **kwargs):
+            result = original(self, *args, **kwargs)
+            os.kill(os.getpid(), signal.SIGKILL)
+            return result  # pragma: no cover - SIGKILL is uncatchable
+
+        target = SQLiteControlLedger
+        attribute = "register"
+        replacement = after_authorization
+    elif boundary == "T1":
         original = SQLiteControlLedger.consume_once
 
         def after_t1(self, *args, **kwargs):
@@ -105,16 +127,18 @@ def _terminate_after_committed_boundary(
 class StageASigkillCampaignTests(unittest.TestCase):
     def test_sigkill_at_committed_boundaries_never_duplicates_effect(self) -> None:
         expected = {
-            "T1": (0, "connected", False),
-            "T2": (1, "isolated", False),
-            "OBSERVATION": (1, "isolated", False),
-            "AUDIT": (1, "isolated", False),
-            "T3": (1, "isolated", True),
+            "CLAIM": (0, "connected", "ABORTED_NO_EFFECT"),
+            "AUTHORIZATION": (0, "connected", "ABORTED_NO_EFFECT"),
+            "T1": (0, "connected", "UNKNOWN_EFFECT"),
+            "T2": (1, "isolated", "UNKNOWN_EFFECT"),
+            "OBSERVATION": (1, "isolated", "UNKNOWN_EFFECT"),
+            "AUDIT": (1, "isolated", "UNKNOWN_EFFECT"),
+            "T3": (1, "isolated", "COMPLETED_VERIFIED"),
         }
         for boundary, (
             expected_receipts,
             expected_network_state,
-            terminal,
+            expected_disposition,
         ) in expected.items():
             with (
                 self.subTest(boundary=boundary),
@@ -162,7 +186,7 @@ class StageASigkillCampaignTests(unittest.TestCase):
                 lookup = reopened.firewall.lookup_request_result(
                     raw, credential=reopened.soc_credential
                 )
-                if terminal:
+                if expected_disposition == "COMPLETED_VERIFIED":
                     self.assertIsNotNone(lookup)
                     assert lookup is not None
                     self.assertEqual(lookup.disposition, "COMPLETED_VERIFIED")
@@ -180,7 +204,7 @@ class StageASigkillCampaignTests(unittest.TestCase):
                     )
                     self.assertIsNotNone(recovered)
                     assert recovered is not None
-                    self.assertEqual(recovered.disposition, "UNKNOWN_EFFECT")
+                    self.assertEqual(recovered.disposition, expected_disposition)
                     self.assertFalse(recovered.new_effect)
 
                 self.assertEqual(

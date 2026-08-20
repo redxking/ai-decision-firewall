@@ -29,8 +29,8 @@ invariants:
 
 | Layer | Test type | Current coverage | Required next coverage |
 |---|---|---|---|
-| Audit primitive | Deterministic unit/integration fault injection | Complete-row `fsync` ambiguity raises `AuditDurabilityError`, preserves the observed chain tip, blocks T3, and requires recovery. Persistent post-effect `ENOSPC` prevents alternate closure until the fault is removed. | Short writes, partial-row writes, `EIO` on write/read, directory-sync failure, permission transition, inode replacement during failure handling. |
-| Transaction process | Multiprocess integration | Uncatchable `SIGKILL` immediately after T1, post-effect observation, T2, normal audit closure, and T3. | Claim, authorization issuance, each recovery-audit prefix, response-loss, and randomized repeated boundary selection. |
+| Audit primitive | Deterministic unit/integration fault injection | Complete-row `fsync` ambiguity raises `AuditDurabilityError`, preserves the observed chain tip, blocks T3, and requires recovery. Persistent post-effect `ENOSPC` prevents alternate closure until the fault is removed. Repeated short writes complete through the bounded append loop, while a partial row followed by write `EIO` is preserved, blocks restart, and cannot duplicate the committed effect. A transient post-effect read `EIO` closes through the alternate accounting lifecycle as durable `RECOVERY_REQUIRED`. | Directory-sync failure, permission transition, and inode replacement during failure handling. |
+| Transaction process | Multiprocess integration | Uncatchable `SIGKILL` immediately after request claim, authorization issuance, T1, post-effect observation, T2, normal audit closure, and T3. The T3 case is also response loss after durable terminal commit and proves exact lookup without re-execution. | Each recovery-audit prefix and randomized repeated boundary selection. |
 | Container | Container integration/chaos | The non-root, network-disabled, read-only image executes the deterministic SIGKILL/I/O cases. A dedicated 1 MiB tmpfs exhausted after T2 produced a partial audit row; restart preserved it and halted for quarantine with one receipt and one effect. An external Docker controller now kills separate containers at T1, observation, T2, audit closure, and T3, then verifies the persisted volumes from fresh containers. | Cgroup memory/CPU pressure, read-only remount, repeated tmpfs exhaustion, and an approved disposition for unrecoverable partial audit records. |
 | Filesystem/block device | System integration | A disposable privileged Linux lab now switches an ext4 loopback device from `linear` to `dm-error` at T1, post-effect observation, T2, audit closure, and T3. After restoring the mapping and running `e2fsck`, fresh Stage A construction preserves the exact receipt/effect boundary and returns conservative recovery or the durable T3 result. | `dm-flakey`, torn/short writes, lost flushes, directory-entry loss, individual WAL/main-DB/audit faults, x86_64 repetition, and one intended CSI/filesystem. |
 | Host/power | Destructive lab campaign | Not established. | Hypervisor power-off/reset at every boundary, repeated boots, integrity capture before recovery, and independent receipt/state comparison. |
@@ -38,18 +38,21 @@ invariants:
 
 ## Current executable cases
 
-- `tests/test_stage_a_sigkill_campaign.py` verifies the five committed
-  transaction boundaries with `SIGKILL`, exact receipt counts, target state,
-  terminal/recovery classification, and zero duplicate effect.
+- `tests/test_stage_a_sigkill_campaign.py` verifies seven committed transaction
+  boundaries with `SIGKILL`, exact receipt counts, target state,
+  terminal/recovery classification, response-loss lookup, and zero duplicate
+  effect.
 - `tests/test_stage_a_storage_failure_campaign.py` verifies ambiguous audit
   `fsync` at both incomplete and complete ordinary lifecycle points, plus
-  persistent post-effect `ENOSPC`.
+  persistent post-effect `ENOSPC`, repeated short audit writes, a transient
+  post-effect read `EIO`, and a partial audit row followed by write `EIO` that
+  must be preserved and quarantined.
 - `tests/container_stage_a_storage_fault.py` is invoked only with an explicit
   container marker and a dedicated tmpfs. It verifies actual kernel `ENOSPC`
   after T2, including the partial-row case that must be preserved and
   quarantined rather than automatically reconciled.
 - `tests/test_stage_a_container_external_kill.py` uses the Docker control plane
-  to deliver `SIGKILL` from outside the process container at all five committed
+  to deliver `SIGKILL` from outside the process container at all seven committed
   boundaries. Each case uses fresh named volumes and a fresh verifier container;
   cleanup is restricted to the uniquely named campaign resources.
 - `tests/container_stage_a_block_device_fault.py` runs only under the explicit
