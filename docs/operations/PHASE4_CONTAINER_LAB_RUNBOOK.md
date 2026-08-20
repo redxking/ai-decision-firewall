@@ -97,3 +97,36 @@ recovery, hostile peers, external identity, a registry-published image,
 signature verification, independent evidence custody, or production
 deployment. The next bounded gate is the ADR-017 adversarial/kill matrix while
 retaining the same no-effect authority boundary.
+
+## Container recovery campaign
+
+The recovery controller adds a fourth, control-only volume that stores the
+exact signed command before the first exchange. It supports three closed
+scenarios:
+
+- `executor-after-reservation`
+- `executor-after-completion`
+- `observer-after-observation`
+
+Run each scenario explicitly against the exact local image ID:
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. \
+python3 scripts/run_phase4_container_recovery.py \
+  --allow-container-recovery \
+  --image sha256:<exact-local-image-id> \
+  --scenario executor-after-reservation
+```
+
+The controller waits for a code-owned boundary marker and then kills the exact
+recorded container through the host Docker API. No application container can
+reach that API. Restart is allowed only after a separate non-root initializer
+validates and removes the exact stale owner-private socket.
+
+The reservation scenario passes only when exact replay closes
+`RECOVERY_REQUIRED`. The completion and observation scenarios pass only when
+the exact persisted command produces a correlated `NO_EFFECT` result after
+replacement services start. Every passing result must also state
+`container_kill_observed=true`, `exact_command_reused=true`,
+`effect_possible=false`, `authorization_integrated=false`,
+`live_actions_possible=false`, and `cleanup_complete=true`.

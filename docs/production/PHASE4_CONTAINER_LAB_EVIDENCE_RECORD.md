@@ -74,3 +74,26 @@ Post-completion loss leaves one reservation and one durable `NO_EFFECT`
 completion; restart returns the exact stored receipt and performs zero target
 reads. These repository-controlled process tests do not extend this record's
 container, independence, production, or action claims.
+
+## Container recovery campaign observation
+
+One three-scenario campaign was observed against pre-commit local image ID
+`sha256:06725c2d9867a36d67d2635aa5eeaa4b6fdc3e9c1c18112696dee24bd797c992`.
+The exact local image is not a published or signed artifact.
+
+| Scenario | Lab ID | Observed recovery |
+|---|---|---|
+| Executor killed after durable reservation | `110000000001` | `RECOVERY_REQUIRED`; exact command reused; no correlated result accepted |
+| Executor killed after durable `NO_EFFECT` completion | `110000000002` | Exact stored receipt replayed; fresh observation correlated |
+| Observer killed after signing, before delivery | `110000000003` | Replacement observer performed a fresh read and completed correlation |
+
+All three results recorded an externally controlled container kill, internal
+network, `effect_possible=false`, `authorization_integrated=false`,
+`live_actions_possible=false`, and exact cleanup. A second execution through
+the automated integration test also passed all three scenarios. No labeled lab
+container, network, or volume remained afterward.
+
+These results establish bounded crash/restart behavior for the current
+pre-effect container topology only. They do not establish post-mutation safety,
+automatic reconciliation authority, independent custody, operational efficacy,
+or production readiness.

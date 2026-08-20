@@ -39,6 +39,7 @@ IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 JOURNAL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\.jsonl$")
 EXECUTOR_AFTER_RESERVATION = "AFTER_RESERVATION"
 EXECUTOR_AFTER_COMPLETION = "AFTER_COMPLETION"
+OBSERVER_AFTER_OBSERVATION = "AFTER_OBSERVATION"
 
 
 class LabServiceError(RuntimeError):
@@ -660,9 +661,15 @@ class LabObserverService:
         key: bytes,
         read_state: Callable[[], LabObservedState],
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+        failure_hook: Callable[[str], None] | None = None,
         enabled: bool,
     ) -> None:
-        if enabled is not True or not callable(read_state) or not callable(clock):
+        if (
+            enabled is not True
+            or not callable(read_state)
+            or not callable(clock)
+            or (failure_hook is not None and not callable(failure_hook))
+        ):
             raise LabServiceError(
                 "LAB_SERVICE_NOT_ENABLED",
                 "Observer requires explicit opt-in and callables.",
@@ -671,6 +678,7 @@ class LabObserverService:
         self.key = _validate_key(key, label="Observer key")
         self.read_state = read_state
         self.clock = clock
+        self.failure_hook = failure_hook
 
     def handle(self, raw: bytes) -> bytes:
         now, timestamp = _utc_seconds(self.clock)
@@ -720,4 +728,6 @@ class LabObserverService:
             key=self.key,
             now=now,
         )
+        if self.failure_hook is not None:
+            self.failure_hook(OBSERVER_AFTER_OBSERVATION)
         return canonical_json(signed).encode("utf-8")

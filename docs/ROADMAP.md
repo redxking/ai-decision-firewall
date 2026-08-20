@@ -228,12 +228,16 @@ but the executor still contains no mutation primitive. See the
 [evidence record](production/PHASE4_CONTAINER_LAB_EVIDENCE_RECORD.md). This is
 not Stage 4 authorization.
 
-An initial real-process crash slice now kills the executor with `SIGKILL` after
-durable reservation and after durable `NO_EFFECT` completion. Exact restart
-oracles prove that the open reservation fences replay and the completed receipt
-replays without another target read. This is not the full ADR-017 kill matrix:
-container-level, observer, audit, terminal-result, and any future post-mutation
-boundaries remain open.
+The crash campaign now covers real-process and externally controlled container
+loss after durable reservation and durable `NO_EFFECT` completion, plus
+container loss after the observer has signed but not delivered its observation.
+A create-once control volume preserves the exact signed command across restart;
+stale sockets are removed only by an explicit owner-checked recovery
+initializer after the controller confirms the service container was killed.
+The open reservation remains fenced, while durable completion and fresh
+observation paths complete exact correlation without another effect. This is
+not the full ADR-017 kill matrix: pre-reservation, audit, terminal-result, and
+any future post-mutation boundaries remain open.
 
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative

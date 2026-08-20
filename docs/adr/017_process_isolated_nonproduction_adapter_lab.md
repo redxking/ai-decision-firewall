@@ -246,5 +246,15 @@ immediately after its durable `NO_EFFECT` completion. The former leaves one
 open reservation and exact replay closes as `LAB_EXECUTOR_RECOVERY_REQUIRED`
 without rereading the target. The latter replays the exact stored receipt after
 restart without rereading the target. This covers only two pre-effect executor
-boundaries. Pre-reservation, observer, audit, terminal-result, container-level,
-and any future kernel-mutation boundaries remain open.
+boundaries.
+
+`scripts/run_phase4_container_recovery.py` now carries those same boundaries
+into externally killed containers and adds observer loss after the observation
+is signed but before delivery. A distinct control volume persists the exact
+signed command, the test controller waits for an exact boundary marker before
+issuing `docker kill`, and a separate non-root initializer removes only the
+validated stale socket after the killed container is stopped. Open reservation
+replay remains recovery-required. Durable `NO_EFFECT` completion and a fresh
+replacement observer complete exact correlation without another effect.
+Pre-reservation, audit, terminal-result, and any future kernel-mutation
+boundaries remain open.
