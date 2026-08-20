@@ -21,6 +21,12 @@
   audit validation, reopen, deadline and artifact-growth bounds, and basic
   thread/descriptor leak checks. This is regression-scale evidence, not an
   operational capacity or SLO claim.
+- Added an explicitly selectable `dm-flakey error_writes` mode to the isolated
+  ext4 block-device campaign at the same five effect-adjacent boundaries. The
+  requested run fails if the kernel lacks the `flakey` target; current Docker
+  Desktop evidence remains limited to verified `dm-error`. Silent dropped
+  writes, lost flushes, physical power loss, and intended-filesystem behavior
+  remain open.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 
