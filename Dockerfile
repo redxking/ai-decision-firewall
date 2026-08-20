@@ -47,6 +47,7 @@ COPY contracts/v0.3.0/decision-request.schema.json /opt/adf/contracts/v0.3.0/dec
 COPY contracts/v0.3.0/phase3-policy.schema.json /opt/adf/contracts/v0.3.0/phase3-policy.schema.json
 COPY contracts/v0.4.0/lab-execution-command.schema.json /opt/adf/contracts/v0.4.0/lab-execution-command.schema.json
 COPY contracts/v0.4.0/lab-executor-receipt.schema.json /opt/adf/contracts/v0.4.0/lab-executor-receipt.schema.json
+COPY contracts/v0.4.0/lab-observation-request.schema.json /opt/adf/contracts/v0.4.0/lab-observation-request.schema.json
 COPY contracts/v0.4.0/lab-observation.schema.json /opt/adf/contracts/v0.4.0/lab-observation.schema.json
 COPY artifacts/supply-chain/runtime.cdx.json /opt/adf/artifacts/supply-chain/runtime.cdx.json
 COPY run_service.py /opt/adf/run_service.py

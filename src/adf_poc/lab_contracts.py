@@ -17,8 +17,9 @@ from adf_poc.utils import StrictJSONError, canonical_json, strict_json_loads
 SCHEMA_VERSION = "0.4.0"
 COMMAND = "LAB_EXECUTION_COMMAND"
 RECEIPT = "LAB_EXECUTOR_RECEIPT"
+OBSERVATION_REQUEST = "LAB_OBSERVATION_REQUEST"
 OBSERVATION = "LAB_OBSERVATION"
-MESSAGE_TYPES = frozenset({COMMAND, RECEIPT, OBSERVATION})
+MESSAGE_TYPES = frozenset({COMMAND, RECEIPT, OBSERVATION_REQUEST, OBSERVATION})
 MAX_MESSAGE_BYTES = 16 * 1024
 MAX_JSON_DEPTH = 8
 MAX_FUTURE_SKEW = timedelta(seconds=30)
@@ -30,11 +31,13 @@ CONTRACT_ROOT = Path(__file__).resolve().parents[2] / "contracts" / "v0.4.0"
 SCHEMA_PATHS = {
     COMMAND: CONTRACT_ROOT / "lab-execution-command.schema.json",
     RECEIPT: CONTRACT_ROOT / "lab-executor-receipt.schema.json",
+    OBSERVATION_REQUEST: CONTRACT_ROOT / "lab-observation-request.schema.json",
     OBSERVATION: CONTRACT_ROOT / "lab-observation.schema.json",
 }
 DOMAINS = {
     COMMAND: b"ADF-LAB-IPC\x00v0.4.0\x00COMMAND\x00",
     RECEIPT: b"ADF-LAB-IPC\x00v0.4.0\x00EXECUTOR-RECEIPT\x00",
+    OBSERVATION_REQUEST: b"ADF-LAB-IPC\x00v0.4.0\x00OBSERVATION-REQUEST\x00",
     OBSERVATION: b"ADF-LAB-IPC\x00v0.4.0\x00INDEPENDENT-OBSERVATION\x00",
 }
 OBSERVATION_FACT_FIELDS = (
@@ -197,24 +200,28 @@ def _validation_time(now: datetime | None) -> datetime:
 
 
 def _validate_times(
-    value: dict[str, Any], message_type: str, now: datetime | None
+    value: dict[str, Any],
+    message_type: str,
+    now: datetime | None,
+    *,
+    allow_expired: bool = False,
 ) -> None:
     validation_time = _validation_time(now)
     try:
-        if message_type == COMMAND:
+        if message_type in (COMMAND, OBSERVATION_REQUEST):
             issued = _parse_canonical_utc(value["issued_at"])
             expires = _parse_canonical_utc(value["expires_at"])
             if expires <= issued or expires - issued > MAX_COMMAND_LIFETIME:
                 raise LabContractError(
                     "LAB_COMMAND_LIFETIME_INVALID",
-                    "Command expiry must be after issue and within 120 seconds.",
+                    "Request expiry must be after issue and within 120 seconds.",
                 )
             if issued > validation_time + MAX_FUTURE_SKEW:
                 raise LabContractError(
-                    "LAB_TIMESTAMP_FUTURE", "Command issue time exceeds allowed skew."
+                    "LAB_TIMESTAMP_FUTURE", "Request issue time exceeds allowed skew."
                 )
-            if expires <= validation_time:
-                raise LabContractError("LAB_COMMAND_EXPIRED", "Command has expired.")
+            if expires <= validation_time and not allow_expired:
+                raise LabContractError("LAB_COMMAND_EXPIRED", "Request has expired.")
         elif message_type == RECEIPT:
             executed = _parse_canonical_utc(value["executed_at"])
             recorded = _parse_canonical_utc(value["recorded_at"])
@@ -269,6 +276,7 @@ def validate_lab_message_dict(
     *,
     message_type: str,
     now: datetime | None = None,
+    allow_expired: bool = False,
 ) -> dict[str, Any]:
     """Validate an already decoded message without assigning it trust."""
 
@@ -300,7 +308,14 @@ def validate_lab_message_dict(
     )
     if errors:
         raise LabContractError("LAB_SCHEMA_INVALID", _schema_error_message(errors[0]))
-    _validate_times(value, message_type, now)
+    if type(allow_expired) is not bool or (
+        allow_expired and message_type not in (COMMAND, OBSERVATION_REQUEST)
+    ):
+        raise LabContractError(
+            "LAB_VALIDATION_MODE_INVALID",
+            "Expired-message validation is available only to replay-aware requests.",
+        )
+    _validate_times(value, message_type, now, allow_expired=allow_expired)
 
     if message_type == RECEIPT:
         expected = {
@@ -423,6 +438,7 @@ def load_authenticated_lab_message(
     expected_key_id: str,
     key: bytes,
     now: datetime | None = None,
+    allow_expired: bool = False,
 ) -> dict[str, Any]:
     """Strict-decode, authenticate, then semantically validate a lab message."""
 
@@ -433,7 +449,12 @@ def load_authenticated_lab_message(
         expected_key_id=expected_key_id,
         key=key,
     )
-    return validate_lab_message_dict(value, message_type=message_type, now=now)
+    return validate_lab_message_dict(
+        value,
+        message_type=message_type,
+        now=now,
+        allow_expired=allow_expired,
+    )
 
 
 def lab_message_sha256(value: dict[str, Any]) -> str:

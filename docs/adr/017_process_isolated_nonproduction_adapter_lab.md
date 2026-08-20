@@ -191,7 +191,7 @@ boundary. The namespace-local container lab is the smaller falsifiable step.
 
 1. [x] Define versioned command, receipt, and observation JSON schemas.
 2. [x] Implement pure validators and canonical HMAC bindings without sockets.
-3. [ ] Implement executor and observer Unix-socket services behind an explicit
+3. [x] Implement executor and observer Unix-socket handlers behind an explicit
    opt-in lab flag.
 4. [ ] Add the digest-pinned internal-network container harness.
 5. [ ] Execute the adversarial and kill matrices.
@@ -204,9 +204,8 @@ requires canonical UTC seconds and bounded command lifetime, authenticates
 each message under a type-specific domain, rejects shared executor/observer key
 material, and correlates the exact signed command with separately authenticated
 receipt and observation records. This is contract-level implementation
-evidence only. No Unix socket, peer-credential check, executor mutation,
-observer probe, container topology, or non-production action has been
-implemented or authorized.
+evidence only. It does not authorize an executor mutation, external probe,
+container topology, or non-production action.
 
 The transport foundation is implemented separately in
 `src/adf_poc/lab_transport.py`. It is Linux-only, requires an explicit true
@@ -214,6 +213,21 @@ opt-in, carries one bounded request and response per `SOCK_SEQPACKET`
 connection, checks exact peer UIDs with `SO_PEERCRED`, requires an owner-private
 `0700` directory and `0600` socket, revalidates inode identity, and refuses to
 replace or clean up an unexpected path. Real Linux tests run without network or
-capabilities. Action item 3 remains open because the contract-specific
-executor and observer service handlers, durable replay fence, and any target
-behavior are not implemented.
+capabilities.
+
+The contract-specific handlers are implemented in `adf_poc.lab_services`. A
+fourth message type gives the observer a distinct authenticated read request,
+so it never needs the executor command key. The executor stores a hash-chained
+reservation before consulting the target reader, persists the signed receipt
+as a completion, returns the exact stored receipt for a completed duplicate,
+rejects conflicting reuse, and fences an unfinished reservation as
+`LAB_EXECUTOR_RECOVERY_REQUIRED`. The observer performs a fresh read on each
+valid request and signs only the resulting closed facts. Both handlers require
+explicit opt-in and are directly composable with the peer-checked transport.
+
+This completes the handler and replay-fence mechanics, not the proposed action.
+The executor intentionally emits a durable `NO_EFFECT` receipt and contains no
+kernel, namespace, firewall-rule, subprocess, container-runtime, or network
+mutation path. The observer currently consumes a code-owned read callback; the
+independent fixed network probes and the digest-pinned disposable container
+harness remain action items 4 and 5.
