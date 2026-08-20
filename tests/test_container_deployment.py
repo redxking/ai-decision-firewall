@@ -80,6 +80,7 @@ class ContainerBuildTests(unittest.TestCase):
         self.assertNotIn(" curl ", dockerfile)
         self.assertNotIn(" wget ", dockerfile)
         self.assertNotRegex(dockerfile, r"(?m)^ADD\s")
+        self.assertIn("COPY run_lab_node.py /opt/adf/run_lab_node.py", dockerfile)
         self.assertIn(
             "COPY contracts/v0.3.0/phase3-policy.schema.json "
             "/opt/adf/contracts/v0.3.0/phase3-policy.schema.json",
@@ -143,6 +144,7 @@ class ContainerBuildTests(unittest.TestCase):
             "!requirements.lock",
             "!run_service.py",
             "!run_preview.py",
+            "!run_lab_node.py",
             "!src/**",
             "!config/phase3_policy.json",
             "!contracts/v0.3.0/decision-request.schema.json",

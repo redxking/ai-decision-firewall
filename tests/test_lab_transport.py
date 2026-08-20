@@ -4,16 +4,19 @@ import os
 import queue
 import socket
 import stat
+import struct
 import sys
 import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from adf_poc.lab_contracts import MAX_MESSAGE_BYTES
 from adf_poc.lab_transport import (
     LabSeqpacketServer,
     LabTransportError,
+    _peer_credentials,
     lab_seqpacket_exchange,
     validate_lab_socket_directory,
 )
@@ -27,6 +30,12 @@ LINUX_TRANSPORT = (
 
 
 class LabTransportPortableSafetyTests(unittest.TestCase):
+    def test_zero_peer_pid_sentinel_preserves_uid_and_gid(self) -> None:
+        connection = Mock()
+        connection.getsockopt.return_value = struct.pack("3i", 0, 10001, 10001)
+        with patch.object(socket, "SO_PEERCRED", 17, create=True):
+            self.assertEqual(_peer_credentials(connection), (0, 10001, 10001))
+
     def test_transport_requires_explicit_true_opt_in_before_platform_use(self) -> None:
         with self.assertRaises(LabTransportError) as raised:
             LabSeqpacketServer(

@@ -217,9 +217,16 @@ duplicate, rejects conflicting idempotency reuse, and fences unfinished
 reservations for reconciliation. The observer accepts only its separately
 authenticated read request and performs a fresh code-owned read. The executor
 is deliberately pre-effect and returns `NO_EFFECT`; kernel target mutation,
-independent network probes, executable recovery, continuous service launchers,
-and the container harness remain unimplemented. This is not Stage 4
-authorization.
+executable recovery, and continuous service launchers remain unimplemented. A
+subsequent bounded increment now composes those handlers in a disposable Docker
+topology: separate executor, observer, and target-facts volumes; an internal
+bridge with no external route; a networkless control client; separately mounted
+keys; exact immutable local image-ID and runtime inspection; and exact resource
+cleanup. The target exposes fixed synthetic management and beacon listeners,
+but the executor still contains no mutation primitive. See the
+[container-lab runbook](operations/PHASE4_CONTAINER_LAB_RUNBOOK.md) and
+[evidence record](production/PHASE4_CONTAINER_LAB_EVIDENCE_RECORD.md). This is
+not Stage 4 authorization.
 
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative
