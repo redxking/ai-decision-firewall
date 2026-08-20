@@ -23,8 +23,10 @@ from adf_poc.lab_contracts import (
     validate_lab_message_correlation,
 )
 from adf_poc.lab_services import (
+    EXECUTOR_AFTER_EFFECT,
     ExecutorReplayJournal,
     LabExecutorService,
+    LabMutationResult,
     LabObservedState,
     LabObserverService,
     LabServiceError,
@@ -312,6 +314,214 @@ class LabServiceTests(unittest.TestCase):
             self.assertEqual(
                 raised.exception.reason_code, "LAB_JOURNAL_IDENTITY_CHANGED"
             )
+
+    def test_effect_boundary_requires_explicit_enablement_and_callable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            _, journal = self._journal(directory)
+            for apply_action, effects_enabled in (
+                (lambda *_: None, False),
+                (None, True),
+            ):
+                with self.subTest(effects_enabled=effects_enabled):
+                    with self.assertRaises(LabServiceError) as raised:
+                        LabExecutorService(
+                            journal=journal,
+                            key_id=EXECUTOR_KEY_ID,
+                            key=EXECUTOR_KEY,
+                            read_state=_state,
+                            apply_action=apply_action,
+                            effects_enabled=effects_enabled,
+                            enabled=True,
+                        )
+                    self.assertEqual(
+                        raised.exception.reason_code, "LAB_SERVICE_NOT_ENABLED"
+                    )
+
+    def test_prestate_mismatch_closes_no_effect_without_invoking_action(self) -> None:
+        mismatches = {
+            "boot": LabObservedState("boot-replaced", True, True, RULESET),
+            "ruleset": LabObservedState("boot-001", True, True, "9" * 64),
+            "beacon": LabObservedState("boot-001", False, True, RULESET),
+            "management": LabObservedState("boot-001", True, False, RULESET),
+        }
+        for label, observed_state in mismatches.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:
+                _, journal = self._journal(directory)
+                calls = 0
+
+                def apply_action(*_args) -> LabMutationResult:
+                    nonlocal calls
+                    calls += 1
+                    raise AssertionError(
+                        "precondition failure must not cross effect boundary"
+                    )
+
+                receipt_raw = LabExecutorService(
+                    journal=journal,
+                    key_id=EXECUTOR_KEY_ID,
+                    key=EXECUTOR_KEY,
+                    read_state=lambda: observed_state,
+                    apply_action=apply_action,
+                    effects_enabled=True,
+                    clock=lambda: NOW,
+                    enabled=True,
+                ).handle(canonical_json(_command()).encode())
+                receipt = load_authenticated_lab_message(
+                    receipt_raw,
+                    message_type=RECEIPT,
+                    expected_key_id=EXECUTOR_KEY_ID,
+                    key=EXECUTOR_KEY,
+                    now=NOW,
+                )
+                self.assertEqual(calls, 0)
+                self.assertEqual(receipt["status"], "NO_EFFECT")
+                self.assertFalse(receipt["effect_possible"])
+
+    def test_applied_effect_is_durable_and_exact_replay_does_not_repeat_it(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path, journal = self._journal(directory)
+            calls = 0
+
+            def apply_action(command, prestate) -> LabMutationResult:
+                nonlocal calls
+                calls += 1
+                self.assertEqual(command["action"], "NETWORK_ISOLATE")
+                self.assertEqual(prestate, _state())
+                return LabMutationResult(
+                    status="APPLIED",
+                    effect_possible=True,
+                    reason_code="RULESET_APPLIED",
+                    poststate_sha256="5" * 64,
+                )
+
+            raw = canonical_json(_command()).encode()
+            first = LabExecutorService(
+                journal=journal,
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=_state,
+                apply_action=apply_action,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            ).handle(raw)
+            second = LabExecutorService(
+                journal=ExecutorReplayJournal(path, require_existing=True),
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=_state,
+                apply_action=apply_action,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            ).handle(raw)
+            receipt = load_authenticated_lab_message(
+                first,
+                message_type=RECEIPT,
+                expected_key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                now=NOW,
+            )
+            self.assertEqual(second, first)
+            self.assertEqual(calls, 1)
+            self.assertEqual(receipt["status"], "APPLIED")
+            self.assertEqual(receipt["poststate_sha256"], "5" * 64)
+
+    def test_action_exception_closes_ambiguous_and_is_never_retried(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path, journal = self._journal(directory)
+            calls = 0
+
+            def apply_action(*_args) -> LabMutationResult:
+                nonlocal calls
+                calls += 1
+                raise OSError("effect state is unknown")
+
+            raw = canonical_json(_command()).encode()
+            service = LabExecutorService(
+                journal=journal,
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=_state,
+                apply_action=apply_action,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            )
+            first = service.handle(raw)
+            replay = LabExecutorService(
+                journal=ExecutorReplayJournal(path, require_existing=True),
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=_state,
+                apply_action=apply_action,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            ).handle(raw)
+            receipt = load_authenticated_lab_message(
+                first,
+                message_type=RECEIPT,
+                expected_key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                now=NOW,
+            )
+            self.assertEqual(replay, first)
+            self.assertEqual(calls, 1)
+            self.assertEqual(receipt["status"], "AMBIGUOUS")
+            self.assertTrue(receipt["effect_possible"])
+            self.assertEqual(receipt["poststate_sha256"], "0" * 64)
+
+    def test_loss_after_effect_fences_replay_without_reinvoking_action(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path, journal = self._journal(directory)
+            calls = 0
+
+            def apply_action(*_args) -> LabMutationResult:
+                nonlocal calls
+                calls += 1
+                return LabMutationResult(
+                    status="APPLIED",
+                    effect_possible=True,
+                    reason_code="RULESET_APPLIED",
+                    poststate_sha256="5" * 64,
+                )
+
+            def fail_after_effect(stage: str) -> None:
+                if stage == EXECUTOR_AFTER_EFFECT:
+                    raise RuntimeError("injected post-effect loss")
+
+            raw = canonical_json(_command()).encode()
+            with self.assertRaisesRegex(RuntimeError, "post-effect loss"):
+                LabExecutorService(
+                    journal=journal,
+                    key_id=EXECUTOR_KEY_ID,
+                    key=EXECUTOR_KEY,
+                    read_state=_state,
+                    apply_action=apply_action,
+                    effects_enabled=True,
+                    failure_hook=fail_after_effect,
+                    clock=lambda: NOW,
+                    enabled=True,
+                ).handle(raw)
+            reopened = LabExecutorService(
+                journal=ExecutorReplayJournal(path, require_existing=True),
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=_state,
+                apply_action=apply_action,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            )
+            with self.assertRaises(LabServiceError) as raised:
+                reopened.handle(raw)
+            self.assertEqual(
+                raised.exception.reason_code, "LAB_EXECUTOR_RECOVERY_REQUIRED"
+            )
+            self.assertEqual(calls, 1)
 
     def test_observer_uses_separate_request_key_and_fresh_read(self) -> None:
         command = _command()

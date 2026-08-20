@@ -55,7 +55,7 @@ execution path.
 | [Phase 3](docs/phase3/README.md) | Raw request-to-effect simulation, scoped authorization, broker, and readback | In-memory synthetic target only; no live connector |
 | [Phase 3.1](docs/phase31/README.md) | Synthetic temporal model evaluation and calibration comparison | Promotion remains `NOT_AUTHORIZED` |
 | Stage A | Durable request, authorization, receipt, recovery, and sanitized result lookup | Opt-in, same-host, offline synthetic mechanism; production remains `BLOCKED` |
-| [Phase 4 lab foundation](contracts/v0.4.0/README.md) | Closed authenticated executor/observer handlers, durable replay fencing, Linux `SOCK_SEQPACKET` peer checks, an internal-only container harness, and externally killed container-recovery campaigns | Executor remains pre-effect `NO_EFFECT`; no target mutation, live connector, external route, or action authority |
+| [Phase 4 lab foundation](contracts/v0.4.0/README.md) | Closed authenticated executor/observer handlers, durable replay fencing, Linux `SOCK_SEQPACKET` peer checks, an internal-only container harness, externally killed container-recovery campaigns, and a default-off mutation transaction seam | Shipped nodes remain `NO_EFFECT`; no kernel driver, target mutation, live connector, external route, or action authority |
 
 ## Stage A architecture
 

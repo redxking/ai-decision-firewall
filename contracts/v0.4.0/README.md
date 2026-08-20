@@ -27,7 +27,11 @@ append-only reservation/completion journal: exact completed duplicates return
 the original receipt, conflicting reuse fails closed, and an unfinished
 reservation requires reconciliation instead of retry. The observer authenticates
 a separate observation request and performs a fresh code-owned read for every
-response. The executor deliberately returns `NO_EFFECT` because kernel mutation
-is not implemented in this increment. Target mutation, executable recovery,
-continuous service launchers, and container orchestration remain outside this
-increment.
+response. The executor now verifies exact target boot identity, ruleset
+prestate, and management reachability before an explicitly gated internal
+mutation port. The shipped node does not supply or enable that port and
+therefore still returns `NO_EFFECT`; no kernel mutation is reachable in this
+increment. A mutation-port exception is durably classified `AMBIGUOUS`, while
+loss after effect entry leaves the reservation fenced against retry. The fixed
+kernel driver, executable reconciliation/rollback, and its full kill matrix
+remain outside this increment.

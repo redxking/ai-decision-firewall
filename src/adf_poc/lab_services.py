@@ -9,7 +9,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from adf_poc.lab_contracts import (
     COMMAND,
@@ -38,6 +38,7 @@ JOURNAL_DOMAIN = b"ADF-LAB-EXECUTOR-JOURNAL\x00v1\x00"
 IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 JOURNAL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\.jsonl$")
 EXECUTOR_AFTER_RESERVATION = "AFTER_RESERVATION"
+EXECUTOR_AFTER_EFFECT = "AFTER_EFFECT"
 EXECUTOR_AFTER_COMPLETION = "AFTER_COMPLETION"
 OBSERVER_AFTER_OBSERVATION = "AFTER_OBSERVATION"
 
@@ -60,6 +61,16 @@ class LabObservedState:
     beacon_reachable: bool
     management_reachable: bool
     ruleset_sha256: str
+
+
+@dataclass(frozen=True)
+class LabMutationResult:
+    """Closed result returned by the target-scoped mutation boundary."""
+
+    status: str
+    effect_possible: bool
+    reason_code: str
+    poststate_sha256: str
 
 
 def _utc_seconds(clock: Callable[[], datetime]) -> tuple[datetime, str]:
@@ -113,6 +124,38 @@ def _validate_observed_state(value: LabObservedState) -> LabObservedState:
     ):
         raise LabServiceError(
             "LAB_OBSERVATION_STATE_INVALID", "Observer returned malformed target facts."
+        )
+    return value
+
+
+def _validate_mutation_result(
+    value: LabMutationResult, *, prestate_sha256: str
+) -> LabMutationResult:
+    if type(value) is not LabMutationResult:
+        raise LabServiceError(
+            "LAB_MUTATION_RESULT_INVALID",
+            "Mutation boundary returned an unexpected result representation.",
+        )
+    expected = {
+        "APPLIED": (True, "RULESET_APPLIED"),
+        "NO_EFFECT": (False, "REJECTED_PRE_EFFECT"),
+        "PARTIAL": (True, "PARTIAL_RULESET"),
+        "AMBIGUOUS": (True, "EFFECT_UNCERTAIN"),
+    }
+    if (
+        value.status not in expected
+        or (value.effect_possible, value.reason_code) != expected[value.status]
+        or type(value.poststate_sha256) is not str
+        or len(value.poststate_sha256) != 64
+        or any(
+            character not in "0123456789abcdef" for character in value.poststate_sha256
+        )
+        or (value.status == "NO_EFFECT" and value.poststate_sha256 != prestate_sha256)
+        or (value.status == "APPLIED" and value.poststate_sha256 == prestate_sha256)
+    ):
+        raise LabServiceError(
+            "LAB_MUTATION_RESULT_INVALID",
+            "Mutation outcome violates the closed receipt contract.",
         )
     return value
 
@@ -520,7 +563,7 @@ class ExecutorReplayJournal:
 
 
 class LabExecutorService:
-    """Authenticated pre-effect executor handler with durable replay fencing."""
+    """Authenticated executor handler with durable replay and effect fencing."""
 
     def __init__(
         self,
@@ -529,14 +572,21 @@ class LabExecutorService:
         key_id: str,
         key: bytes,
         read_state: Callable[[], LabObservedState],
+        apply_action: (
+            Callable[[dict[str, Any], LabObservedState], LabMutationResult] | None
+        ) = None,
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
         failure_hook: Callable[[str], None] | None = None,
+        effects_enabled: bool = False,
         enabled: bool,
     ) -> None:
         if (
             enabled is not True
             or type(journal) is not ExecutorReplayJournal
             or not callable(read_state)
+            or type(effects_enabled) is not bool
+            or (effects_enabled and not callable(apply_action))
+            or (not effects_enabled and apply_action is not None)
             or not callable(clock)
             or (failure_hook is not None and not callable(failure_hook))
         ):
@@ -548,6 +598,8 @@ class LabExecutorService:
         self.key_id = _validate_identifier(key_id, label="Executor key identifier")
         self.key = _validate_key(key, label="Executor key")
         self.read_state = read_state
+        self.apply_action = apply_action
+        self.effects_enabled = effects_enabled
         self.clock = clock
         self.failure_hook = failure_hook
 
@@ -605,7 +657,7 @@ class LabExecutorService:
             self.failure_hook(EXECUTOR_AFTER_RESERVATION)
 
         try:
-            _validate_observed_state(self.read_state())
+            prestate = _validate_observed_state(self.read_state())
         except LabServiceError:
             raise
         except Exception as exc:
@@ -613,6 +665,36 @@ class LabExecutorService:
                 "LAB_TARGET_READ_FAILED",
                 "Executor could not establish the target prestate after reservation.",
             ) from exc
+        preconditions_hold = (
+            prestate.target_boot_id == command["target_boot_id"]
+            and prestate.ruleset_sha256 == command["prestate_sha256"]
+            and prestate.beacon_reachable is True
+            and prestate.management_reachable is True
+        )
+        outcome = LabMutationResult(
+            status="NO_EFFECT",
+            effect_possible=False,
+            reason_code="REJECTED_PRE_EFFECT",
+            poststate_sha256=command["prestate_sha256"],
+        )
+        if preconditions_hold and self.effects_enabled:
+            assert self.apply_action is not None
+            try:
+                outcome = _validate_mutation_result(
+                    self.apply_action(command, prestate),
+                    prestate_sha256=command["prestate_sha256"],
+                )
+            except LabServiceError:
+                raise
+            except Exception:
+                outcome = LabMutationResult(
+                    status="AMBIGUOUS",
+                    effect_possible=True,
+                    reason_code="EFFECT_UNCERTAIN",
+                    poststate_sha256=ZERO_DIGEST,
+                )
+            if self.failure_hook is not None:
+                self.failure_hook(EXECUTOR_AFTER_EFFECT)
         receipt = sign_lab_message(
             {
                 "schema_version": "0.4.0",
@@ -626,11 +708,11 @@ class LabExecutorService:
                 "target_id": command["target_id"],
                 "target_boot_id": command["target_boot_id"],
                 "sequence": command["sequence"],
-                "status": "NO_EFFECT",
-                "effect_possible": False,
-                "reason_code": "REJECTED_PRE_EFFECT",
+                "status": outcome.status,
+                "effect_possible": outcome.effect_possible,
+                "reason_code": outcome.reason_code,
                 "prestate_sha256": command["prestate_sha256"],
-                "poststate_sha256": command["prestate_sha256"],
+                "poststate_sha256": outcome.poststate_sha256,
                 "executed_at": timestamp,
                 "recorded_at": timestamp,
             },
