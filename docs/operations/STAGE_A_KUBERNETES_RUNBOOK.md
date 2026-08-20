@@ -32,6 +32,7 @@ Read this procedure together with:
 
 - [ADR-016](../adr/016_offline_stage_a_container_boundary.md);
 - [Stage A durable-ledger runbook](STAGE_A_DURABLE_LEDGER_RUNBOOK.md);
+- [Stage A cold backup/restore runbook](STAGE_A_BACKUP_RESTORE_RUNBOOK.md);
 - [production readiness](../production/PRODUCTION_READINESS.md); and
 - [supply-chain boundary](../production/SUPPLY_CHAIN.md).
 

@@ -14,6 +14,13 @@ was observed. Exact evidence and limitations are recorded in
 - Advanced the official CI and Pages actions to immutable Node.js 24 releases
   after GitHub reported that the earlier Node.js 20 actions were deprecated and
   being force-run on Node.js 24.
+- Added a fail-closed cold backup/restore command for the correlated Stage A
+  audit, control, and synthetic-adapter artifacts. Backup uses the cooperative
+  durable/audit lock and atomic directory publication; restore requires the
+  exact configuration, policy, secret binding, store identities, file digests,
+  and empty state path before regenerating the audit-inode-bound service marker.
+  This is local self-custodied recoverability mechanics, not approved DR,
+  rollback resistance, trusted time, continuous backup, RPO, or RTO evidence.
 - Added exact-version, SHA-256 hash-locked runtime and documentation dependency
   graphs, a reproducible CycloneDX 1.6 runtime SBOM, closed lock/SBOM
   validation, and `--require-hashes` CI installation. A clean temporary runtime

@@ -37,8 +37,13 @@ memory. Stage A adds opt-in, same-host durable request, authorization, attempt,
 receipt, terminal-result, and recovery state for offline synthetic execution;
 the current successor tree also includes an explicit-create, loopback-only
 reference service and a deny-all Kubernetes source baseline with no Service or
-Ingress. These do not provide production transport, distributed fencing, HA/DR,
-cross-store atomicity, or an operational service boundary. Runtime HMAC keys are domain-separated and bind
+Ingress. A local cold backup/restore command now copies the exact audit/control/
+adapter set under the cooperative lock, validates its closed manifest and store
+correlation, and rebinds the restored audit inode. It is unsigned,
+self-custodied, and dependent on an operator quiescence assertion; it does not
+provide production transport, distributed fencing, approved HA/DR, continuous
+backup, rollback resistance, cross-store atomicity, or an operational service
+boundary. Runtime HMAC keys are domain-separated and bind
 synthetic source fixtures, but do not provide enterprise provenance, PKI/HSM
 custody, or nonrepudiation. Human approval resolves a synthetic human credential
 and emits a reevaluation-only receipt; it cannot execute. Target readback is

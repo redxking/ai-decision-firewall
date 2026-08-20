@@ -446,11 +446,17 @@ immutability; every recovery disposition; corruption/mismatch halt without
 transition; zero illegal authority reopening; JSONL/outbox validation; backup-
 candidate integrity; and restore-candidate review-only disposition.
 
-Repository-controlled tests do not exercise this complete operator procedure, a production supervisor, external custody, independent observation, real power loss at every fsync, storage loss, coherent DR, or a deployment environment. Until the critical runbook is executed and version-bound, its state is `DOCUMENTED / NOT OPERATIONALLY VALIDATED`.
+Repository-controlled tests now exercise a separate local cold three-artifact
+backup/restore mechanism, including exact-result replay and rehashed mixed-store
+refusal. They do not exercise this complete operator procedure, a production
+supervisor, external custody, independent observation, real power loss at every
+fsync, storage loss, approved DR, or a deployment environment. Until the
+critical runbooks are executed and version-bound in the intended environment,
+their state is `DOCUMENTED / NOT OPERATIONALLY VALIDATED`.
 
 ## Evidence limits and prohibited inferences
 
-This Stage A increment provides bounded development evidence for local durability, canonical idempotency, cooperative first-open/operation serialization, semantic/chronology and cross-store consistency checks, separate adapter-reported receipts, sanitized terminal lookup, and conservative same-host reconciliation. It does not establish process isolation, authenticated IPC, independently custodied observation, vendor equivalence, hostile-writer fencing, cross-store atomicity, distributed linearizability, consensus, split-brain prevention, HA, coherent backup/restore, DR, nonrepudiation, trusted time, managed secrets, successful rollback, production safety, or operational effectiveness.
+This Stage A increment provides bounded development evidence for local durability, canonical idempotency, cooperative first-open/operation serialization, semantic/chronology and cross-store consistency checks, separate adapter-reported receipts, sanitized terminal lookup, conservative same-host reconciliation, and local cold-copy restoration. It does not establish process isolation, authenticated IPC, independently custodied observation, vendor equivalence, hostile-writer fencing, cross-store atomicity, distributed linearizability, consensus, split-brain prevention, HA, continuous or independently anchored backup, approved DR, nonrepudiation, trusted time, managed secrets, successful rollback, production safety, or operational effectiveness.
 
 No outcome authorizes Stage B or C, model promotion, historical-data access, external communication, deployment, or operational effect. Every production-readiness owner acceptance remains unrecorded.
 
@@ -462,3 +468,4 @@ No outcome authorizes Stage B or C, model promotion, historical-data access, ext
 | 2026-08-15 | Added separate offline adapter receipt/store, closed terminal lookup, exact recovery table, schema-v1 refusal/preservation and new-v2 procedure, and three-artifact backup boundary. | Documentation candidate only; exact source/test/evidence freeze remains pending. |
 | 2026-08-16 | Aligned `0.4.0-alpha.2` with bounded cooperative first-open/operation ownership, preflight-before-create, full semantic/chronology scans, runtime cross-store correlation, and exact recovery-audit trio/writer fence. | 43/43 focused tests observed on mutable worktree; exact commit, full regression, manifest, CI, and operational exercise remain pending. |
 | 2026-08-16 | Bound the Stage A implementation to exact Commit `8818d5d2` on `main` and linked `ADF-STAGE-A-ER-002`. | Exact local 43/43 focused, 18/18 gate, warning-fatal 360/360 full, 57/57 Phase 3, 46/46 corpus, manifest 307/307, CI and Dependency Graph succeeded; no tag, GitHub Release, deployment, owner acceptance, or operational exercise; no exact-SHA Pages run observed. |
+| 2026-08-20 | Added a fail-closed local cold backup/restore mechanism and exact runbook. | Repository-controlled unit coverage only; unsigned/self-custodied snapshot, operator quiescence, power-loss, hostile-writer, intended-environment restore, DR, RPO, RTO, and owner acceptance remain open. |

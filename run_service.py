@@ -17,6 +17,7 @@ from adf_poc.service import (
     create_application,
     initialize_service,
 )
+from adf_poc.service_backup import create_cold_backup, restore_cold_backup
 from adf_poc.service_secret_stage import stage_secret_directory
 from adf_poc.utils import canonical_json, strict_json_loads
 
@@ -127,6 +128,16 @@ def build_parser() -> argparse.ArgumentParser:
     initialize.add_argument("--config", required=True)
     initialize.add_argument("--expect-empty", action="store_true", required=True)
 
+    backup = commands.add_parser("backup")
+    backup.add_argument("--config", required=True)
+    backup.add_argument("--destination", required=True)
+    backup.add_argument("--expect-quiesced", action="store_true", required=True)
+
+    restore = commands.add_parser("restore")
+    restore.add_argument("--config", required=True)
+    restore.add_argument("--source", required=True)
+    restore.add_argument("--expect-empty", action="store_true", required=True)
+
     serve = commands.add_parser("serve")
     serve.add_argument("--config", required=True)
     serve.add_argument("--bind")
@@ -158,6 +169,18 @@ def main(argv: list[str] | None = None) -> int:
             if not args.expect_empty:
                 raise ServiceConfigurationError("initialize requires --expect-empty")
             result = initialize_service(args.config)
+        elif args.command == "backup":
+            result = create_cold_backup(
+                args.config,
+                args.destination,
+                operator_asserted_quiesced=args.expect_quiesced,
+            )
+        elif args.command == "restore":
+            result = restore_cold_backup(
+                args.config,
+                args.source,
+                expect_empty=args.expect_empty,
+            )
         elif args.command == "probe":
             result = _probe(args.url)
         else:

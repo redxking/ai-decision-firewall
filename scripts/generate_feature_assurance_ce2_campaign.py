@@ -130,6 +130,7 @@ def _assert_finite_json_numbers(value: Any) -> None:
 POST_CAMPAIGN_ISOLATED_SOURCES = frozenset(
     {
         "src/adf_poc/service.py",
+        "src/adf_poc/service_backup.py",
         "src/adf_poc/service_secret_stage.py",
         "src/adf_poc/stage_a.py",
     }

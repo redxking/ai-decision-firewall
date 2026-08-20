@@ -30,6 +30,15 @@ effectiveness. The successor evidence record is carried separately from the
 implementation by this evidence-only change. Its exact carrier SHA is
 necessarily reported after creation and is not self-claimed in these contents.
 
+The later production-development baseline merged through
+[`db7d6e6d3bea59bc8579c1e198a236a541f65d86`](https://github.com/redxking/ai-decision-firewall/commit/db7d6e6d3bea59bc8579c1e198a236a541f65d86).
+Exact-main [CI run 32381074320](https://github.com/redxking/ai-decision-firewall/actions/runs/32381074320)
+passed Python 3.11, Python 3.12, and the restricted non-publishing container
+build/smoke job. The successor includes an explicit existing-state-only service,
+offline Kubernetes source baseline, closed dependency/SBOM graph, audit/store
+continuity hardening, and a later local cold backup/restore development
+mechanism. These additions do not change the `BLOCKED` production decision.
+
 The machine-readable source of truth is
 [`config/production_readiness_requirements.json`](../../config/production_readiness_requirements.json).
 It contains mandatory requirements for all 18 production-readiness domains,
@@ -278,8 +287,10 @@ open gates:
 
 - the durable receipt/result seam is deliberately split across control,
   adapter, audit, and observation boundaries; there is no cross-store
-  transaction, shared recovery-point marker, verified backup/restore, or proof
-  against all real crash, disk, corruption, and divergence cases;
+  transaction, independently custodied recovery-point marker, approved
+  backup/restore promotion, or proof against all real crash, disk, corruption,
+  and divergence cases; the local cold-copy mechanism is self-custodied and
+  operator-quiesced only;
 - SQLite establishes single-host durability and interprocess serialization,
   not distributed linearizability, a lease/fencing epoch, failover, partition
   tolerance, HA, or disaster recovery; the directory/audit locks are
@@ -293,7 +304,8 @@ open gates:
   rollback, and revocation remain open;
 - container and Kubernetes source, secret-staging procedures, and local
   runbooks now exist, but no intended-environment deployment, CSI/CNI/admission
-  validation, SLOs, monitoring, incident exercise, backup/restore exercise,
+  validation, SLOs, monitoring, incident exercise, intended-environment
+  backup/restore exercise,
   capacity/load evidence, or operational rollback is established;
 - signed SBOM and release artifacts, hermetic and independently reproduced
   build evidence, trusted-builder provenance attestations, transparency-log
