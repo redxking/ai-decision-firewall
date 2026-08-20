@@ -18,6 +18,13 @@ was observed. Exact evidence and limitations are recorded in
   contract tests. This is project-controlled dependency integrity evidence,
   not trusted-builder provenance, vulnerability disposition, or a signed
   release.
+- Corrected the runtime lock after CI proved the original graph was not closed
+  across the supported interpreter matrix: NumPy `2.5.2` had no Python 3.11
+  wheel and `referencing` required conditional `typing-extensions` on Python
+  3.11/3.12. The runtime range now resolves to NumPy `2.4.6`, the conditional
+  package is hash locked, and the SBOM validator requires every reviewed
+  transitive edge rather than only root edges. Clean binary-only hash installs
+  and import smoke checks passed locally on Python 3.11 and 3.12.
 - Removed reliance on jsonschema's process-global optional date-time format
   registry. Installing SBOM tooling registered an optional validator and
   changed malformed timestamp classification from the code-owned stable reason

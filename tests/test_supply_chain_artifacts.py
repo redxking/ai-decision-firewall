@@ -67,6 +67,56 @@ class SupplyChainArtifactTests(unittest.TestCase):
             ):
                 validate_repository(candidate)
 
+    def test_sbom_missing_conditional_transitive_edge_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            candidate = Path(temporary_directory)
+            _copy_supply_candidate(candidate)
+            sbom_path = candidate / "artifacts/supply-chain/runtime.cdx.json"
+            sbom = json.loads(sbom_path.read_text(encoding="utf-8"))
+            references = {
+                component["name"]: component["bom-ref"]
+                for component in sbom["components"]
+            }
+            referencing_row = next(
+                row
+                for row in sbom["dependencies"]
+                if row["ref"] == references["referencing"]
+            )
+            referencing_row["dependsOn"].remove(references["typing-extensions"])
+            sbom_path.write_text(json.dumps(sbom), encoding="utf-8")
+            with self.assertRaisesRegex(
+                SupplyChainValidationError,
+                "reviewed graph for referencing",
+            ):
+                validate_repository(candidate)
+
+    def test_runtime_lock_must_match_reviewed_transitive_graph(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            candidate = Path(temporary_directory)
+            _copy_supply_candidate(candidate)
+            lock_path = candidate / "requirements.lock"
+            lock_path.write_text(
+                lock_path.read_text(encoding="utf-8").replace(
+                    "typing-extensions==4.16.0", "unreviewed-package==4.16.0", 1
+                ),
+                encoding="utf-8",
+            )
+            sbom_path = candidate / "artifacts/supply-chain/runtime.cdx.json"
+            sbom = json.loads(sbom_path.read_text(encoding="utf-8"))
+            component = next(
+                item for item in sbom["components"] if item["name"] == "typing-extensions"
+            )
+            component["name"] = "unreviewed-package"
+            component["purl"] = "pkg:pypi/unreviewed-package@4.16.0"
+            component["externalReferences"][0]["url"] = (
+                "https://pypi.org/simple/unreviewed-package/"
+            )
+            sbom_path.write_text(json.dumps(sbom), encoding="utf-8")
+            with self.assertRaisesRegex(
+                SupplyChainValidationError, "reviewed transitive dependency graph"
+            ):
+                validate_repository(candidate)
+
     def test_lock_parser_rejects_every_unparsed_directive(self) -> None:
         mutations = (
             "--extra-index-url https://packages.invalid/simple\n",
@@ -170,7 +220,7 @@ class SupplyChainArtifactTests(unittest.TestCase):
             requirements = candidate / "requirements.txt"
             requirements.write_text(
                 requirements.read_text(encoding="utf-8").replace(
-                    "numpy>=1.26,<3", "numpy>=1.27,<3"
+                    "numpy>=1.26,<2.5", "numpy>=1.27,<2.5"
                 ),
                 encoding="utf-8",
             )

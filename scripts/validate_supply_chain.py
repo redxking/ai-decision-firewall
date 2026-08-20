@@ -17,6 +17,22 @@ MAX_INPUT_LINES = 100_000
 MAX_LINE_LENGTH = 131_072
 MAX_SBOM_COMPONENTS = 2048
 
+# Reviewed from the Requires-Dist metadata for the exact runtime lock while
+# resolving for the oldest supported interpreter (Python 3.11). Conditional
+# edges that apply to any supported interpreter are included. A lock update is
+# therefore incomplete until this closed graph and the SBOM are reviewed too.
+EXPECTED_RUNTIME_DEPENDENCIES: dict[str, frozenset[str]] = {
+    "attrs": frozenset(),
+    "jsonschema": frozenset(
+        {"attrs", "jsonschema-specifications", "referencing", "rpds-py"}
+    ),
+    "jsonschema-specifications": frozenset({"referencing"}),
+    "numpy": frozenset(),
+    "referencing": frozenset({"attrs", "rpds-py", "typing-extensions"}),
+    "rpds-py": frozenset(),
+    "typing-extensions": frozenset(),
+}
+
 DIRECT_ENTRY = re.compile(
     r"^([A-Za-z0-9][A-Za-z0-9_.-]*)"
     r"((?:(?:==|<=|>=|<|>)[0-9]+(?:\.[0-9]+)*)(?:,(?:==|<=|>=|<|>)[0-9]+(?:\.[0-9]+)*)*)$"
@@ -479,6 +495,8 @@ def validate_sbom(
         _raise("Runtime SBOM components do not exactly match requirements.lock")
     if observed_order != sorted(observed_order):
         _raise("Runtime SBOM components are not in deterministic name order")
+    if set(components) != set(EXPECTED_RUNTIME_DEPENDENCIES):
+        _raise("Runtime lock differs from the reviewed transitive dependency graph")
 
     raw_dependencies = document["dependencies"]
     if (
@@ -522,6 +540,13 @@ def validate_sbom(
     expected_direct_refs = {components[name][1] for name in direct}
     if dependency_rows[str(root_component["bom-ref"])] != expected_direct_refs:
         _raise("Runtime SBOM root dependency edges are incomplete")
+    for name, dependency_names in EXPECTED_RUNTIME_DEPENDENCIES.items():
+        reference = components[name][1]
+        expected_refs = {components[item][1] for item in dependency_names}
+        if dependency_rows[reference] != expected_refs:
+            _raise(
+                f"Runtime SBOM dependency edges differ from the reviewed graph for {name}"
+            )
 
 
 def validate_repository(root: Path = ROOT) -> dict[str, int]:

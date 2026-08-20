@@ -50,12 +50,18 @@ closed document/component/dependency shape, and requires:
 - one canonical component for every runtime lock entry and no others;
 - exact package version, purl, and unique component reference;
 - an exact, sorted distribution-hash set equal to the lock; and
-- exact root edges for the direct runtime dependencies.
+- exact root edges for the direct runtime dependencies; and
+- exact per-component edges against the reviewed transitive graph resolved for
+  Python 3.11, including conditional dependencies applicable to any supported
+  interpreter.
 
-The SBOM's component rows do not establish a complete transitive dependency
-relationship graph. The generator toolchain itself is not locked by this
-runtime graph, so the marker and deterministic ordering checks are not evidence
-of an independently reproduced byte-identical SBOM.
+The reviewed graph is deliberately code-owned: changing a locked component or
+edge requires an explicit validator and SBOM update. It closes the failure mode
+where `--no-deps` accepted an incomplete lock, while installation without that
+flag later discovered an unpinned transitive dependency. The generator
+toolchain itself is not locked by this runtime graph, so the marker and
+deterministic ordering checks are not evidence of an independently reproduced
+byte-identical SBOM.
 
 ## Verification commands
 
