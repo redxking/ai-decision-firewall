@@ -200,9 +200,11 @@ class Phase4ContainerRecoveryCampaign(Phase4ContainerLab):
             role="control-client",
             network_mode="none",
             mounts=(
-                (executor_volume, "/executor", False),
-                (observer_volume, "/observer", False),
-                (facts_volume, "/facts", True),
+                *self._control_client_mounts(
+                    executor_volume=executor_volume,
+                    observer_volume=observer_volume,
+                    facts_volume=facts_volume,
+                ),
                 (control_volume, "/control", False),
             ),
             environment=(("ADF_LAB_SESSION_ID", f"lab-{self.lab_id}"),),
