@@ -6,6 +6,10 @@
 !src/**
 !config/
 !config/phase3_policy.json
+!contracts/
+!contracts/v0.3.0/
+!contracts/v0.3.0/decision-request.schema.json
+!contracts/v0.3.0/phase3-policy.schema.json
 !artifacts/
 !artifacts/supply-chain/
 !artifacts/supply-chain/runtime.cdx.json

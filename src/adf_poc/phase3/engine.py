@@ -14,7 +14,7 @@ from threading import Lock
 from time import perf_counter, sleep
 from typing import Any, Callable
 
-from adf_poc.audit import AuditLogger
+from adf_poc.audit import AuditDurabilityError, AuditLogger
 from adf_poc.stage_a import (
     REQUEST_LOOKUP_SCHEMA_VERSION,
     ControlLedgerError,
@@ -1288,6 +1288,11 @@ class Phase3DecisionFirewall:
         }
         try:
             record = self._audit.append(record_type, audit_payload)
+        except AuditDurabilityError:
+            # A complete row may be visible while still absent from durable
+            # storage. Readback cannot clear that ambiguity. Stop before any
+            # later lifecycle write or T3 commit and require restart recovery.
+            raise
         except Exception:
             # An append can become durable before a caller observes an fsync or
             # readback failure. Reconcile the exact next row before propagating;
@@ -3298,6 +3303,8 @@ class Phase3DecisionFirewall:
                 decision_id=decision_id,
                 payload=broker_result.to_dict(),
             )
+        except AuditDurabilityError:
+            raise
         except Exception as exc:
             return self._close_post_effect_accounting_failure(
                 failed_record_type="ACTION_ATTEMPTED",
@@ -3385,6 +3392,8 @@ class Phase3DecisionFirewall:
                 decision_id=decision_id,
                 payload=verification.to_dict(),
             )
+        except AuditDurabilityError:
+            raise
         except Exception as exc:
             return self._close_post_effect_accounting_failure(
                 failed_record_type="VERIFICATION_PERFORMED",
@@ -3419,6 +3428,8 @@ class Phase3DecisionFirewall:
                     "target_state_sha256": sha256_json(final_state),
                 },
             )
+        except AuditDurabilityError:
+            raise
         except Exception as exc:
             return self._close_post_effect_accounting_failure(
                 failed_record_type="FINAL_STATE_RECORDED",

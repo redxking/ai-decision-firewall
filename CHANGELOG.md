@@ -21,6 +21,15 @@ was observed. Exact evidence and limitations are recorded in
   and empty state path before regenerating the audit-inode-bound service marker.
   This is local self-custodied recoverability mechanics, not approved DR,
   rollback resistance, trusted time, continuous backup, RPO, or RTO evidence.
+- Added a layered Stage A storage-fault campaign with uncatchable process loss
+  at T1, observation, T2, audit closure, and T3; ambiguous audit-`fsync` and
+  persistent `ENOSPC` controls; and a real Linux tmpfs-exhaustion container
+  case. A complete audit row with failed `fsync` now raises a distinct
+  durability error and cannot reach T3. A partial row caused by actual
+  exhaustion is preserved and forces quarantine. The container package now
+  includes both required Phase 3 schemas, and CI constructs the packaged policy
+  and runs the bounded fault layer under non-root, network-disabled,
+  read-only restrictions.
 - Added exact-version, SHA-256 hash-locked runtime and documentation dependency
   graphs, a reproducible CycloneDX 1.6 runtime SBOM, closed lock/SBOM
   validation, and `--require-hashes` CI installation. A clean temporary runtime

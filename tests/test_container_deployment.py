@@ -80,6 +80,16 @@ class ContainerBuildTests(unittest.TestCase):
         self.assertNotIn(" curl ", dockerfile)
         self.assertNotIn(" wget ", dockerfile)
         self.assertNotRegex(dockerfile, r"(?m)^ADD\s")
+        self.assertIn(
+            "COPY contracts/v0.3.0/phase3-policy.schema.json "
+            "/opt/adf/contracts/v0.3.0/phase3-policy.schema.json",
+            dockerfile,
+        )
+        self.assertIn(
+            "COPY contracts/v0.3.0/decision-request.schema.json "
+            "/opt/adf/contracts/v0.3.0/decision-request.schema.json",
+            dockerfile,
+        )
 
     def test_final_image_is_nonroot_and_has_no_network_exposure(self) -> None:
         dockerfile = _read(ROOT / "Dockerfile")
@@ -108,6 +118,8 @@ class ContainerBuildTests(unittest.TestCase):
             "!run_service.py",
             "!src/**",
             "!config/phase3_policy.json",
+            "!contracts/v0.3.0/decision-request.schema.json",
+            "!contracts/v0.3.0/phase3-policy.schema.json",
             "!artifacts/supply-chain/runtime.cdx.json",
         ):
             self.assertIn(required, rows)

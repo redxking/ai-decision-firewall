@@ -181,6 +181,13 @@ semantics, HA/DR, or operational recovery.
 The exact commands, results, and limitations are recorded in
 [`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
+Successor development adds a layered
+[Stage A storage-fault campaign](production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md).
+Its first executable layer covers `SIGKILL` at five transaction boundaries,
+ambiguous audit `fsync`, and persistent post-effect `ENOSPC`. This is
+deterministic repository-controlled fault injection, not real filesystem,
+block-device, CSI, host-power, or operational recovery evidence.
+
 The repository-wide production gate remains `BLOCKED`. The exact current
 coverage and every unresolved degraded mode are recorded in
 [`production/FAILURE_RECOVERY_MATRIX.md`](production/FAILURE_RECOVERY_MATRIX.md)
