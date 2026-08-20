@@ -2833,6 +2833,7 @@ class _SQLiteControlLedgerBase:
         connection: sqlite3.Connection | None = None
         try:
             connection = self._raw_connect()
+            connection.execute("BEGIN")
             _assert_sqlite_runtime_integrity(
                 connection,
                 expected_schema_sha256=_CONTROL_SCHEMA_SHA256,
@@ -2854,6 +2855,7 @@ class _SQLiteControlLedgerBase:
                 )
             _validate_control_relations(connection)
             self._assert_runtime_identity()
+            connection.commit()
             return connection
         except ControlLedgerError:
             if connection is not None:
@@ -3422,6 +3424,7 @@ class SQLiteSyntheticAdapterStore:
             connection.execute(f"PRAGMA busy_timeout={self.busy_timeout_ms}")
             connection.execute("PRAGMA foreign_keys=ON")
             connection.execute("PRAGMA synchronous=FULL")
+            connection.execute("BEGIN")
             _assert_sqlite_runtime_integrity(
                 connection,
                 expected_schema_sha256=_ADAPTER_SCHEMA_SHA256,
@@ -3441,6 +3444,7 @@ class SQLiteSyntheticAdapterStore:
                     "Synthetic-adapter store identity changed after construction.",
                 )
             self._assert_runtime_identity()
+            connection.commit()
             return connection
         except SyntheticAdapterError:
             if connection is not None:
