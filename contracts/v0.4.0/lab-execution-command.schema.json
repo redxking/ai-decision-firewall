@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/redxking/ai-decision-firewall/contracts/v0.4.0/lab-execution-command.schema.json",
+  "title": "AI Decision Firewall v0.4.0 Isolated Lab Execution Command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "message_type", "lab_session_id", "request_id",
+    "decision_id", "authorization_id", "policy_sha256",
+    "adapter_contract_sha256", "target_id", "target_boot_id", "action",
+    "parameters", "prestate_sha256", "idempotency_key", "sequence", "nonce",
+    "issued_at", "expires_at", "authentication"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.4.0"},
+    "message_type": {"const": "LAB_EXECUTION_COMMAND"},
+    "lab_session_id": {"$ref": "#/$defs/identifier"},
+    "request_id": {"$ref": "#/$defs/identifier"},
+    "decision_id": {"$ref": "#/$defs/identifier"},
+    "authorization_id": {"$ref": "#/$defs/identifier"},
+    "policy_sha256": {"$ref": "#/$defs/sha256"},
+    "adapter_contract_sha256": {"$ref": "#/$defs/sha256"},
+    "target_id": {"const": "LAB_ENDPOINT_001"},
+    "target_boot_id": {"$ref": "#/$defs/identifier"},
+    "action": {"const": "NETWORK_ISOLATE"},
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["duration_seconds", "preserve_management", "network_profile"],
+      "properties": {
+        "duration_seconds": {"type": "integer", "minimum": 60, "maximum": 3600},
+        "preserve_management": {"const": true},
+        "network_profile": {"const": "LAB_BEACON_BLOCK_MANAGEMENT_ALLOW_V1"}
+      }
+    },
+    "prestate_sha256": {"$ref": "#/$defs/sha256"},
+    "idempotency_key": {"$ref": "#/$defs/identifier"},
+    "sequence": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+    "nonce": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "issued_at": {"$ref": "#/$defs/timestamp"},
+    "expires_at": {"$ref": "#/$defs/timestamp"},
+    "authentication": {"$ref": "#/$defs/authentication"}
+  },
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "minLength": 20, "maxLength": 40},
+    "authentication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key_id", "mac_sha256"],
+      "properties": {
+        "key_id": {"$ref": "#/$defs/identifier"},
+        "mac_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

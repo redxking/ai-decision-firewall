@@ -189,11 +189,21 @@ boundary. The namespace-local container lab is the smaller falsifiable step.
 
 ## Action items
 
-1. [ ] Define versioned command, receipt, and observation JSON schemas.
-2. [ ] Implement pure validators and canonical HMAC bindings without sockets.
+1. [x] Define versioned command, receipt, and observation JSON schemas.
+2. [x] Implement pure validators and canonical HMAC bindings without sockets.
 3. [ ] Implement executor and observer Unix-socket services behind an explicit
    opt-in lab flag.
 4. [ ] Add the digest-pinned internal-network container harness.
 5. [ ] Execute the adversarial and kill matrices.
 6. [ ] Seek independent security and target-owner review before any later
    environment or connector decision.
+
+The first two items are implemented in `contracts/v0.4.0/` and
+`src/adf_poc/lab_contracts.py`. The implementation closes message shapes,
+requires canonical UTC seconds and bounded command lifetime, authenticates
+each message under a type-specific domain, rejects shared executor/observer key
+material, and correlates the exact signed command with separately authenticated
+receipt and observation records. This is contract-level implementation
+evidence only. No Unix socket, peer-credential check, executor mutation,
+observer probe, container topology, or non-production action has been
+implemented or authorized.

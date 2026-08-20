@@ -203,8 +203,13 @@ The proposed next trust-boundary increment is defined in
 opt-in Linux container lab that keeps the firewall unprivileged and networkless,
 places `CAP_NET_ADMIN` only in a disposable target namespace, separates command
 and observation processes and keys, and exposes neither a container-runtime
-socket nor an external route. The ADR is a design boundary, not implementation
-evidence or Stage 4 authorization.
+socket nor an external route. Its first contract-only increment is now
+implemented: three closed v0.4.0 schemas plus duplicate-safe, bounded,
+offset-aware validators; domain-separated canonical HMAC bindings; exact
+command/receipt/observation correlation; and executor/observer key-separation
+checks. The socket services, peer-credential enforcement, target mutation,
+independent probe, and container harness remain unimplemented. This is not
+Stage 4 authorization.
 
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative
