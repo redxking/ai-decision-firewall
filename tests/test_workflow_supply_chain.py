@@ -147,6 +147,20 @@ class WorkflowSupplyChainTests(unittest.TestCase):
         self.assertIn("python3 scripts/validate_manifest.py", workflow)
         self.assertIn("docker image inspect", workflow)
         self.assertIn("docker run --rm", workflow)
+        self.assertIn("Validate packaged policy and schema", workflow)
+        self.assertIn("Run bounded storage-fault campaigns in the image", workflow)
+        self.assertIn("tests.test_stage_a_sigkill_campaign", workflow)
+        self.assertIn("tests.test_stage_a_storage_failure_campaign", workflow)
+        self.assertIn("tests.container_stage_a_storage_fault", workflow)
+        self.assertIn("ADF_CONTAINER_STORAGE_CAMPAIGN=1", workflow)
+        self.assertIn(
+            "--tmpfs /audit-volume:rw,noexec,nosuid,nodev,size=1m,"
+            "uid=10001,gid=10001,mode=0700",
+            workflow,
+        )
+        self.assertIn(
+            '--volume "${GITHUB_WORKSPACE}/tests:/opt/adf/tests:ro"', workflow
+        )
         for restriction in (
             "--network=none",
             "--read-only",

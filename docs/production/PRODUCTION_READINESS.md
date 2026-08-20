@@ -170,9 +170,14 @@ The default Phase 3 simulation remains process-local for published-baseline
 compatibility. The two-database successor path is opt-in and offline. Its
 implementation evidence is repository-controlled synthetic conformance only.
 The exact implementation commit, local focused/full verification, manifest,
-and exact-SHA CI are now recorded below. Broader real power-loss, filesystem and
-storage-failure, hostile-writer, capacity, independent-assessment, and
-operational campaigns remain separate release steps.
+and exact-SHA CI are now recorded below. The mutable successor adds a layered
+storage-fault campaign: five uncatchable process-loss boundaries, deterministic
+complete-row audit-durability ambiguity, persistent `ENOSPC`, and a restricted
+container using an actually exhausted tmpfs. The last case produced a partial
+JSONL row, which is preserved and quarantined rather than truncated or treated
+as recoverable. Virtual-block-device, physical power-loss, intended-filesystem,
+hostile-writer, capacity, independent-assessment, and operational campaigns
+remain separate release steps.
 
 The current successor source tree also carries exact-version SHA-256 runtime
 and documentation dependency locks, an unsigned CycloneDX 1.6 runtime SBOM,
@@ -181,7 +186,9 @@ full-commit Action pins, nonpersistent checkout credentials, binary-only
 hash-enforced workflow installation, warning-fatal tests, and job-scoped Pages
 write/OIDC authority. It additionally carries a non-publishing CI container
 build, immutable-configuration inspection, and no-network/read-only smoke-run
-mechanism for the digest-pinned Stage A image. These are repository-controlled
+mechanism for the digest-pinned Stage A image. The successor also packages the
+request and policy schemas required at runtime and runs bounded crash and
+storage-fault cases inside the restricted image. These are repository-controlled
 mechanisms. Until a clean candidate commit, regenerated complete manifest,
 exact-commit CI, build
 artifact, provenance, vulnerability disposition, and independent review exist,
@@ -313,11 +320,13 @@ open gates:
 - mission, security, data, model, policy, operations, target-system, and
   authorizing-official acceptances are not recorded.
 
-The next safe engineering gate is broader real power-loss, kill/fsync,
-filesystem and storage-failure injection at every T1, T2, observation, audit,
-and T3 boundary, including receipt/result corruption, hostile writers, mixed
-backups, and cross-store divergence, plus resource and soak evidence. Process
-isolation should follow the verified transaction contract. ER-002 must be
+The next safe engineering gate is virtual-block-device and destructive host
+power-loss testing at the uncovered claim, authorization, SQLite/WAL,
+directory-entry, recovery-prefix, response-loss, and flush boundaries, followed
+by an intended CSI/filesystem campaign. Receipt/result corruption, hostile
+writers, mixed backups, cross-store divergence, resource pressure, and soak
+remain open. Process isolation should follow the verified transaction contract.
+ER-002 must be
 published in a later evidence-only carrier whose exact SHA and manifest are
 recorded only after that commit exists. Any move to representative data,
 external identity, a connector, or a designated target requires a separate,

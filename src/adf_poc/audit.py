@@ -16,6 +16,10 @@ class _DuplicateJSONMember(ValueError):
     """Internal marker for an ambiguous serialized audit row."""
 
 
+class AuditDurabilityError(OSError):
+    """A complete audit row was written but its durability is ambiguous."""
+
+
 def _reject_duplicate_json_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     value: dict[str, Any] = {}
     for key, child in pairs:
@@ -126,13 +130,32 @@ class AuditLogger:
                     if written <= 0:
                         raise OSError("Audit append made no forward progress.")
                     view = view[written:]
-                os.fsync(self._bound_fd)
+                try:
+                    os.fsync(self._bound_fd)
+                except OSError as exc:
+                    # The complete row is observable through this descriptor,
+                    # but readback is not proof that storage made it durable.
+                    # Advance the in-process chain tip so a later explicit
+                    # recovery write cannot corrupt the observed prefix, then
+                    # force the caller to stop before terminal commitment.
+                    self.previous_hash = body["record_hash"]
+                    self.sequence += 1
+                    raise AuditDurabilityError(
+                        "Audit row durability is ambiguous after fsync failure."
+                    ) from exc
                 self._assert_bound_identity()
             else:
                 with self.path.open("a", encoding="utf-8") as handle:
                     handle.write(canonical_json(body) + "\n")
                     handle.flush()
-                    os.fsync(handle.fileno())
+                    try:
+                        os.fsync(handle.fileno())
+                    except OSError as exc:
+                        self.previous_hash = body["record_hash"]
+                        self.sequence += 1
+                        raise AuditDurabilityError(
+                            "Audit row durability is ambiguous after fsync failure."
+                        ) from exc
             self.previous_hash = body["record_hash"]
             self.sequence += 1
             return _decode_audit_row(canonical_json(body))

@@ -111,3 +111,36 @@ jobs:
           --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m
           --user 10001:10001
           "${ADF_IMAGE_TAG}" --help
+      - name: Validate packaged policy and schema
+        run: >-
+          docker run --rm
+          --network=none
+          --read-only
+          --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m
+          --user 10001:10001
+          --entrypoint python
+          "${ADF_IMAGE_TAG}"
+          -c "from adf_poc.phase3.config import Phase3PolicyConfig; Phase3PolicyConfig.load('/opt/adf/config/phase3_policy.json')"
+      - name: Run bounded storage-fault campaigns in the image
+        run: >-
+          docker run --rm
+          --network=none
+          --read-only
+          --cap-drop=ALL
+          --security-opt=no-new-privileges
+          --pids-limit=64
+          --memory=512m
+          --cpus=2
+          --tmpfs /tmp:rw,noexec,nosuid,nodev,size=128m
+          --tmpfs /audit-volume:rw,noexec,nosuid,nodev,size=1m,uid=10001,gid=10001,mode=0700
+          --user 10001:10001
+          --volume "${GITHUB_WORKSPACE}/tests:/opt/adf/tests:ro"
+          --env PYTHONPATH=/opt/adf/src:/opt/adf/dependencies:/opt/adf
+          --env ADF_CONTAINER_STORAGE_CAMPAIGN=1
+          --entrypoint python
+          "${ADF_IMAGE_TAG}"
+          -m unittest
+          tests.test_stage_a_sigkill_campaign
+          tests.test_stage_a_storage_failure_campaign
+          tests.container_stage_a_storage_fault
+          -q

@@ -207,6 +207,14 @@ marker. This is local recoverability mechanics only; power-loss behavior,
 continuous backup, rollback selection, external custody, DR, RPO, and RTO
 remain open.
 
+The second bounded increment is a layered storage-fault campaign. Its initial
+repository-controlled cases use uncatchable process loss at T1, observation,
+T2, audit closure, and T3, plus deterministic audit `fsync` ambiguity and
+post-effect `ENOSPC`. They require zero duplicate effect and explicit recovery,
+but do not stand in for filesystem, block-device, container, CSI, or physical
+power-loss testing. See the
+[storage-fault campaign](production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md).
+
 ## Phase 3.1B — Approved read-only evidence realism
 
 After the external Gate B package and an offline historical pilot, evaluate an
