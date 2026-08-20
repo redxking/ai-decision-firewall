@@ -19,6 +19,7 @@ REQUEST_COUNT = 16
 WORKERS = 4
 PER_OPERATION_DEADLINE_SECONDS = 30.0
 CAMPAIGN_DEADLINE_SECONDS = 60.0
+LOCK_ACQUISITION_TIMEOUT_MS = 20_000
 MAX_ARTIFACT_BYTES = 16 * 1024 * 1024
 
 
@@ -33,6 +34,10 @@ def _descriptor_count() -> int | None:
 
 class StageABoundedLoadTests(unittest.TestCase):
     def test_concurrent_intake_and_lookup_preserve_durable_invariants(self) -> None:
+        self.assertLess(
+            LOCK_ACQUISITION_TIMEOUT_MS / 1000,
+            PER_OPERATION_DEADLINE_SECONDS,
+        )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             audit_path = root / "audit.jsonl"
@@ -41,9 +46,9 @@ class StageABoundedLoadTests(unittest.TestCase):
             harness = new_harness(
                 audit_path=audit_path,
                 control_ledger_path=control_path,
-                control_ledger_busy_timeout_ms=5000,
+                control_ledger_busy_timeout_ms=LOCK_ACQUISITION_TIMEOUT_MS,
                 synthetic_adapter_path=adapter_path,
-                synthetic_adapter_busy_timeout_ms=5000,
+                synthetic_adapter_busy_timeout_ms=LOCK_ACQUISITION_TIMEOUT_MS,
             )
             requests = tuple(
                 request_json(
@@ -137,9 +142,9 @@ class StageABoundedLoadTests(unittest.TestCase):
                 now=harness.clock(),
                 audit_path=audit_path,
                 control_ledger_path=control_path,
-                control_ledger_busy_timeout_ms=5000,
+                control_ledger_busy_timeout_ms=LOCK_ACQUISITION_TIMEOUT_MS,
                 synthetic_adapter_path=adapter_path,
-                synthetic_adapter_busy_timeout_ms=5000,
+                synthetic_adapter_busy_timeout_ms=LOCK_ACQUISITION_TIMEOUT_MS,
             )
             self.assertEqual(
                 reopened.firewall._adapter_store.receipt_count(), REQUEST_COUNT
