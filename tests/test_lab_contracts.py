@@ -441,6 +441,45 @@ class IsolatedLabContractTests(unittest.TestCase):
             )
         self.assertEqual(raised.exception.reason_code, "LAB_RECEIPT_OUTCOME_INVALID")
 
+    def test_target_unavailable_no_effect_requires_unknown_poststate(self) -> None:
+        command = _command()
+        unavailable = _unsigned_receipt(command, status="NO_EFFECT")
+        unavailable["reason_code"] = "TARGET_UNAVAILABLE_PRE_EFFECT"
+        unavailable["poststate_sha256"] = "0" * 64
+        signed = sign_lab_message(
+            unavailable,
+            message_type=RECEIPT,
+            key_id=EXECUTOR_KEY_ID,
+            key=EXECUTOR_KEY,
+            now=NOW,
+        )
+        self.assertEqual(signed["status"], "NO_EFFECT")
+        self.assertFalse(signed["effect_possible"])
+        self.assertEqual(signed["poststate_sha256"], "0" * 64)
+
+        invalid_cases = {
+            "fabricated-known-poststate": {
+                "poststate_sha256": command["prestate_sha256"]
+            },
+            "effect-possible": {"effect_possible": True},
+            "wrong-status": {"status": "AMBIGUOUS", "effect_possible": True},
+        }
+        for label, changes in invalid_cases.items():
+            with self.subTest(label=label):
+                invalid = copy.deepcopy(unavailable)
+                invalid.update(changes)
+                with self.assertRaises(LabContractError) as raised:
+                    sign_lab_message(
+                        invalid,
+                        message_type=RECEIPT,
+                        key_id=EXECUTOR_KEY_ID,
+                        key=EXECUTOR_KEY,
+                        now=NOW,
+                    )
+                self.assertEqual(
+                    raised.exception.reason_code, "LAB_RECEIPT_OUTCOME_INVALID"
+                )
+
     def test_observation_digest_is_independent_and_exact(self) -> None:
         command = _command()
         receipt = _receipt(command)

@@ -466,6 +466,14 @@ class ExecutorReplayJournal:
                     "LAB_EXECUTOR_RECOVERY_REQUIRED",
                     "A prior reservation has no durable completion; automatic retry is fenced.",
                 )
+            latest_by_key: dict[str, str] = {}
+            for row in records:
+                latest_by_key[str(row["idempotency_key"])] = str(row["record_type"])
+            if "RESERVATION" in latest_by_key.values():
+                raise LabServiceError(
+                    "LAB_EXECUTOR_RECOVERY_REQUIRED",
+                    "An unfinished reservation blocks all new executor intake.",
+                )
             previous = str(records[-1]["record_sha256"]) if records else ZERO_DIGEST
             self._append(
                 descriptor,
@@ -656,16 +664,14 @@ class LabExecutorService:
         if self.failure_hook is not None:
             self.failure_hook(EXECUTOR_AFTER_RESERVATION)
 
+        prestate: LabObservedState | None
         try:
             prestate = _validate_observed_state(self.read_state())
-        except LabServiceError:
-            raise
-        except Exception as exc:
-            raise LabServiceError(
-                "LAB_TARGET_READ_FAILED",
-                "Executor could not establish the target prestate after reservation.",
-            ) from exc
-        preconditions_hold = (
+        except Exception:
+            # The mutation port has not been entered, so target-read failure is
+            # a proven pre-effect rejection rather than an ambiguous action.
+            prestate = None
+        preconditions_hold = prestate is not None and (
             prestate.target_boot_id == command["target_boot_id"]
             and prestate.ruleset_sha256 == command["prestate_sha256"]
             and prestate.beacon_reachable is True
@@ -674,18 +680,23 @@ class LabExecutorService:
         outcome = LabMutationResult(
             status="NO_EFFECT",
             effect_possible=False,
-            reason_code="REJECTED_PRE_EFFECT",
-            poststate_sha256=command["prestate_sha256"],
+            reason_code=(
+                "TARGET_UNAVAILABLE_PRE_EFFECT"
+                if prestate is None
+                else "REJECTED_PRE_EFFECT"
+            ),
+            poststate_sha256=(
+                ZERO_DIGEST if prestate is None else command["prestate_sha256"]
+            ),
         )
         if preconditions_hold and self.effects_enabled:
+            assert prestate is not None
             assert self.apply_action is not None
             try:
                 outcome = _validate_mutation_result(
                     self.apply_action(command, prestate),
                     prestate_sha256=command["prestate_sha256"],
                 )
-            except LabServiceError:
-                raise
             except Exception:
                 outcome = LabMutationResult(
                     status="AMBIGUOUS",

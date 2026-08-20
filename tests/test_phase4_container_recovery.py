@@ -90,6 +90,33 @@ class Phase4ContainerRecoveryTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), first)
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
 
+    def test_recovery_client_keeps_only_control_volume_writable(self) -> None:
+        campaign = Phase4ContainerRecoveryCampaign(
+            image=IMAGE,
+            lab_id="abcdef123456",
+            scenario="executor-after-completion",
+        )
+        expected = object()
+        with patch.object(
+            campaign, "create_container", return_value=expected
+        ) as create_container:
+            result = campaign._client(
+                executor_volume="executor-volume",
+                observer_volume="observer-volume",
+                facts_volume="facts-volume",
+                control_volume="control-volume",
+            )
+        self.assertIs(result, expected)
+        self.assertEqual(
+            create_container.call_args.kwargs["mounts"],
+            (
+                ("executor-volume", "/executor", True),
+                ("observer-volume", "/observer", True),
+                ("facts-volume", "/facts", True),
+                ("control-volume", "/control", False),
+            ),
+        )
+
     def test_socket_recovery_refuses_any_still_mounted_volume(self) -> None:
         campaign = Phase4ContainerRecoveryCampaign(
             image=IMAGE,

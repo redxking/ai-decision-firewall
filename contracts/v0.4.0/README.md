@@ -24,14 +24,17 @@ filesystem checks, inode binding, and non-destructive cleanup on replacement.
 `adf_poc.lab_services` composes those boundaries into explicitly enabled
 executor and observer handlers. The executor uses a create-once, owner-private,
 append-only reservation/completion journal: exact completed duplicates return
-the original receipt, conflicting reuse fails closed, and an unfinished
-reservation requires reconciliation instead of retry. The observer authenticates
-a separate observation request and performs a fresh code-owned read for every
-response. The executor now verifies exact target boot identity, ruleset
-prestate, and management reachability before an explicitly gated internal
-mutation port. The shipped node does not supply or enable that port and
-therefore still returns `NO_EFFECT`; no kernel mutation is reachable in this
-increment. A mutation-port exception is durably classified `AMBIGUOUS`, while
-loss after effect entry leaves the reservation fenced against retry. The fixed
-kernel driver, executable reconciliation/rollback, and its full kill matrix
-remain outside this increment.
+the original receipt, conflicting reuse fails closed, and any unfinished
+reservation blocks all new intake pending reconciliation. The observer
+authenticates a separate observation request and performs a fresh code-owned
+read for every response. The executor now verifies exact target boot identity,
+ruleset prestate, and management reachability before an explicitly gated
+internal mutation port. A failed or malformed target read closes as durable
+`NO_EFFECT` with `TARGET_UNAVAILABLE_PRE_EFFECT` and an all-zero unknown
+poststate; it never copies an unobserved expected prestate into the receipt. The
+shipped node does not supply or enable the mutation port and therefore still
+returns `NO_EFFECT`; no kernel mutation is reachable in this increment. A
+mutation-port exception or invalid closed result is durably classified
+`AMBIGUOUS`, while loss after effect entry leaves the reservation fenced against
+retry. The fixed kernel driver, executable reconciliation/rollback, and its full
+kill matrix remain outside this increment.

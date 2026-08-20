@@ -103,6 +103,18 @@ class Phase4ContainerLab:
             f"{ROLE_LABEL}={role}",
         ]
 
+    @staticmethod
+    def _control_client_mounts(
+        *, executor_volume: str, observer_volume: str, facts_volume: str
+    ) -> tuple[tuple[str, str, bool], ...]:
+        """Expose service IPC and facts to the client without write authority."""
+
+        return (
+            (executor_volume, "/executor", True),
+            (observer_volume, "/observer", True),
+            (facts_volume, "/facts", True),
+        )
+
     def preflight(self) -> None:
         version = _json_output("version", "--format", "{{json .}}")
         if version.get("Server", {}).get("Os") != "linux":
@@ -473,10 +485,10 @@ class Phase4ContainerLab:
         client = self.create_container(
             role="control-client",
             network_mode="none",
-            mounts=(
-                (executor_volume, "/executor", False),
-                (observer_volume, "/observer", False),
-                (facts_volume, "/facts", True),
+            mounts=self._control_client_mounts(
+                executor_volume=executor_volume,
+                observer_volume=observer_volume,
+                facts_volume=facts_volume,
             ),
             environment=(("ADF_LAB_SESSION_ID", f"lab-{self.lab_id}"),),
             command=(

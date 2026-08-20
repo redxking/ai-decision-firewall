@@ -44,7 +44,11 @@ representative data, vendor connector, Kubernetes API, or production use.
   kernel primitive directly.
 - Only the executor receives `CAP_NET_ADMIN`, and only inside the disposable
   target namespace. No container-runtime socket or host namespace is mounted.
-- An unavailable or mismatched precondition closes as durable `NO_EFFECT`.
+- An unavailable precondition closes as durable `NO_EFFECT` with
+  `TARGET_UNAVAILABLE_PRE_EFFECT` and an all-zero unknown poststate digest; it
+  must not copy the command's expected prestate into an observation claim. A
+  mismatched observed precondition closes as durable `NO_EFFECT` without
+  invoking the mutation port.
 - An exception after entering the effect boundary closes as `AMBIGUOUS` with an
   unknown poststate digest when the process remains alive. Process loss leaves
   an open reservation and recovery fence.

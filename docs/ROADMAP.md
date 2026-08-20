@@ -216,8 +216,10 @@ target read, returns the identical stored receipt for an exact completed
 duplicate, rejects conflicting idempotency reuse, and fences unfinished
 reservations for reconciliation. The observer accepts only its separately
 authenticated read request and performs a fresh code-owned read. The executor
-is deliberately pre-effect and returns `NO_EFFECT`; kernel target mutation,
-executable recovery, and continuous service launchers remain unimplemented. A
+now has an explicitly enabled, default-off, closed-result mutation port; the
+shipped node supplies neither enablement nor an implementation and still
+returns `NO_EFFECT`. Kernel target mutation, executable recovery, and
+continuous service launchers remain unimplemented. A
 subsequent bounded increment now composes those handlers in a disposable Docker
 topology: separate executor, observer, and target-facts volumes; an internal
 bridge with no external route; a networkless control client; separately mounted
@@ -235,9 +237,19 @@ A create-once control volume preserves the exact signed command across restart;
 stale sockets are removed only by an explicit owner-checked recovery
 initializer after the controller confirms the service container was killed.
 The open reservation remains fenced, while durable completion and fresh
-observation paths complete exact correlation without another effect. This is
-not the full ADR-017 kill matrix: pre-reservation, audit, terminal-result, and
-any future post-mutation boundaries remain open.
+observation paths complete exact correlation without another effect. The
+process matrix additionally uses a code-owned, fsync-durable effect marker to
+prove `SIGKILL` after mutation but before completion leaves one effect and an
+unresolved reservation that fences all new command keys before target read or
+execution. A kill after durable `APPLIED` completion replays the exact receipt
+with the same one effect. Failed or malformed pre-effect reads close as
+`TARGET_UNAVAILABLE_PRE_EFFECT` with no mutation and an explicitly unknown
+poststate; invalid post-effect returns close as `AMBIGUOUS`. Control-client
+service and facts mounts are read-only. This is not the full ADR-017 kill
+matrix: directional signatures, distinct service identities, durable
+completion-state reconciliation, live containerized kernel mutation and
+readback, pre-reservation, observation, audit, terminal-result, and rollback
+boundaries remain open.
 
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative

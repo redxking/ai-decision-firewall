@@ -121,6 +121,20 @@ class Phase4ContainerHarnessTests(unittest.TestCase):
         ):
             self.assertNotIn(prohibited, joined)
 
+    def test_control_client_has_read_only_service_and_facts_mounts(self) -> None:
+        self.assertEqual(
+            Phase4ContainerLab._control_client_mounts(
+                executor_volume="executor-volume",
+                observer_volume="observer-volume",
+                facts_volume="facts-volume",
+            ),
+            (
+                ("executor-volume", "/executor", True),
+                ("observer-volume", "/observer", True),
+                ("facts-volume", "/facts", True),
+            ),
+        )
+
     def test_exact_container_inspection_accepts_only_closed_topology(self) -> None:
         lab = Phase4ContainerLab(image=IMAGE, lab_id=LAB_ID)
         spec = ContainerSpec(

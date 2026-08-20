@@ -319,24 +319,30 @@ def validate_lab_message_dict(
 
     if message_type == RECEIPT:
         expected = {
-            "APPLIED": (True, "RULESET_APPLIED"),
-            "NO_EFFECT": (False, "REJECTED_PRE_EFFECT"),
-            "PARTIAL": (True, "PARTIAL_RULESET"),
-            "AMBIGUOUS": (True, "EFFECT_UNCERTAIN"),
+            "APPLIED": {(True, "RULESET_APPLIED")},
+            "NO_EFFECT": {
+                (False, "REJECTED_PRE_EFFECT"),
+                (False, "TARGET_UNAVAILABLE_PRE_EFFECT"),
+            },
+            "PARTIAL": {(True, "PARTIAL_RULESET")},
+            "AMBIGUOUS": {(True, "EFFECT_UNCERTAIN")},
         }[value["status"]]
-        if (value["effect_possible"], value["reason_code"]) != expected:
+        if (value["effect_possible"], value["reason_code"]) not in expected:
             raise LabContractError(
                 "LAB_RECEIPT_OUTCOME_INVALID",
                 "Receipt status, effect possibility, and reason code disagree.",
             )
-        if (
-            value["status"] == "NO_EFFECT"
-            and value["poststate_sha256"] != value["prestate_sha256"]
-        ):
-            raise LabContractError(
-                "LAB_RECEIPT_OUTCOME_INVALID",
-                "NO_EFFECT receipt must preserve the exact prestate digest.",
+        if value["status"] == "NO_EFFECT":
+            expected_poststate = (
+                "0" * 64
+                if value["reason_code"] == "TARGET_UNAVAILABLE_PRE_EFFECT"
+                else value["prestate_sha256"]
             )
+            if value["poststate_sha256"] != expected_poststate:
+                raise LabContractError(
+                    "LAB_RECEIPT_OUTCOME_INVALID",
+                    "NO_EFFECT receipt poststate does not match its closed reason.",
+                )
         if (
             value["status"] == "APPLIED"
             and value["poststate_sha256"] == value["prestate_sha256"]

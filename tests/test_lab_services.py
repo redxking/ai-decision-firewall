@@ -248,43 +248,174 @@ class LabServiceTests(unittest.TestCase):
                 service.handle(canonical_json(conflict).encode())
             self.assertEqual(raised.exception.reason_code, "LAB_IDEMPOTENCY_CONFLICT")
 
-    def test_failure_after_reservation_never_reinvokes_target_reader(self) -> None:
+    def test_pre_effect_read_failure_closes_no_effect_and_replays_without_read(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path, journal = self._journal(directory)
             reads = 0
+            effects = 0
 
             def unavailable_state() -> LabObservedState:
                 nonlocal reads
                 reads += 1
                 raise OSError("injected read failure after reservation")
 
+            def forbidden_effect(*_args) -> LabMutationResult:
+                nonlocal effects
+                effects += 1
+                raise AssertionError("pre-effect read failure must not mutate")
+
             service = LabExecutorService(
                 journal=journal,
                 key_id=EXECUTOR_KEY_ID,
                 key=EXECUTOR_KEY,
                 read_state=unavailable_state,
+                apply_action=forbidden_effect,
+                effects_enabled=True,
                 clock=lambda: NOW,
                 enabled=True,
             )
             raw = canonical_json(_command()).encode()
-            with self.assertRaises(LabServiceError) as raised:
-                service.handle(raw)
-            self.assertEqual(raised.exception.reason_code, "LAB_TARGET_READ_FAILED")
+            first = service.handle(raw)
             self.assertEqual(reads, 1)
+            self.assertEqual(effects, 0)
             reopened = LabExecutorService(
                 journal=ExecutorReplayJournal(path, require_existing=True),
                 key_id=EXECUTOR_KEY_ID,
                 key=EXECUTOR_KEY,
                 read_state=unavailable_state,
+                apply_action=forbidden_effect,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            )
+            self.assertEqual(reopened.handle(raw), first)
+            receipt = load_authenticated_lab_message(
+                first,
+                message_type=RECEIPT,
+                expected_key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                now=NOW,
+            )
+            self.assertEqual(reads, 1)
+            self.assertEqual(effects, 0)
+            self.assertEqual(receipt["status"], "NO_EFFECT")
+            self.assertFalse(receipt["effect_possible"])
+            self.assertEqual(receipt["reason_code"], "TARGET_UNAVAILABLE_PRE_EFFECT")
+            self.assertEqual(receipt["poststate_sha256"], "0" * 64)
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+            self.assertEqual(
+                [row["record_type"] for row in rows], ["RESERVATION", "COMPLETION"]
+            )
+
+    def test_malformed_pre_effect_state_closes_target_unavailable_no_effect(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path, journal = self._journal(directory)
+            reads = 0
+            effects = 0
+
+            def malformed_state() -> LabObservedState:
+                nonlocal reads
+                reads += 1
+                return LabObservedState(
+                    target_boot_id="boot-001",
+                    beacon_reachable=True,
+                    management_reachable=True,
+                    ruleset_sha256="not-a-digest",
+                )
+
+            def forbidden_effect(*_args) -> LabMutationResult:
+                nonlocal effects
+                effects += 1
+                raise AssertionError("malformed prestate must not mutate")
+
+            raw = canonical_json(_command()).encode()
+            first = LabExecutorService(
+                journal=journal,
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=malformed_state,
+                apply_action=forbidden_effect,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            ).handle(raw)
+            replay = LabExecutorService(
+                journal=ExecutorReplayJournal(path, require_existing=True),
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=malformed_state,
+                apply_action=forbidden_effect,
+                effects_enabled=True,
+                clock=lambda: NOW,
+                enabled=True,
+            ).handle(raw)
+            receipt = load_authenticated_lab_message(
+                first,
+                message_type=RECEIPT,
+                expected_key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                now=NOW,
+            )
+            self.assertEqual(replay, first)
+            self.assertEqual(reads, 1)
+            self.assertEqual(effects, 0)
+            self.assertEqual(receipt["status"], "NO_EFFECT")
+            self.assertEqual(receipt["reason_code"], "TARGET_UNAVAILABLE_PRE_EFFECT")
+            self.assertEqual(receipt["poststate_sha256"], "0" * 64)
+
+    def test_open_reservation_blocks_new_idempotency_key_without_target_use(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path, journal = self._journal(directory)
+            first = _command(idempotency_key="idem-open-001")
+            journal.reserve_or_replay(
+                idempotency_key=first["idempotency_key"],
+                command_sha256=lab_message_sha256(first),
+                recorded_at=_timestamp(NOW),
+            )
+            before = path.read_bytes()
+            reads = 0
+            effects = 0
+
+            def forbidden_read() -> LabObservedState:
+                nonlocal reads
+                reads += 1
+                return _state()
+
+            def forbidden_effect(*_args) -> LabMutationResult:
+                nonlocal effects
+                effects += 1
+                return LabMutationResult(
+                    status="APPLIED",
+                    effect_possible=True,
+                    reason_code="RULESET_APPLIED",
+                    poststate_sha256="5" * 64,
+                )
+
+            second = _command(request_id="request-002", idempotency_key="idem-new-002")
+            service = LabExecutorService(
+                journal=journal,
+                key_id=EXECUTOR_KEY_ID,
+                key=EXECUTOR_KEY,
+                read_state=forbidden_read,
+                apply_action=forbidden_effect,
+                effects_enabled=True,
                 clock=lambda: NOW,
                 enabled=True,
             )
             with self.assertRaises(LabServiceError) as raised:
-                reopened.handle(raw)
+                service.handle(canonical_json(second).encode())
             self.assertEqual(
                 raised.exception.reason_code, "LAB_EXECUTOR_RECOVERY_REQUIRED"
             )
-            self.assertEqual(reads, 1)
+            self.assertEqual(reads, 0)
+            self.assertEqual(effects, 0)
+            self.assertEqual(path.read_bytes(), before)
 
     def test_journal_corruption_and_replacement_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -473,6 +604,104 @@ class LabServiceTests(unittest.TestCase):
             self.assertEqual(receipt["status"], "AMBIGUOUS")
             self.assertTrue(receipt["effect_possible"])
             self.assertEqual(receipt["poststate_sha256"], "0" * 64)
+
+    def test_invalid_mutation_results_close_ambiguous_and_are_never_retried(
+        self,
+    ) -> None:
+        cases: tuple[tuple[str, object], ...] = (
+            ("wrong-type", None),
+            (
+                "status-flag-reason-mismatch",
+                LabMutationResult(
+                    status="APPLIED",
+                    effect_possible=False,
+                    reason_code="RULESET_APPLIED",
+                    poststate_sha256="5" * 64,
+                ),
+            ),
+            (
+                "malformed-digest",
+                LabMutationResult(
+                    status="APPLIED",
+                    effect_possible=True,
+                    reason_code="RULESET_APPLIED",
+                    poststate_sha256="not-a-digest",
+                ),
+            ),
+            (
+                "applied-unchanged-digest",
+                LabMutationResult(
+                    status="APPLIED",
+                    effect_possible=True,
+                    reason_code="RULESET_APPLIED",
+                    poststate_sha256=RULESET,
+                ),
+            ),
+            (
+                "no-effect-changed-digest",
+                LabMutationResult(
+                    status="NO_EFFECT",
+                    effect_possible=False,
+                    reason_code="REJECTED_PRE_EFFECT",
+                    poststate_sha256="5" * 64,
+                ),
+            ),
+        )
+        for label, invalid in cases:
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as directory:
+                path, journal = self._journal(directory)
+                reads = 0
+                calls = 0
+
+                def read_state() -> LabObservedState:
+                    nonlocal reads
+                    reads += 1
+                    return _state()
+
+                def invalid_result(*_args) -> object:
+                    nonlocal calls
+                    calls += 1
+                    return invalid
+
+                raw = canonical_json(_command()).encode()
+                first = LabExecutorService(
+                    journal=journal,
+                    key_id=EXECUTOR_KEY_ID,
+                    key=EXECUTOR_KEY,
+                    read_state=read_state,
+                    apply_action=invalid_result,
+                    effects_enabled=True,
+                    clock=lambda: NOW,
+                    enabled=True,
+                ).handle(raw)
+                replay = LabExecutorService(
+                    journal=ExecutorReplayJournal(path, require_existing=True),
+                    key_id=EXECUTOR_KEY_ID,
+                    key=EXECUTOR_KEY,
+                    read_state=read_state,
+                    apply_action=invalid_result,
+                    effects_enabled=True,
+                    clock=lambda: NOW,
+                    enabled=True,
+                ).handle(raw)
+                receipt = load_authenticated_lab_message(
+                    first,
+                    message_type=RECEIPT,
+                    expected_key_id=EXECUTOR_KEY_ID,
+                    key=EXECUTOR_KEY,
+                    now=NOW,
+                )
+                self.assertEqual(replay, first)
+                self.assertEqual(reads, 1)
+                self.assertEqual(calls, 1)
+                self.assertEqual(receipt["status"], "AMBIGUOUS")
+                self.assertTrue(receipt["effect_possible"])
+                self.assertEqual(receipt["poststate_sha256"], "0" * 64)
+                rows = [json.loads(line) for line in path.read_text().splitlines()]
+                self.assertEqual(
+                    [row["record_type"] for row in rows],
+                    ["RESERVATION", "COMPLETION"],
+                )
 
     def test_loss_after_effect_fences_replay_without_reinvoking_action(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

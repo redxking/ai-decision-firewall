@@ -67,13 +67,22 @@ effectiveness. ADR-017's adversarial and kill matrices remain open.
 
 ## Subsequent process-kill evidence
 
-The next bounded test slice adds two real `SIGKILL` cases around the pre-effect
-executor journal. Post-reservation loss leaves exactly one durable reservation;
+The next bounded test slice adds real `SIGKILL` cases around the executor
+journal. Post-reservation loss leaves exactly one durable reservation;
 an exact retry is fenced as recovery-required and performs zero target reads.
 Post-completion loss leaves one reservation and one durable `NO_EFFECT`
 completion; restart returns the exact stored receipt and performs zero target
-reads. These repository-controlled process tests do not extend this record's
-container, independence, production, or action claims.
+reads. A separate explicitly enabled test port durably creates one code-owned
+effect marker, then loses the process after the action returns but before a
+completion is written. Restart preserves the single marker, retains exactly
+one open reservation, fences every new command key, and performs zero target
+reads or effects. Killing after the `APPLIED` completion instead replays the
+exact signed receipt without touching the marker. Failed or malformed target
+reads close before the effect boundary with an explicitly unknown poststate;
+malformed mutation returns close as durable `AMBIGUOUS`. The base and recovery
+clients now mount service and facts volumes read-only. These
+repository-controlled process tests are not a kernel/network effect and do not
+extend this record's container, independence, production, or action claims.
 
 ## Container recovery campaign observation
 

@@ -8,6 +8,20 @@
   replay, explicit ambiguity handling, and a post-effect crash fence. Shipped
   lab nodes do not enable or supply the port and continue to produce
   `NO_EFFECT`; no kernel mutation is reachable.
+- Extended the real-process Phase 4 kill matrix through the default-off effect
+  seam. A durable code-owned marker proves a kill after mutation but before
+  completion leaves exactly one effect and a fenced reservation; a kill after
+  durable `APPLIED` completion replays the exact receipt without another read
+  or effect. This is transaction evidence, not a kernel-action claim.
+- Closed three Phase 4 transaction-boundary defects before enabling a kernel
+  driver: any unfinished reservation now fences all new command keys; failed or
+  malformed pre-effect reads return durable `TARGET_UNAVAILABLE_PRE_EFFECT`
+  without inventing a poststate; and invalid post-effect results close durable
+  `AMBIGUOUS` instead of leaving an accidentally retryable exception path.
+- Made the control client's executor, observer, and target-facts mounts
+  read-only in both the base and recovery container labs. Directional
+  signatures, distinct service identities, completion-state reconciliation,
+  and live kernel readback remain required before a real action is enabled.
 - Recorded the implementation-ready transaction architecture, failure states,
   recovery rules, verification gates, and later distributed-fencing growth
   path. Production and external target authority remain blocked.

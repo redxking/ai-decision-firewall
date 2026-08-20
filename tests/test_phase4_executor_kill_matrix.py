@@ -12,9 +12,11 @@ from pathlib import Path
 from adf_poc.lab_contracts import COMMAND, lab_message_sha256, sign_lab_message
 from adf_poc.lab_services import (
     EXECUTOR_AFTER_COMPLETION,
+    EXECUTOR_AFTER_EFFECT,
     EXECUTOR_AFTER_RESERVATION,
     ExecutorReplayJournal,
     LabExecutorService,
+    LabMutationResult,
     LabObservedState,
     LabServiceError,
     initialize_executor_journal,
@@ -26,6 +28,8 @@ NOW = datetime(2026, 8, 20, 21, 0, tzinfo=timezone.utc)
 KEY = b"phase4-kill-matrix-key".ljust(32, b"!")
 KEY_ID = "LAB_EXECUTOR_KEY_001"
 RULESET = "8" * 64
+ISOLATED_RULESET = "7" * 64
+EFFECT_MARKER = b"ADF-PHASE4-CODE-OWNED-EFFECT-V1\n"
 
 
 def _command() -> bytes:
@@ -80,7 +84,45 @@ class Phase4ExecutorKillMatrixTests(unittest.TestCase):
         initialize_executor_journal(path, expect_empty=True)
         return path
 
-    def _kill_at(self, path: Path, stage: str) -> None:
+    @staticmethod
+    def _apply_effect_once(path: Path):
+        def apply_effect(_command, _prestate) -> LabMutationResult:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+            descriptor = os.open(path, flags, 0o600)
+            try:
+                os.fchmod(descriptor, 0o600)
+                offset = 0
+                while offset < len(EFFECT_MARKER):
+                    written = os.write(descriptor, EFFECT_MARKER[offset:])
+                    if written <= 0:
+                        raise OSError("effect marker write was incomplete")
+                    offset += written
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            directory_fd = os.open(
+                path.parent,
+                os.O_RDONLY
+                | getattr(os, "O_DIRECTORY", 0)
+                | getattr(os, "O_CLOEXEC", 0),
+            )
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+            return LabMutationResult(
+                status="APPLIED",
+                effect_possible=True,
+                reason_code="RULESET_APPLIED",
+                poststate_sha256=ISOLATED_RULESET,
+            )
+
+        return apply_effect
+
+    def _kill_at(
+        self, path: Path, stage: str, *, effect_path: Path | None = None
+    ) -> None:
         read_fd, write_fd = os.pipe()
         child = os.fork()
         if child == 0:
@@ -96,8 +138,14 @@ class Phase4ExecutorKillMatrixTests(unittest.TestCase):
                 key_id=KEY_ID,
                 key=KEY,
                 read_state=_state,
+                apply_action=(
+                    self._apply_effect_once(effect_path)
+                    if effect_path is not None
+                    else None
+                ),
                 clock=lambda: NOW,
                 failure_hook=stop_at,
+                effects_enabled=effect_path is not None,
                 enabled=True,
             )
             service.handle(_command())
@@ -191,6 +239,105 @@ class Phase4ExecutorKillMatrixTests(unittest.TestCase):
                 rows[0]["command_sha256"],
                 lab_message_sha256(json.loads(command)),
             )
+
+    def test_kill_after_effect_fences_retry_and_preserves_exactly_one_effect(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._journal_path(directory)
+            effect_path = Path(directory) / "code-owned-effect.marker"
+            self._kill_at(path, EXECUTOR_AFTER_EFFECT, effect_path=effect_path)
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+            self.assertEqual([row["record_type"] for row in rows], ["RESERVATION"])
+            self.assertEqual(effect_path.read_bytes(), EFFECT_MARKER)
+            self.assertEqual(effect_path.stat().st_mode & 0o777, 0o600)
+
+            reads = 0
+            effects = 0
+
+            def forbidden_read() -> LabObservedState:
+                nonlocal reads
+                reads += 1
+                return _state()
+
+            def forbidden_effect(*_args) -> LabMutationResult:
+                nonlocal effects
+                effects += 1
+                return LabMutationResult(
+                    status="APPLIED",
+                    effect_possible=True,
+                    reason_code="RULESET_APPLIED",
+                    poststate_sha256=ISOLATED_RULESET,
+                )
+
+            reopened = LabExecutorService(
+                journal=ExecutorReplayJournal(path, require_existing=True),
+                key_id=KEY_ID,
+                key=KEY,
+                read_state=forbidden_read,
+                apply_action=forbidden_effect,
+                clock=lambda: NOW,
+                effects_enabled=True,
+                enabled=True,
+            )
+            with self.assertRaises(LabServiceError) as raised:
+                reopened.handle(_command())
+            self.assertEqual(
+                raised.exception.reason_code, "LAB_EXECUTOR_RECOVERY_REQUIRED"
+            )
+            self.assertEqual(reads, 0)
+            self.assertEqual(effects, 0)
+            self.assertEqual(effect_path.read_bytes(), EFFECT_MARKER)
+            self.assertEqual(len(path.read_text().splitlines()), 1)
+
+    def test_kill_after_applied_completion_replays_without_second_effect(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._journal_path(directory)
+            effect_path = Path(directory) / "code-owned-effect.marker"
+            command = _command()
+            self._kill_at(path, EXECUTOR_AFTER_COMPLETION, effect_path=effect_path)
+            rows = [json.loads(line) for line in path.read_text().splitlines()]
+            self.assertEqual(
+                [row["record_type"] for row in rows],
+                ["RESERVATION", "COMPLETION"],
+            )
+            completion = rows[-1]["receipt_json"].encode("utf-8")
+            receipt = json.loads(rows[-1]["receipt_json"])
+            self.assertEqual(receipt["status"], "APPLIED")
+            self.assertTrue(receipt["effect_possible"])
+            self.assertEqual(receipt["poststate_sha256"], ISOLATED_RULESET)
+            self.assertEqual(effect_path.read_bytes(), EFFECT_MARKER)
+
+            reads = 0
+            effects = 0
+
+            def forbidden_read() -> LabObservedState:
+                nonlocal reads
+                reads += 1
+                return _state()
+
+            def forbidden_effect(*_args) -> LabMutationResult:
+                nonlocal effects
+                effects += 1
+                raise AssertionError("durable completion must replay before effect")
+
+            reopened = LabExecutorService(
+                journal=ExecutorReplayJournal(path, require_existing=True),
+                key_id=KEY_ID,
+                key=KEY,
+                read_state=forbidden_read,
+                apply_action=forbidden_effect,
+                clock=lambda: NOW,
+                effects_enabled=True,
+                enabled=True,
+            )
+            self.assertEqual(reopened.handle(command), completion)
+            self.assertEqual(reads, 0)
+            self.assertEqual(effects, 0)
+            self.assertEqual(effect_path.read_bytes(), EFFECT_MARKER)
+            self.assertEqual(len(path.read_text().splitlines()), 2)
 
 
 if __name__ == "__main__":
