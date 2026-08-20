@@ -22,12 +22,12 @@ the [current developer prerelease](https://github.com/redxking/ai-decision-firew
 |---|---|
 | Developer prerelease | [`v0.4.0-alpha.2`](https://github.com/redxking/ai-decision-firewall/releases/tag/v0.4.0-alpha.2), published 2026-08-20 from exact commit [`d5c15719`](https://github.com/redxking/ai-decision-firewall/commit/d5c1571930a29d78b31210c219465ecc4d1a793a) |
 | Public website | [Evidence-gated interactive synthetic demonstration](https://redxking.github.io/ai-decision-firewall/), deployed from the immutable `v0.4.0-alpha.2` release source; it is not an operational service |
-| Stage A production-development merge | [`db7d6e6d`](https://github.com/redxking/ai-decision-firewall/commit/db7d6e6d3bea59bc8579c1e198a236a541f65d86) |
-| Bound implementation / carrier | [`91a35145`](https://github.com/redxking/ai-decision-firewall/commit/91a351459610e045ae5de7b9380f8228c157006f) / [`a5046f38`](https://github.com/redxking/ai-decision-firewall/commit/a5046f38b229b5899baf399143b13c20c1101aae) |
-| Production gate | `BLOCKED`: 18 domains, 36 mandatory requirements all blocking, 36/36 owner acceptances `NOT_RECORDED` |
+| Audited post-release implementation | [`83d7548`](https://github.com/redxking/ai-decision-firewall/commit/83d754846fbd1460e0bb231d1dfab201f4d58c0d), merged through [PR #35](https://github.com/redxking/ai-decision-firewall/pull/35) after the publication base-drift recheck; later Stage A and Phase 4 engineering is `Merged / Unreleased` |
+| Verification snapshot | [Post-merge CI run 32426057568](https://github.com/redxking/ai-decision-firewall/actions/runs/32426057568) succeeded on Python 3.11 and 3.12 after running 514 tests with four skips in each job, plus the restricted container build and smoke path, supply-chain checks, and the 379-entry manifest at exact audited implementation commit `83d7548`; this is not release or operational evidence |
+| Production gate | `BLOCKED`: the authoritative readiness-record snapshot is bound to exact candidate [`8ee9cc8`](https://github.com/redxking/ai-decision-firewall/commit/8ee9cc8e9ece72056c119cc4dffe5457a57f5994) and has 18 domains, 36 mandatory blocking requirements, and 36/36 owner acceptances `NOT_RECORDED`; green CI does not change the gate |
 | Included data and executed effects | Offline and synthetic only |
 | Model promotion | `NOT_AUTHORIZED` |
-| Main verification | [CI run 32399958311](https://github.com/redxking/ai-decision-firewall/actions/runs/32399958311) passed Python 3.11, Python 3.12, and the restricted container build at exact merge commit [`8fa39dfa`](https://github.com/redxking/ai-decision-firewall/commit/8fa39dfadea270ad96d312b48bda8da403806ee8); production approval remains blocked |
+| Full roadmap | [Gate-driven Now / Next / Later engineering roadmap](docs/ROADMAP.md) |
 
 ## What the project does
 
@@ -55,7 +55,7 @@ execution path.
 | [Phase 3](docs/phase3/README.md) | Raw request-to-effect simulation, scoped authorization, broker, and readback | In-memory synthetic target only; no live connector |
 | [Phase 3.1](docs/phase31/README.md) | Synthetic temporal model evaluation and calibration comparison | Promotion remains `NOT_AUTHORIZED` |
 | Stage A | Durable request, authorization, receipt, recovery, and sanitized result lookup | Opt-in, same-host, offline synthetic mechanism; production remains `BLOCKED` |
-| [Phase 4 lab foundation](contracts/v0.4.0/README.md) | Closed authenticated executor/observer handlers, durable replay fencing, Linux `SOCK_SEQPACKET` peer checks, an internal-only container harness, externally killed container-recovery campaigns, and a default-off mutation transaction seam | Shipped nodes remain `NO_EFFECT`; no kernel driver, target mutation, live connector, external route, or action authority |
+| [Phase 4 lab foundation](contracts/v0.4.0/README.md) | Closed authenticated executor/observer handlers, durable replay fencing, Linux `SOCK_SEQPACKET` peer checks, an internal-only container harness, externally killed container-recovery campaigns, and a default-off mutation transaction seam | Shipped nodes remain `NO_EFFECT`; no kernel driver, Phase 4 kernel/namespace target mutation, live connector, external route, or action authority |
 
 ## Stage A architecture
 
@@ -262,8 +262,9 @@ The current repository does not establish:
 - production vendor behavior, identity, key management, credentials, or target
   semantics;
 - independently custodied command receipts, observation, audit, or trusted time;
-- cross-store atomicity, distributed replay protection, process isolation,
-  failover, approved DR/rollback behavior, continuous backup, or
+- cross-store atomicity, distributed replay protection, production-grade
+  process isolation beyond the bounded Phase 4 lab, failover, approved
+  DR/rollback behavior, continuous backup, or
   production-scale behavior;
 - historical/live model performance, analyst agreement, or operational error
   rates; or
