@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — Phase 4 controlled-action transaction seam
+## Unreleased — transaction and durability hardening
 
 - Added exact target-boot, ruleset-prestate, and management-reachability checks
   before an executor can cross the effect boundary.
@@ -11,6 +11,11 @@
 - Recorded the implementation-ready transaction architecture, failure states,
   recovery rules, verification gates, and later distributed-fencing growth
   path. Production and external target authority remain blocked.
+- Expanded the Stage A fault campaign with request-claim and authorization-
+  issuance process/container kills, making the response-loss meaning of the T3
+  boundary explicit. Added repeated short-write, partial-row-plus-write-`EIO`,
+  and transient read-`EIO` audit cases with exact no-duplicate-effect and
+  restart dispositions.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 

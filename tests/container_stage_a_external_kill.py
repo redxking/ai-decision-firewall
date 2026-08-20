@@ -18,7 +18,15 @@ from tests.phase3_support import new_harness, workstation_case
 CAMPAIGN_TIME = "2026-08-20T15:00:00+00:00"
 STATE_ROOT = Path("/state")
 CONTROL_ROOT = Path("/campaign-control")
-BOUNDARIES = ("T1", "OBSERVATION", "T2", "AUDIT", "T3")
+BOUNDARIES = (
+    "CLAIM",
+    "AUTHORIZATION",
+    "T1",
+    "OBSERVATION",
+    "T2",
+    "AUDIT",
+    "T3",
+)
 
 
 def _harness():
@@ -70,7 +78,29 @@ def run_worker(boundary: str) -> None:
     harness = _harness()
     raw = _request(harness, boundary)
 
-    if boundary == "T1":
+    if boundary == "CLAIM":
+        original = SQLiteControlLedger.claim_request
+
+        def after_claim(self, *args, **kwargs):
+            result = original(self, *args, **kwargs)
+            _mark_boundary(boundary)
+            return result  # pragma: no cover - the host kills the container
+
+        target = SQLiteControlLedger
+        attribute = "claim_request"
+        replacement = after_claim
+    elif boundary == "AUTHORIZATION":
+        original = SQLiteControlLedger.register
+
+        def after_authorization(self, *args, **kwargs):
+            result = original(self, *args, **kwargs)
+            _mark_boundary(boundary)
+            return result  # pragma: no cover - the host kills the container
+
+        target = SQLiteControlLedger
+        attribute = "register"
+        replacement = after_authorization
+    elif boundary == "T1":
         original = SQLiteControlLedger.consume_once
 
         def after_t1(self, *args, **kwargs):
@@ -139,8 +169,9 @@ def run_worker(boundary: str) -> None:
 def verify_restart(boundary: str) -> dict[str, object]:
     if boundary not in BOUNDARIES:
         raise ValueError(f"Unsupported external-kill boundary: {boundary}")
-    expected_receipts = 0 if boundary == "T1" else 1
-    expected_state = "connected" if boundary == "T1" else "isolated"
+    pre_effect = boundary in {"CLAIM", "AUTHORIZATION", "T1"}
+    expected_receipts = 0 if pre_effect else 1
+    expected_state = "connected" if pre_effect else "isolated"
     terminal = boundary == "T3"
     harness = _harness()
     raw = _request(harness, boundary)
@@ -174,7 +205,12 @@ def verify_restart(boundary: str) -> dict[str, object]:
             credential=harness.soc_credential,
             operator_asserted_quiesced=True,
         )
-        if recovered is None or recovered.disposition != "UNKNOWN_EFFECT":
+        expected_disposition = (
+            "ABORTED_NO_EFFECT"
+            if boundary in {"CLAIM", "AUTHORIZATION"}
+            else "UNKNOWN_EFFECT"
+        )
+        if recovered is None or recovered.disposition != expected_disposition:
             raise AssertionError("Nonterminal restart did not close conservatively.")
         if recovered.new_effect:
             raise AssertionError("Recovery issued a new effect.")
