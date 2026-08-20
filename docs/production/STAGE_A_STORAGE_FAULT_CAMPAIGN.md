@@ -34,7 +34,7 @@ invariants:
 | Container | Container integration/chaos | The non-root, network-disabled, read-only image executes the deterministic SIGKILL/I/O cases. A dedicated 1 MiB tmpfs exhausted after T2 produced a partial audit row; restart preserved it and halted for quarantine with one receipt and one effect. An external Docker controller now kills separate containers at T1, observation, T2, audit closure, and T3, then verifies the persisted volumes from fresh containers. | Cgroup memory/CPU pressure, read-only remount, repeated tmpfs exhaustion, and an approved disposition for unrecoverable partial audit records. |
 | Filesystem/block device | System integration | A disposable privileged Linux lab now switches an ext4 loopback device from `linear` to `dm-error` at T1, post-effect observation, T2, audit closure, and T3. After restoring the mapping and running `e2fsck`, fresh Stage A construction preserves the exact receipt/effect boundary and returns conservative recovery or the durable T3 result. | `dm-flakey`, torn/short writes, lost flushes, directory-entry loss, individual WAL/main-DB/audit faults, x86_64 repetition, and one intended CSI/filesystem. |
 | Host/power | Destructive lab campaign | Not established. | Hypervisor power-off/reset at every boundary, repeated boots, integrity capture before recovery, and independent receipt/state comparison. |
-| Soak/resource | Reliability | Not established. | Bounded request/lookup/recovery concurrency, file growth, outbox backlog, disk-watermark stop behavior, latency distribution, and leak checks. |
+| Soak/resource | Reliability | A first bounded 16-request/4-worker campaign exercises concurrent durable intake and terminal lookup, exact receipt and outbox accounting, audit-chain growth, reopen, per-operation deadlines, artifact-size bounds, and thread/descriptor leak checks. | Longer soak, concurrent recovery, disk-watermark stop behavior, latency distribution across intended capacity, memory/cgroup pressure, and accepted SLOs. |
 
 ## Current executable cases
 
@@ -63,6 +63,9 @@ invariants:
   `docs/operations/STAGE_A_BLOCK_DEVICE_FAULT_LAB_RUNBOOK.md`.
 - `tests/test_stage_a_receipt_recovery.py` remains the detailed oracle for
   recovery prefixes, writer fencing, corruption, lookup, and exact replay.
+- `tests/test_stage_a_bounded_load.py` runs a bounded concurrent intake/lookup
+  slice with exact durable accounting, restart, growth, deadline, and basic
+  resource-leak assertions. It is not an operational capacity or soak result.
 
 On the mutable successor worktree, the new five-boundary SIGKILL case passed
 three consecutive executions; the combined storage/SIGKILL/recovery/release-

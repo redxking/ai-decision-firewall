@@ -262,6 +262,12 @@ recovery. They do not stand in for torn writes, lost flushes, an intended CSI
 implementation, hostile storage, or physical power loss. See the
 [storage-fault campaign](production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md).
 
+A first bounded load slice now drives 16 unique durable requests and terminal
+lookups through four concurrent workers. It verifies exact receipt/outbox
+accounting, audit-chain growth, reopen, generous operation deadlines, artifact
+size bounds, and basic thread/descriptor cleanup. This is a regression-scale
+reliability check, not capacity, soak, SLO, or intended-environment evidence.
+
 ## Phase 3.1B — Approved read-only evidence realism
 
 After the external Gate B package and an offline historical pilot, evaluate an
