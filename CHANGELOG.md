@@ -50,6 +50,11 @@
   added a one-second bounded ordinary-unmount retry. The lab never uses lazy
   unmount; persistent open handles still fail the campaign and are left to the
   disposable container boundary for cleanup.
+- Recorded the successful exact-SHA hosted `dm-flakey error_writes` campaign:
+  five of five boundaries passed against candidate `662cb668`, with exact
+  receipt/disposition oracles, no duplicate effect, unpublished image identity,
+  and a bounded GitHub artifact digest. This is repository-controlled
+  development evidence, not independent or intended-environment validation.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 

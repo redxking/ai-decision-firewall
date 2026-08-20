@@ -189,8 +189,8 @@ repository-controlled fault injection. The successor layer adds external
 whole-container `SIGKILL` against persisted volumes and a separately gated
 privileged Linux lab that has injected full-device `dm-error` below ext4 at the
 same five boundaries. A separately selected `dm-flakey error_writes` campaign
-is implemented but awaits a capable kernel; absence of that target fails the
-requested run. The block-device oracle records raw image hashes and
+also passed all five on an exact-SHA ephemeral Ubuntu 24.04 runner; absence of
+that target fails the requested run. The block-device oracle records raw image hashes and
 filesystem-repair transformations, then requires a valid correlated audit and
 store history, the exact receipt count, conservative recovery, and no duplicate
 effect. It is not torn-write, cache-loss, intended-CSI, host-power, hostile-

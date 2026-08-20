@@ -177,9 +177,9 @@ container using an actually exhausted tmpfs. The last case produced a partial
 JSONL row, which is preserved and quarantined rather than truncated or treated
 as recoverable. The mutable successor additionally kills whole containers from
 an external Docker controller and injects `dm-error` beneath ext4 on isolated
-loopback files. A separately selectable `dm-flakey error_writes` campaign is
-implemented but has not run in the current Docker Desktop kernel because that
-kernel does not expose the `flakey` target. The block-device harness records
+loopback files. The separately selectable `dm-flakey error_writes` campaign
+also passed all five boundaries on an exact-SHA ephemeral Ubuntu 24.04 runner;
+the local Docker Desktop kernel still does not expose the `flakey` target. The block-device harness records
 raw pre/post-repair image hashes and validates
 the reconstructed application history; it does not treat `e2fsck` as evidence
 authenticity. Torn-write, lost-flush, physical-power, intended-filesystem/CSI,
@@ -327,8 +327,7 @@ open gates:
 - mission, security, data, model, policy, operations, target-system, and
   authorizing-official acceptances are not recorded.
 
-The next safe engineering gate is executing `dm-flakey error_writes` on a
-capable Linux kernel, followed by `dm-flakey drop_writes`, torn-write/lost-flush, and
+The next safe engineering gate is `dm-flakey drop_writes`, torn-write/lost-flush, and
 destructive host-power testing at the uncovered claim, authorization,
 individual SQLite/WAL, directory-entry, recovery-prefix, and response-loss
 boundaries, followed by an intended CSI/filesystem campaign. Receipt/result corruption, hostile
