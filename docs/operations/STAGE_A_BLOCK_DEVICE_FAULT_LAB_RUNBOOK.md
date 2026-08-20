@@ -11,8 +11,9 @@ durability or recovery
 
 ## Purpose
 
-This procedure injects whole-device I/O failure beneath ext4 at the T1,
-post-effect observation, T2, audit-closure, and T3 boundaries. It verifies
+This procedure injects either full-device `dm-error` or intermittent
+`dm-flakey error_writes` failures beneath ext4 at the T1, post-effect
+observation, T2, audit-closure, and T3 boundaries. It verifies
 restart disposition, exact receipt count, target state, audit integrity, and
 the absence of a second synthetic effect.
 
@@ -26,6 +27,8 @@ artifact.
 
 - [ ] A named verification owner authorizes privileged local execution.
 - [ ] Docker uses a disposable Linux engine with loop and device-mapper support.
+- [ ] For `dm-flakey-error-writes`, `dmsetup targets` reports a `flakey`
+  target. The runner fails the requested campaign if the target is absent.
 - [ ] The exact Stage A candidate image exists locally and its image ID and
   revision label have been recorded.
 - [ ] At least 1 GiB memory, two CPUs, and 256 MiB temporary storage are
@@ -54,19 +57,23 @@ repository-controlled process; do not substitute a mutable image silently.
 From the repository root:
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/run_stage_a_block_device_campaign.py --image <exact-local-image-tag> --allow-privileged-lab
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/run_stage_a_block_device_campaign.py --image <exact-local-image-tag> --fault-mode dm-error --allow-privileged-lab
 ```
+
+Repeat with `--fault-mode dm-flakey-error-writes` only on a kernel that reports
+the required target. Each invocation is a separately identified five-boundary
+campaign.
 
 The runner binds a unique local alias to the inspected image ID, builds a
 temporary lab-only derivative with exact `dmsetup`, ext4, and util-linux package
-versions, disconnects the runtime network, and executes the five cases. It does
+versions, disconnects the runtime network, and executes five cases. It does
 not pass a host device into the container.
 
 **Expected result:** the unit test reports `OK`; the boundary observations show
 zero receipts at T1, one receipt at every later boundary, `UNKNOWN_EFFECT` for
 the four nonterminal cases, `COMPLETED_VERIFIED` after T3, and `new_effect=false`
-for recovery. The runner's final JSON reports `"status": "PASSED"` and the
-exact base image ID.
+for recovery. The runner's final JSON reports `"status": "PASSED"`, the
+selected `fault_mode`, and the exact base image ID.
 
 **If it fails:** preserve the complete output. Do not rerun until the failing
 boundary, filesystem state, error chain, and cleanup status are understood.
@@ -101,18 +108,27 @@ Capture:
 The repository-controlled 2026-08-20 development run used Docker Desktop
 4.87.0, LinuxKit kernel 7.0.12 on arm64, and the locally inspected Stage A image
 ID `sha256:00b9ed3dab06a3b124c079255851e91877074823093c7a1fa0d37d090f3a45ad`.
-All five boundaries passed. The four nonterminal cases required filesystem
+All original five `dm-error` boundaries passed. The four nonterminal cases required filesystem
 repair and changed WAL/SHM membership or bytes; T2 also changed the visible
 audit digest between the pre-repair and remounted views. The post-repair audit
 chain and three-store correlation remained valid, with the exact receipt/effect
 count. This observation is mutable local development evidence until frozen
 through the candidate/carrier process.
 
+The 2026-08-20 capability check against LinuxKit 7.0.12 reported only the
+`crypt`, `striped`, `linear`, and `error` device-mapper targets. The explicitly
+requested `dm-flakey-error-writes` run therefore failed before creating a test
+device with `DM_FLAKEY_ERROR_WRITES requested but the kernel has no
+device-mapper flakey target`. That is a verified environment limitation, not a
+passing flakey result; the run must be repeated on a capable disposable Linux
+kernel.
+
 ## Troubleshooting
 
 | Symptom | Likely cause | Required response |
 |---|---|---|
 | `/dev/mapper/control` or loop devices are absent | Docker engine does not expose the required Linux kernel interfaces | Stop and use an approved disposable Linux VM; do not pass a host production disk. |
+| Requested `dm-flakey` target is absent | The active kernel did not build or load the optional target | Preserve the failed capability result and move the disposable campaign to a capable Linux VM. Do not count the mode as tested or substitute `dm-error`. |
 | Exact `dmsetup` package is unavailable | Debian repository state changed | Stop, record repository metadata, and update the lab dependency through review. Do not remove the version pin. |
 | `e2fsck` returns greater than 1 | Filesystem damage was not automatically correctable | Preserve output and the lab while it remains isolated; escalate to verification and platform owners. Do not claim a safe restart. |
 | Receipt count exceeds one | Idempotency or recovery safety failure | Stop the release, preserve all artifacts, and open a security/reliability defect. |
@@ -138,7 +154,7 @@ Docker VM before another campaign.
 ## Limitations and prohibited inferences
 
 Passing this procedure does not prove physical power-loss safety, flush/barrier
-correctness, torn-write behavior, device-cache semantics, an intended CSI or
+correctness, torn-write behavior, silent `drop_writes`, device-cache semantics, an intended CSI or
 filesystem implementation, hostile-writer resistance, HA/DR, RPO/RTO,
 representative-target validity, or production authorization. `e2fsck` repairs
 filesystem metadata; it does not authenticate application evidence. Root in the

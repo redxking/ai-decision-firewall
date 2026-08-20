@@ -10,6 +10,10 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 LAB_DOCKERFILE = ROOT / "tests" / "Dockerfile.stage-a-storage-lab"
+FAULT_MODES = {
+    "dm-error": "DM_ERROR",
+    "dm-flakey-error-writes": "DM_FLAKEY_ERROR_WRITES",
+}
 
 
 def _run(
@@ -24,9 +28,10 @@ def _run(
         timeout=180,
     )
     if completed.returncode != 0:
+        detail = completed.stderr or completed.stdout or "see streamed output above"
         raise RuntimeError(
             f"docker {' '.join(arguments[:3])} failed ({completed.returncode}): "
-            f"{completed.stderr or completed.stdout}"
+            f"{detail}"
         )
     return completed
 
@@ -34,11 +39,21 @@ def _run(
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Run the destructive Stage A dm-error/ext4 campaign on loopback files "
-            "inside a disposable privileged Linux container."
+            "Run the destructive Stage A dm-error and dm-flakey/error_writes "
+            "ext4 campaign on loopback files inside a disposable privileged "
+            "Linux container."
         )
     )
     parser.add_argument("--image", required=True, help="Exact local Stage A image tag")
+    parser.add_argument(
+        "--fault-mode",
+        choices=tuple(FAULT_MODES),
+        default="dm-error",
+        help=(
+            "Exact device-mapper mode to run; flakey requires kernel target support "
+            "and fails closed when unavailable"
+        ),
+    )
     parser.add_argument(
         "--allow-privileged-lab",
         action="store_true",
@@ -118,6 +133,8 @@ def main() -> int:
                 "PYTHONWARNINGS=error",
                 "--env",
                 "ADF_CONTAINER_BLOCK_DEVICE_CAMPAIGN=1",
+                "--env",
+                f"ADF_BLOCK_DEVICE_FAULT_MODE={FAULT_MODES[arguments.fault_mode]}",
                 lab_image,
             ]
         )
@@ -125,7 +142,8 @@ def main() -> int:
             json.dumps(
                 {
                     "base_image_id": inspected,
-                    "campaign": "STAGE_A_DM_ERROR_EXT4",
+                    "campaign": "STAGE_A_DEVICE_MAPPER_EXT4",
+                    "fault_mode": arguments.fault_mode,
                     "lab_image": lab_image,
                     "status": "PASSED",
                 },
