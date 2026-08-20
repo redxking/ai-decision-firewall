@@ -12,17 +12,22 @@ and demonstrated effects are offline and synthetic.
 > decision-making, or live containment. It includes no live connector,
 > operational credential, external target, or approved historical dataset.
 
+**[Explore the public project website and interactive synthetic decision
+demonstration](https://redxking.github.io/ai-decision-firewall/)** or download
+the [current developer prerelease](https://github.com/redxking/ai-decision-firewall/releases/tag/v0.4.0-alpha.2).
+
 ## Current status
 
 | Item | Status |
 |---|---|
-| Candidate | `0.4.0-alpha.2` (`0.4.0a2` package metadata), unreleased |
+| Developer prerelease | [`v0.4.0-alpha.2`](https://github.com/redxking/ai-decision-firewall/releases/tag/v0.4.0-alpha.2), published 2026-08-20 from exact commit [`d5c15719`](https://github.com/redxking/ai-decision-firewall/commit/d5c1571930a29d78b31210c219465ecc4d1a793a) |
+| Public website | [Evidence-gated interactive synthetic demonstration](https://redxking.github.io/ai-decision-firewall/), deployed from the immutable `v0.4.0-alpha.2` release source; it is not an operational service |
 | Stage A production-development merge | [`db7d6e6d`](https://github.com/redxking/ai-decision-firewall/commit/db7d6e6d3bea59bc8579c1e198a236a541f65d86) |
 | Bound implementation / carrier | [`91a35145`](https://github.com/redxking/ai-decision-firewall/commit/91a351459610e045ae5de7b9380f8228c157006f) / [`a5046f38`](https://github.com/redxking/ai-decision-firewall/commit/a5046f38b229b5899baf399143b13c20c1101aae) |
 | Production gate | `BLOCKED`: 18 domains, 36 mandatory requirements all blocking, 36/36 owner acceptances `NOT_RECORDED` |
 | Included data and executed effects | Offline and synthetic only |
 | Model promotion | `NOT_AUTHORIZED` |
-| Main verification | [CI run 32381074320](https://github.com/redxking/ai-decision-firewall/actions/runs/32381074320) passed Python 3.11, Python 3.12, and the restricted container build at exact merge commit `db7d6e6d`; no tag, GitHub Release, deployment, or production approval was created |
+| Main verification | [CI run 32399958311](https://github.com/redxking/ai-decision-firewall/actions/runs/32399958311) passed Python 3.11, Python 3.12, and the restricted container build at exact merge commit [`8fa39dfa`](https://github.com/redxking/ai-decision-firewall/commit/8fa39dfadea270ad96d312b48bda8da403806ee8); production approval remains blocked |
 
 ## What the project does
 

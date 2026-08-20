@@ -1,12 +1,17 @@
 # Changelog
 
-## Unreleased — `0.4.0-alpha.2` Stage A production-development candidate
+## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 
-Exact implementation Commit
+The [public prerelease](https://github.com/redxking/ai-decision-firewall/releases/tag/v0.4.0-alpha.2)
+and [evidence-gated project website](https://redxking.github.io/ai-decision-firewall/)
+were published on 2026-08-20 from exact release-main Commit
+[`d5c1571930a29d78b31210c219465ecc4d1a793a`](https://github.com/redxking/ai-decision-firewall/commit/d5c1571930a29d78b31210c219465ecc4d1a793a).
+The release remains offline and synthetic and does not authorize production
+integration or live action.
+
+The earlier exact implementation Commit
 [`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4)
-was published to `main` on 2026-08-16. The version remains unreleased: no tag or
-GitHub Release was created, no deployment occurred, and no exact-SHA Pages run
-was observed. Exact evidence and limitations are recorded in
+was published to `main` on 2026-08-16. Exact evidence and limitations are recorded in
 [`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
 
 - Added a one-command, networkless Stage A developer preview that creates
