@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — Phase 4 controlled-action transaction seam
+
+- Added exact target-boot, ruleset-prestate, and management-reachability checks
+  before an executor can cross the effect boundary.
+- Added a default-off mutation port with closed result validation, durable exact
+  replay, explicit ambiguity handling, and a post-effect crash fence. Shipped
+  lab nodes do not enable or supply the port and continue to produce
+  `NO_EFFECT`; no kernel mutation is reachable.
+- Recorded the implementation-ready transaction architecture, failure states,
+  recovery rules, verification gates, and later distributed-fencing growth
+  path. Production and external target authority remain blocked.
+
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 
 The [public prerelease](https://github.com/redxking/ai-decision-firewall/releases/tag/v0.4.0-alpha.2)

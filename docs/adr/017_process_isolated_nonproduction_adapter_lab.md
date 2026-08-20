@@ -194,8 +194,11 @@ boundary. The namespace-local container lab is the smaller falsifiable step.
 3. [x] Implement executor and observer Unix-socket handlers behind an explicit
    opt-in lab flag.
 4. [x] Add the immutable-local-image internal-network container harness.
-5. [ ] Execute the adversarial and kill matrices.
-6. [ ] Seek independent security and target-owner review before any later
+5. [x] Add a default-off mutation port, exact precondition enforcement, and a
+   post-effect crash fence without wiring a kernel driver.
+6. [ ] Implement and verify the fixed namespace-local kernel driver, rollback,
+   reconciliation, and remaining adversarial and kill matrices.
+7. [ ] Seek independent security and target-owner review before any later
    environment or connector decision.
 
 The first two items are implemented in `contracts/v0.4.0/` and
@@ -258,3 +261,15 @@ replay remains recovery-required. Durable `NO_EFFECT` completion and a fresh
 replacement observer complete exact correlation without another effect.
 Pre-reservation, audit, terminal-result, and any future kernel-mutation
 boundaries remain open.
+
+The next transaction-boundary increment is implemented in
+`LabExecutorService`: exact target boot identity, ruleset prestate, and
+management reachability are now enforced before a mutation callable can run.
+The callable is accepted only with an explicit `effects_enabled=True` gate;
+all existing lab nodes omit both and remain `NO_EFFECT`. A completed effect is
+durably replayed without reinvocation, a raised effect error closes as an
+`AMBIGUOUS` receipt with unknown poststate, and loss at the new `AFTER_EFFECT`
+boundary leaves an open reservation that fences retry. This establishes the
+transaction seam and failure semantics, not the kernel mutation. The exact
+architecture and remaining acceptance gates are recorded in
+`docs/phase4/ACTION_TRANSACTION_ARCHITECTURE.md`.
