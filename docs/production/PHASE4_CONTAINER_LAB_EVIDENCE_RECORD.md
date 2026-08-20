@@ -64,3 +64,13 @@ container-runtime compromise, network-namespace mutation, post-effect crash
 recovery, rollback, distributed fencing, production transport, supply-chain
 provenance, image signing/scanning, external evidence custody, or operational
 effectiveness. ADR-017's adversarial and kill matrices remain open.
+
+## Subsequent process-kill evidence
+
+The next bounded test slice adds two real `SIGKILL` cases around the pre-effect
+executor journal. Post-reservation loss leaves exactly one durable reservation;
+an exact retry is fenced as recovery-required and performs zero target reads.
+Post-completion loss leaves one reservation and one durable `NO_EFFECT`
+completion; restart returns the exact stored receipt and performs zero target
+reads. These repository-controlled process tests do not extend this record's
+container, independence, production, or action claims.

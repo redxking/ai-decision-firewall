@@ -37,6 +37,8 @@ ZERO_DIGEST = "0" * 64
 JOURNAL_DOMAIN = b"ADF-LAB-EXECUTOR-JOURNAL\x00v1\x00"
 IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 JOURNAL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\.jsonl$")
+EXECUTOR_AFTER_RESERVATION = "AFTER_RESERVATION"
+EXECUTOR_AFTER_COMPLETION = "AFTER_COMPLETION"
 
 
 class LabServiceError(RuntimeError):
@@ -527,6 +529,7 @@ class LabExecutorService:
         key: bytes,
         read_state: Callable[[], LabObservedState],
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+        failure_hook: Callable[[str], None] | None = None,
         enabled: bool,
     ) -> None:
         if (
@@ -534,6 +537,7 @@ class LabExecutorService:
             or type(journal) is not ExecutorReplayJournal
             or not callable(read_state)
             or not callable(clock)
+            or (failure_hook is not None and not callable(failure_hook))
         ):
             raise LabServiceError(
                 "LAB_SERVICE_NOT_ENABLED",
@@ -544,6 +548,7 @@ class LabExecutorService:
         self.key = _validate_key(key, label="Executor key")
         self.read_state = read_state
         self.clock = clock
+        self.failure_hook = failure_hook
 
     def handle(self, raw: bytes) -> bytes:
         now, timestamp = _utc_seconds(self.clock)
@@ -595,6 +600,9 @@ class LabExecutorService:
                 )
             return replay.encode("utf-8")
 
+        if self.failure_hook is not None:
+            self.failure_hook(EXECUTOR_AFTER_RESERVATION)
+
         try:
             _validate_observed_state(self.read_state())
         except LabServiceError:
@@ -637,6 +645,8 @@ class LabExecutorService:
             receipt_json=receipt_json,
             recorded_at=timestamp,
         )
+        if self.failure_hook is not None:
+            self.failure_hook(EXECUTOR_AFTER_COMPLETION)
         return receipt_json.encode("utf-8")
 
 
