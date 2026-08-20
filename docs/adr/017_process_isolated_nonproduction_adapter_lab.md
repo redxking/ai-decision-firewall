@@ -238,3 +238,13 @@ mount each other's key volume. This is a local Docker image-ID binding, not
 registry provenance, signature, independent custody, or production evidence.
 The executor still has no mutation primitive; the adversarial and kill matrices
 remain action item 5.
+
+The first process-kill slice of item 5 is implemented in
+`tests/test_phase4_executor_kill_matrix.py`. A parent test controller delivers
+`SIGKILL` to the executor immediately after its durable reservation and
+immediately after its durable `NO_EFFECT` completion. The former leaves one
+open reservation and exact replay closes as `LAB_EXECUTOR_RECOVERY_REQUIRED`
+without rereading the target. The latter replays the exact stored receipt after
+restart without rereading the target. This covers only two pre-effect executor
+boundaries. Pre-reservation, observer, audit, terminal-result, container-level,
+and any future kernel-mutation boundaries remain open.

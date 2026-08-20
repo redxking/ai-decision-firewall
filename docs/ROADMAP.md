@@ -228,6 +228,13 @@ but the executor still contains no mutation primitive. See the
 [evidence record](production/PHASE4_CONTAINER_LAB_EVIDENCE_RECORD.md). This is
 not Stage 4 authorization.
 
+An initial real-process crash slice now kills the executor with `SIGKILL` after
+durable reservation and after durable `NO_EFFECT` completion. Exact restart
+oracles prove that the open reservation fences replay and the completed receipt
+replays without another target read. This is not the full ADR-017 kill matrix:
+container-level, observer, audit, terminal-result, and any future post-mutation
+boundaries remain open.
+
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative
 durable/audit lock, refuses active SQLite sidecars and invalid/incomplete state,
