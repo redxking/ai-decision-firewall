@@ -62,6 +62,11 @@ invariants:
   five-case `dm-error` or `dm-flakey error_writes` ext4 campaign. An unavailable
   requested kernel target is a failure, not a skip. The exact operator procedure is in
   `docs/operations/STAGE_A_BLOCK_DEVICE_FAULT_LAB_RUNBOOK.md`.
+- `.github/workflows/stage-a-storage-lab.yml` is a manual-only, exact-SHA,
+  read-token ephemeral Linux carrier for the pending flakey run. It validates
+  the ordinary candidate first, requires the kernel target, never publishes an
+  image, and retains bounded logs. Merely committing the workflow is not fault
+  evidence; only a successful exact run can change the observed-coverage row.
 - `tests/test_stage_a_receipt_recovery.py` remains the detailed oracle for
   recovery prefixes, writer fencing, corruption, lookup, and exact replay.
 - `tests/test_stage_a_bounded_load.py` runs a bounded concurrent intake/lookup
