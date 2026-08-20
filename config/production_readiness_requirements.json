@@ -435,8 +435,8 @@
       "accountable_owner": "RELEASE_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["pyproject.toml", ".github/workflows/ci.yml", "MANIFEST.sha256", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "There is no control-schema migrator. Preserve any v1 evidence and create a distinct reviewed v2 ledger. Exact implementation Commit 8818d5d2d40faebced66a254d58b1f0d04c9f8b4 passed its bound manifest, CI run 31953570779, and Dependency Graph run 31953572482. The separate ER-002 evidence carrier regenerates and verifies a manifest that covers the record; its exact carrier SHA is reported outside the necessarily non-self-referential record. SBOM, reproducible-build evidence, provenance, dependency lock, and signed artifacts remain absent.",
+      "evidence_artifacts": ["pyproject.toml", "requirements.lock", "requirements-docs.lock", "artifacts/supply-chain/runtime.cdx.json", "scripts/validate_supply_chain.py", "tests/test_supply_chain_artifacts.py", ".github/workflows/ci.yml", "MANIFEST.sha256", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md", "docs/production/SUPPLY_CHAIN.md"],
+      "remaining_gate": "The runtime and documentation graphs are exact-version and SHA-256 hash locked, the runtime CycloneDX 1.6 SBOM is closed against the runtime lock, and CI installs the runtime graph with --require-hashes. There is no control-schema migrator; preserve any v1 evidence and create a distinct reviewed v2 ledger. Reproducible cross-platform wheel-build evidence, signed provenance, vulnerability disposition, trusted builder custody, and signed release artifacts remain absent.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "A SHA-256 inventory is not an SBOM, signature, or reproducible-build proof."
     },
@@ -451,7 +451,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "NOT_IMPLEMENTED",
       "evidence_artifacts": [],
-      "remaining_gate": "No service container, IaC, deployment lock, KMS, SBOM, signature, or provenance attestation exists.",
+      "remaining_gate": "Full-commit Action pins, hash-locked Python graphs, and a runtime CycloneDX SBOM now exist as project-controlled source artifacts. No approved service container, IaC, deployment environment, managed KMS or secrets, signature, provenance attestation, vulnerability disposition, rotation evidence, or rollback test exists.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "Local raw key bytes are not managed secrets or production key custody."
     },
