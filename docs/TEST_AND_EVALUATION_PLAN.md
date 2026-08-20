@@ -185,8 +185,14 @@ Successor development adds a layered
 [Stage A storage-fault campaign](production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md).
 Its first executable layer covers `SIGKILL` at five transaction boundaries,
 ambiguous audit `fsync`, and persistent post-effect `ENOSPC`. This is
-deterministic repository-controlled fault injection, not real filesystem,
-block-device, CSI, host-power, or operational recovery evidence.
+repository-controlled fault injection. The successor layer adds external
+whole-container `SIGKILL` against persisted volumes and a separately gated
+privileged Linux lab that injects full-device `dm-error` below ext4 at the same
+five boundaries. The block-device oracle records raw image hashes and
+filesystem-repair transformations, then requires a valid correlated audit and
+store history, the exact receipt count, conservative recovery, and no duplicate
+effect. It is not torn-write, cache-loss, intended-CSI, host-power, hostile-
+writer, or operational recovery evidence.
 
 The repository-wide production gate remains `BLOCKED`. The exact current
 coverage and every unresolved degraded mode are recorded in

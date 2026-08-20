@@ -1,0 +1,15 @@
+ARG ADF_BASE_IMAGE=adf-stage-a-storage-base:invalid
+FROM ${ADF_BASE_IMAGE}
+
+# Destructive, disposable verification image only. This is not the production
+# runtime image and must never be published or deployed.
+USER 0:0
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends dmsetup=2:1.02.185-2 \
+    && test "$(dpkg-query -W -f='${Version}' dmsetup)" = "2:1.02.185-2" \
+    && test "$(dpkg-query -W -f='${Version}' e2fsprogs)" = "1.47.0-2+b2" \
+    && test "$(dpkg-query -W -f='${Version}' util-linux)" = "2.38.1-5+deb12u3" \
+    && rm -rf /var/lib/apt/lists/*
+
+HEALTHCHECK NONE
+ENTRYPOINT ["python", "-m", "unittest", "tests.container_stage_a_block_device_fault", "-v"]

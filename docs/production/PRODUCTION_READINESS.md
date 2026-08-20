@@ -175,7 +175,11 @@ storage-fault campaign: five uncatchable process-loss boundaries, deterministic
 complete-row audit-durability ambiguity, persistent `ENOSPC`, and a restricted
 container using an actually exhausted tmpfs. The last case produced a partial
 JSONL row, which is preserved and quarantined rather than truncated or treated
-as recoverable. Virtual-block-device, physical power-loss, intended-filesystem,
+as recoverable. The mutable successor additionally kills whole containers from
+an external Docker controller and injects `dm-error` beneath ext4 on isolated
+loopback files. The latter records raw pre/post-repair image hashes and validates
+the reconstructed application history; it does not treat `e2fsck` as evidence
+authenticity. Torn-write, lost-flush, physical-power, intended-filesystem/CSI,
 hostile-writer, capacity, independent-assessment, and operational campaigns
 remain separate release steps.
 
@@ -320,10 +324,10 @@ open gates:
 - mission, security, data, model, policy, operations, target-system, and
   authorizing-official acceptances are not recorded.
 
-The next safe engineering gate is virtual-block-device and destructive host
-power-loss testing at the uncovered claim, authorization, SQLite/WAL,
-directory-entry, recovery-prefix, response-loss, and flush boundaries, followed
-by an intended CSI/filesystem campaign. Receipt/result corruption, hostile
+The next safe engineering gate is `dm-flakey`, torn-write/lost-flush, and
+destructive host-power testing at the uncovered claim, authorization,
+individual SQLite/WAL, directory-entry, recovery-prefix, and response-loss
+boundaries, followed by an intended CSI/filesystem campaign. Receipt/result corruption, hostile
 writers, mixed backups, cross-store divergence, resource pressure, and soak
 remain open. Process isolation should follow the verified transaction contract.
 ER-002 must be

@@ -30,6 +30,18 @@ was observed. Exact evidence and limitations are recorded in
   includes both required Phase 3 schemas, and CI constructs the packaged policy
   and runs the bounded fault layer under non-root, network-disabled,
   read-only restrictions.
+- Extended the campaign through two additional system boundaries. A Docker
+  controller now terminates the whole non-root Stage A container from outside
+  at T1, observation, T2, audit closure, and T3, then verifies the persisted
+  volumes from a fresh container. A separate explicitly authorized privileged
+  lab derives from an inspected local image ID and switches an ext4 loopback
+  device to `dm-error` at the same five boundaries. Recovery preserved zero
+  receipts before effect, one receipt after effect, conservative nonterminal
+  disposition, and the durable T3 result without a duplicate effect. The lab
+  records raw pre/post-`e2fsck` image hashes and application-file changes;
+  filesystem repair is never treated as evidence authenticity. Physical power,
+  torn writes, lost flushes, intended CSI behavior, and operational acceptance
+  remain open.
 - Added exact-version, SHA-256 hash-locked runtime and documentation dependency
   graphs, a reproducible CycloneDX 1.6 runtime SBOM, closed lock/SBOM
   validation, and `--require-hashes` CI installation. A clean temporary runtime

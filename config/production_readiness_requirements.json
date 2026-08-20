@@ -2,8 +2,8 @@
   "schema_version": "adf-production-readiness-0.2.0",
   "as_of": "2026-08-20",
   "baseline_commit": "bb6b8f28afba0961bb97b24e6050fccaa94d5702",
-  "candidate_commit": "1060728e15eddd2ec1665c01056730ecf467d2d9",
-  "candidate_manifest_sha256": "692f70cd84c2785e57f2d41b31451810d1c8b850a69132826751ee5f49f790a0",
+  "candidate_commit": "8ee9cc8e9ece72056c119cc4dffe5457a57f5994",
+  "candidate_manifest_sha256": "d9de4a2fffa144f39df5008585a223dce4d138d0197669307df7922e86e359d7",
   "candidate_label": "PRODUCTION_DEVELOPMENT_CANDIDATE",
   "declared_status": "BLOCKED",
   "requirements": [
@@ -287,8 +287,8 @@
       "accountable_owner": "OPERATIONS_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/stage_a.py", "src/adf_poc/audit.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "tests/test_stage_a_sigkill_campaign.py", "tests/test_stage_a_storage_failure_campaign.py", "tests/container_stage_a_storage_fault.py", "tests/test_phase3_release_blockers.py", "docs/production/FAILURE_RECOVERY_MATRIX.md", "docs/production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "Repository-controlled coverage now includes SIGKILL after T1, post-effect observation, T2, audit closure, and T3; deterministic complete-row fsync ambiguity and ENOSPC; and one actual container-tmpfs partial-row ENOSPC disposition. Complete container-level termination, virtual-block-device and physical power-loss campaigns at the remaining claim, authorization, recovery-prefix, response-loss, SQLite/WAL, directory-entry, and flush boundaries, plus queue, network, key, expiry, observer-delay, rollback-failure, and hostile cross-store corruption campaigns.",
+      "evidence_artifacts": ["src/adf_poc/stage_a.py", "src/adf_poc/audit.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "tests/test_stage_a_sigkill_campaign.py", "tests/test_stage_a_storage_failure_campaign.py", "tests/container_stage_a_storage_fault.py", "tests/test_stage_a_container_external_kill.py", "tests/container_stage_a_external_kill.py", "tests/container_stage_a_block_device_fault.py", "scripts/run_stage_a_block_device_campaign.py", "tests/test_phase3_release_blockers.py", "docs/production/FAILURE_RECOVERY_MATRIX.md", "docs/production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md", "docs/operations/STAGE_A_BLOCK_DEVICE_FAULT_LAB_RUNBOOK.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "Repository-controlled coverage now includes process and external-container SIGKILL plus deterministic fsync/ENOSPC, actual tmpfs exhaustion, and a local ext4 loopback device switched to dm-error at T1, post-effect observation, T2, audit closure, and T3. Complete dm-flakey, torn-write/lost-flush, physical power-loss, claim, authorization, recovery-prefix, response-loss, individual SQLite/WAL, directory-entry, and intended-CSI campaigns, plus queue, network, key, expiry, observer-delay, rollback-failure, and hostile cross-store corruption campaigns.",
       "release_gate": "RECOVERY_ACCEPTANCE_GATE",
       "prohibited_inference": "Handled exceptions and explicit recovery do not prove power-loss safety."
     },
@@ -317,8 +317,8 @@
       "accountable_owner": "AUDIT_OWNER",
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
-      "evidence_artifacts": ["src/adf_poc/audit.py", "src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "tests/test_stage_a_sigkill_campaign.py", "tests/test_stage_a_storage_failure_campaign.py", "tests/container_stage_a_storage_fault.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md", "docs/production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md"],
-      "remaining_gate": "Complete short-write, partial-write, EIO, directory-sync, permission-transition, block-device, power-loss, and intended-filesystem campaigns; exercise hostile cross-store divergence; and add an authenticated exporter, sequence and recovery-point binding, retention, trusted time, readback, and external anchoring. Repository logic deliberately quarantines rather than repairs a partial audit row.",
+      "evidence_artifacts": ["src/adf_poc/audit.py", "src/adf_poc/stage_a.py", "tests/test_stage_a_durable_control_ledger.py", "tests/test_stage_a_receipt_recovery.py", "tests/test_stage_a_sigkill_campaign.py", "tests/test_stage_a_storage_failure_campaign.py", "tests/container_stage_a_storage_fault.py", "tests/test_stage_a_container_external_kill.py", "tests/container_stage_a_block_device_fault.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md", "docs/production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md", "docs/operations/STAGE_A_BLOCK_DEVICE_FAULT_LAB_RUNBOOK.md"],
+      "remaining_gate": "Complete short/partial/torn-write, lost-flush, directory-sync, permission-transition, dm-flakey, physical-power, intended-filesystem/CSI, and hostile cross-store campaigns; add an authenticated exporter, sequence and recovery-point binding, retention, trusted time, readback, and external anchoring. Filesystem repair can transform WAL/SHM and visible audit bytes, so raw pre-repair imaging and post-repair application correlation are both required; repository logic never truncates a partial audit row.",
       "release_gate": "AUDIT_CUSTODY_GATE",
       "prohibited_inference": "A self-custodied hash chain and local outbox are replaceable by a privileged writer."
     },
@@ -453,7 +453,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "UNIT_TESTED",
       "evidence_artifacts": ["Dockerfile", ".dockerignore", ".github/workflows/ci.yml", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "docs/adr/016_offline_stage_a_container_boundary.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "tests/test_container_deployment.py", "tests/test_workflow_supply_chain.py"],
-      "remaining_gate": "A digest-pinned non-root image, offline Kubernetes source baseline, projected-secret staging, and non-publishing CI build/smoke mechanism exist. Exact implementation candidate 1060728e15eddd2ec1665c01056730ecf467d2d9 packages both runtime schemas and adds a bounded non-root, no-network, read-only container storage-fault job; exact-candidate remote CI is not yet recorded. No approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
+      "remaining_gate": "Exact implementation candidate 8ee9cc8e9ece72056c119cc4dffe5457a57f5994 adds external-container kill to the non-publishing container job and a separately gated privileged lab derivative for local block-device testing; neither changes the production deployment boundary. Exact-candidate remote CI is not yet recorded. No approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "Local raw key bytes are not managed secrets or production key custody."
     },
@@ -498,7 +498,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
       "evidence_artifacts": ["tests/", "docs/TEST_AND_EVALUATION_PLAN.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md", "docs/production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md"],
-      "remaining_gate": "Exact implementation candidate 1060728e15eddd2ec1665c01056730ecf467d2d9 passed 439 warning-fatal local tests, a 69-test focused selection, the packaged policy/schema check, and four bounded fault cases in the restricted local image, including actual tmpfs ENOSPC. Its 344-entry manifest verified against all 345 tracked files except the manifest itself. Exact-candidate remote CI, resource, fuzz, soak, virtual-block-device, physical power-loss, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
+      "remaining_gate": "Exact implementation candidate 8ee9cc8e9ece72056c119cc4dffe5457a57f5994 passed 440 warning-fatal local tests with one privileged-lab skip, a 77-test focused selection with two destructive-campaign skips, all five externally killed container boundaries, and all five ext4/dm-error boundaries in the explicitly privileged local lab. Its 350-entry manifest verified against all 351 tracked files except the manifest itself. Exact-candidate remote CI, resource, fuzz, soak, dm-flakey, torn-write/lost-flush, physical power-loss, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
       "release_gate": "VERIFICATION_ACCEPTANCE_GATE",
       "prohibited_inference": "Green CI is implementation evidence, not operational effectiveness."
     },
@@ -528,7 +528,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "UNIT_TESTED",
       "evidence_artifacts": ["MANIFEST.sha256", "config/production_readiness_requirements.json", "scripts/validate_production_readiness.py", "tests/test_production_readiness_gate.py", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "docs/adr/016_offline_stage_a_container_boundary.md", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "tests/test_container_deployment.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 1060728e15eddd2ec1665c01056730ecf467d2d9 and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
+      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 8ee9cc8e9ece72056c119cc4dffe5457a57f5994 and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
       "release_gate": "RELEASE_LIFECYCLE_ACCEPTANCE_GATE",
       "prohibited_inference": "A local commit does not mean pushed, merged, tagged, released, or deployed, and source rollback is not operational rollback."
     },
