@@ -75,3 +75,39 @@ jobs:
           --profile P2-CE-004
       - name: Verify repository manifest
         run: python scripts/validate_manifest.py
+
+  container-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      ADF_IMAGE_TAG: adf-stage-a:${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify repository manifest before build
+        run: python3 scripts/validate_manifest.py
+      - name: Build the digest-pinned Stage A image without publishing
+        run: >-
+          docker build --pull
+          --build-arg ADF_IMAGE_CREATED=1970-01-01T00:00:00Z
+          --build-arg ADF_IMAGE_REVISION=${GITHUB_SHA}
+          --build-arg ADF_IMAGE_VERSION=0.4.0a2
+          --tag "${ADF_IMAGE_TAG}" .
+      - name: Verify immutable image configuration
+        run: |
+          test "$(docker image inspect --format '{{.Config.User}}' "${ADF_IMAGE_TAG}")" = "10001:10001"
+          test "$(docker image inspect --format '{{json .Config.Entrypoint}}' "${ADF_IMAGE_TAG}")" = '["python","/opt/adf/run_service.py"]'
+          test "$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "${ADF_IMAGE_TAG}")" = "${GITHUB_SHA}"
+      - name: Smoke-run the image with production restrictions
+        run: >-
+          docker run --rm
+          --network=none
+          --read-only
+          --tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m
+          --user 10001:10001
+          "${ADF_IMAGE_TAG}" --help

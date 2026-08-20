@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import io
+import hashlib
 import json
+import subprocess
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -13,6 +15,8 @@ from scripts.validate_production_readiness import (
     DOMAIN_NAMES,
     EXPECTED_REQUIREMENT_IDS,
     ReadinessValidationError,
+    SCHEMA_VERSION,
+    _validate_release_carrier,
     load_readiness_document,
     main,
     validate_readiness_document,
@@ -33,6 +37,26 @@ class ProductionReadinessGateTests(unittest.TestCase):
         with self.assertRaisesRegex(ReadinessValidationError, pattern):
             validate_readiness_document(document, repo_root=ROOT)
 
+    def current_candidate_document(self) -> dict:
+        candidate = deepcopy(self.document)
+        if candidate["schema_version"] == SCHEMA_VERSION:
+            return candidate
+        commit = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        manifest = subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{commit}:MANIFEST.sha256"],
+            check=True,
+            capture_output=True,
+        ).stdout
+        candidate["schema_version"] = SCHEMA_VERSION
+        candidate["candidate_commit"] = commit
+        candidate["candidate_manifest_sha256"] = hashlib.sha256(manifest).hexdigest()
+        return candidate
+
     def test_current_matrix_is_structurally_valid_and_derived_blocked(self) -> None:
         report = validate_readiness_file(MATRIX, repo_root=ROOT)
         self.assertEqual(report.derived_status, "BLOCKED")
@@ -47,12 +71,77 @@ class ProductionReadinessGateTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with redirect_stdout(stdout), redirect_stderr(stderr):
-            return_code = main(
-                ["--config", str(MATRIX), "--repo-root", str(ROOT)]
-            )
+            return_code = main(["--config", str(MATRIX), "--repo-root", str(ROOT)])
         self.assertEqual(return_code, 2)
         self.assertEqual(stderr.getvalue(), "")
         self.assertEqual(json.loads(stdout.getvalue())["derived_status"], "BLOCKED")
+
+    def test_current_schema_binds_exact_candidate_commit_and_manifest(self) -> None:
+        candidate = self.current_candidate_document()
+        report = validate_readiness_document(candidate, repo_root=ROOT)
+        self.assertTrue(report.candidate_manifest_verified)
+        self.assertEqual(report.candidate_commit, candidate["candidate_commit"])
+
+        wrong_digest = deepcopy(candidate)
+        wrong_digest["candidate_manifest_sha256"] = "0" * 64
+        self.assert_invalid(wrong_digest, "does not match its declared digest")
+
+        unknown_commit = deepcopy(candidate)
+        unknown_commit["candidate_commit"] = "0" * 40
+        self.assert_invalid(unknown_commit, "Git evidence is unavailable")
+
+    def test_release_carrier_allows_only_descriptor_and_manifest_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "config",
+                    "user.email",
+                    "test@example.invalid",
+                ],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "config", "user.name", "Test"],
+                check=True,
+            )
+            (root / "config").mkdir()
+            (root / "config/production_readiness_requirements.json").write_text(
+                "candidate\n", encoding="utf-8"
+            )
+            (root / "source.py").write_text("candidate\n", encoding="utf-8")
+            (root / "MANIFEST.sha256").write_text("candidate\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "-q", "-m", "candidate"],
+                check=True,
+            )
+            candidate_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (root / "config/production_readiness_requirements.json").write_text(
+                "carrier\n", encoding="utf-8"
+            )
+            (root / "MANIFEST.sha256").write_text("carrier\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "."], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "-q", "-m", "carrier"],
+                check=True,
+            )
+            _validate_release_carrier(root, candidate_commit)
+
+            (root / "source.py").write_text("dirty\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                ReadinessValidationError, "requires a clean Git worktree"
+            ):
+                _validate_release_carrier(root, candidate_commit)
 
     def test_relabeling_blocked_matrix_ready_is_rejected(self) -> None:
         mutation = deepcopy(self.document)
@@ -198,7 +287,9 @@ class ProductionReadinessGateTests(unittest.TestCase):
         placeholder["requirements"][0]["accountable_owner"] = "TBD"
         self.assert_invalid(placeholder, "not a valid accountable role identifier")
 
-    def test_only_controlled_evidence_and_owner_acceptance_states_are_allowed(self) -> None:
+    def test_only_controlled_evidence_and_owner_acceptance_states_are_allowed(
+        self,
+    ) -> None:
         mutation = deepcopy(self.document)
         mutation["requirements"][0]["current_state"] = "READY"
         self.assert_invalid(mutation, "current_state must be one of")
@@ -225,9 +316,7 @@ class ProductionReadinessGateTests(unittest.TestCase):
         )
 
         combined = deepcopy(self.document)
-        combined["requirements"][0][
-            "current_state"
-        ] = "PRODUCTION_AUTHORIZED_EFFECTIVE"
+        combined["requirements"][0]["current_state"] = "PRODUCTION_AUTHORIZED_EFFECTIVE"
         self.assert_invalid(combined, "current_state must be one of")
 
     def test_production_authorization_is_distinct_from_operational_effectiveness(
@@ -263,7 +352,9 @@ class ProductionReadinessGateTests(unittest.TestCase):
             mutations.append((artifact, mutation))
         for artifact, mutation in mutations:
             with self.subTest(artifact=artifact):
-                self.assert_invalid(mutation, "repository-relative path|does not resolve")
+                self.assert_invalid(
+                    mutation, "repository-relative path|does not resolve"
+                )
 
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             temporary_root = Path(directory)

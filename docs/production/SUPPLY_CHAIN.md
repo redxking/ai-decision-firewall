@@ -24,6 +24,15 @@ not retain repository credentials. Test execution treats warnings as failures.
 Pages write and OIDC permissions exist only on the deployment job; validation
 has read-only repository access.
 
+The CI source also defines a separate, non-publishing container job. It verifies
+the repository manifest before building the digest-pinned Dockerfile, binds the
+OCI revision label to the exact workflow SHA, inspects the configured non-root
+user and entry point, and smoke-runs the image with no network, a read-only root
+filesystem, a bounded temporary filesystem, and UID/GID `10001:10001`. The job
+has no registry login, push, signing, release, package, or deployment authority.
+This is a configured verification mechanism until an exact-candidate workflow
+run is observed and retained.
+
 Every external GitHub Action reference is pinned to a full 40-character commit
 identifier. The repository manifest validator obtains the tracked inventory
 from Git, requires exactly one sorted canonical entry for every tracked regular
@@ -74,7 +83,9 @@ hermetic or independently reproduced build, signed provenance, release
 signature, transparency-log entry, trusted builder, isolated build network,
 private package mirror, or independent verification is claimed. The Python/pip
 bootstrap and the package used to generate the SBOM remain outside the runtime
-lock.
+lock. The non-publishing CI container job is not a vulnerability scan, signed
+artifact, provenance attestation, reproducibility result, or evidence that the
+runner or upstream image is trustworthy.
 
 The production gate remains `BLOCKED`. These mechanisms do not supply
 release-owner acceptance, platform-owner acceptance, deployment authority,

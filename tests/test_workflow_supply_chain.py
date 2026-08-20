@@ -136,6 +136,32 @@ class WorkflowSupplyChainTests(unittest.TestCase):
             "Coverage-blind manifest checks remain in: " + ", ".join(prohibited),
         )
 
+    def test_container_job_builds_without_publishing_and_smokes_fail_closed(
+        self,
+    ) -> None:
+        workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
+        self.assertIn("container-build:", workflow)
+        self.assertIn("runs-on: ubuntu-24.04", workflow)
+        self.assertIn("docker build --pull", workflow)
+        self.assertIn("ADF_IMAGE_REVISION=${GITHUB_SHA}", workflow)
+        self.assertIn("python3 scripts/validate_manifest.py", workflow)
+        self.assertIn("docker image inspect", workflow)
+        self.assertIn("docker run --rm", workflow)
+        for restriction in (
+            "--network=none",
+            "--read-only",
+            "--tmpfs /tmp:rw,noexec,nosuid,nodev,size=16m",
+            "--user 10001:10001",
+        ):
+            self.assertIn(restriction, workflow)
+        for publishing_command in (
+            "docker push",
+            "build-push-action",
+            "login-action",
+            "cosign sign",
+        ):
+            self.assertNotIn(publishing_command, workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

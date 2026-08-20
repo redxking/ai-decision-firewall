@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import date
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 from typing import Any, NoReturn
 
@@ -13,9 +16,12 @@ from typing import Any, NoReturn
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REQUIREMENTS = ROOT / "config" / "production_readiness_requirements.json"
 MAX_DOCUMENT_BYTES = 1024 * 1024
+MAX_GIT_TREE_BYTES = 16 * 1024 * 1024
+MAX_GIT_BLOB_BYTES = 64 * 1024 * 1024
 
-SCHEMA_VERSION = "adf-production-readiness-0.1.0"
-TOP_LEVEL_FIELDS = frozenset(
+LEGACY_SCHEMA_VERSION = "adf-production-readiness-0.1.0"
+SCHEMA_VERSION = "adf-production-readiness-0.2.0"
+LEGACY_TOP_LEVEL_FIELDS = frozenset(
     {
         "schema_version",
         "as_of",
@@ -24,6 +30,9 @@ TOP_LEVEL_FIELDS = frozenset(
         "declared_status",
         "requirements",
     }
+)
+TOP_LEVEL_FIELDS = LEGACY_TOP_LEVEL_FIELDS | frozenset(
+    {"candidate_commit", "candidate_manifest_sha256"}
 )
 ROW_FIELDS = frozenset(
     {
@@ -99,7 +108,12 @@ NO_REMAINING_GATE = "NONE"
 
 REQUIREMENT_ID_RE = re.compile(r"^PR-(0[1-9]|1[0-8])-[0-9]{3}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+MANIFEST_LINE_RE = re.compile(r"^([0-9a-f]{64})  (.+)$")
 CONTROL_ID_RE = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
+RELEASE_CARRIER_PATHS = frozenset(
+    {"MANIFEST.sha256", "config/production_readiness_requirements.json"}
+)
 
 
 class ReadinessValidationError(ValueError):
@@ -112,6 +126,8 @@ class ReadinessReport:
     domain_count: int
     requirement_count: int
     blocking_requirement_ids: tuple[str, ...]
+    candidate_commit: str | None = None
+    candidate_manifest_verified: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -120,6 +136,8 @@ class ReadinessReport:
             "domain_count": self.domain_count,
             "requirement_count": self.requirement_count,
             "blocking_requirement_ids": list(self.blocking_requirement_ids),
+            "candidate_commit": self.candidate_commit,
+            "candidate_manifest_verified": self.candidate_manifest_verified,
         }
 
 
@@ -201,7 +219,9 @@ def _validate_artifact_path(raw_path: Any, repo_root: Path, label: str) -> str:
     if "\\" in value:
         _raise(f"{label} must use repository-relative POSIX separators")
     relative = PurePosixPath(value)
-    if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
+    if relative.is_absolute() or any(
+        part in {"", ".", ".."} for part in relative.parts
+    ):
         _raise(f"{label} must be a canonical repository-relative path")
 
     candidate = repo_root.joinpath(*relative.parts)
@@ -218,6 +238,181 @@ def _validate_artifact_path(raw_path: Any, repo_root: Path, label: str) -> str:
             f"{label} does not resolve to an existing repository path: {value}"
         ) from exc
     return value
+
+
+def _canonical_manifest_path(value: str, label: str) -> str:
+    if (
+        not value
+        or value != value.strip()
+        or "\\" in value
+        or "\x00" in value
+        or "\n" in value
+        or "\r" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        _raise(f"{label} is not a canonical repository-relative POSIX path")
+    candidate = PurePosixPath(value)
+    if (
+        candidate.is_absolute()
+        or candidate.as_posix() != value
+        or any(part in {"", ".", ".."} for part in candidate.parts)
+    ):
+        _raise(f"{label} is not a canonical repository-relative POSIX path")
+    return value
+
+
+def _git_output(repo_root: Path, arguments: list[str], *, maximum: int) -> bytes:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(repo_root), *arguments],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError as exc:
+        raise ReadinessValidationError(
+            "candidate Git evidence could not be read"
+        ) from exc
+    if result.returncode != 0:
+        _raise("candidate Git evidence is unavailable or invalid")
+    if len(result.stdout) > maximum:
+        _raise("candidate Git evidence exceeds its validation bound")
+    return result.stdout
+
+
+@lru_cache(maxsize=8)
+def _validate_candidate_snapshot_cached(
+    repo_root_text: str, candidate_commit: str, expected_manifest_sha256: str
+) -> int:
+    repo_root = Path(repo_root_text)
+    object_type = (
+        _git_output(repo_root, ["cat-file", "-t", candidate_commit], maximum=64)
+        .decode("ascii", errors="strict")
+        .strip()
+    )
+    if object_type != "commit":
+        _raise("document.candidate_commit does not identify a Git commit")
+
+    manifest_bytes = _git_output(
+        repo_root,
+        ["show", f"{candidate_commit}:MANIFEST.sha256"],
+        maximum=MAX_DOCUMENT_BYTES,
+    )
+    if hashlib.sha256(manifest_bytes).hexdigest() != expected_manifest_sha256:
+        _raise("candidate MANIFEST.sha256 does not match its declared digest")
+    try:
+        manifest_text = manifest_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ReadinessValidationError(
+            "candidate MANIFEST.sha256 is not UTF-8"
+        ) from exc
+    if not manifest_text or not manifest_text.endswith("\n"):
+        _raise("candidate MANIFEST.sha256 must be nonempty and newline terminated")
+
+    manifest_entries: dict[str, str] = {}
+    ordered_manifest_paths: list[str] = []
+    for line_number, line in enumerate(manifest_text.splitlines(), 1):
+        match = MANIFEST_LINE_RE.fullmatch(line)
+        if match is None:
+            _raise(
+                f"candidate manifest line {line_number} is not an exact SHA-256 entry"
+            )
+        digest, raw_path = match.groups()
+        path = _canonical_manifest_path(
+            raw_path, f"candidate manifest line {line_number} path"
+        )
+        if path == "MANIFEST.sha256":
+            _raise("candidate manifest must not recursively inventory itself")
+        if path in manifest_entries:
+            _raise(f"candidate manifest repeats path {path}")
+        manifest_entries[path] = digest
+        ordered_manifest_paths.append(path)
+    if ordered_manifest_paths != sorted(ordered_manifest_paths):
+        _raise("candidate manifest entries are not sorted")
+
+    tree_bytes = _git_output(
+        repo_root,
+        ["ls-tree", "-r", "-z", "--full-tree", candidate_commit],
+        maximum=MAX_GIT_TREE_BYTES,
+    )
+    tree_entries: dict[str, str] = {}
+    for raw_entry in tree_bytes.split(b"\x00"):
+        if not raw_entry:
+            continue
+        try:
+            metadata, raw_path = raw_entry.split(b"\t", 1)
+            mode, object_kind, object_id = metadata.decode("ascii").split(" ")
+            path = _canonical_manifest_path(
+                raw_path.decode("utf-8"), "candidate Git tree path"
+            )
+        except (UnicodeDecodeError, ValueError) as exc:
+            raise ReadinessValidationError(
+                "candidate Git tree contains a malformed entry"
+            ) from exc
+        if object_kind != "blob" or mode not in {"100644", "100755"}:
+            _raise("candidate Git tree contains a non-regular tracked entry")
+        if path in tree_entries:
+            _raise("candidate Git tree contains a duplicate path")
+        tree_entries[path] = object_id
+
+    if "MANIFEST.sha256" not in tree_entries:
+        _raise("candidate Git tree does not contain MANIFEST.sha256")
+    expected_paths = set(tree_entries) - {"MANIFEST.sha256"}
+    if set(manifest_entries) != expected_paths:
+        _raise("candidate manifest coverage differs from the candidate Git tree")
+
+    for path in ordered_manifest_paths:
+        blob = _git_output(
+            repo_root,
+            ["cat-file", "blob", tree_entries[path]],
+            maximum=MAX_GIT_BLOB_BYTES,
+        )
+        if hashlib.sha256(blob).hexdigest() != manifest_entries[path]:
+            _raise(f"candidate manifest digest mismatch: {path}")
+    return len(manifest_entries)
+
+
+def _validate_candidate_snapshot(
+    repo_root: Path, candidate_commit: str, expected_manifest_sha256: str
+) -> int:
+    return _validate_candidate_snapshot_cached(
+        str(repo_root.resolve(strict=True)),
+        candidate_commit,
+        expected_manifest_sha256,
+    )
+
+
+def _validate_release_carrier(repo_root: Path, candidate_commit: str) -> None:
+    status = _git_output(
+        repo_root,
+        ["status", "--porcelain=v1", "--untracked-files=all"],
+        maximum=MAX_GIT_TREE_BYTES,
+    )
+    if status:
+        _raise("release-mode validation requires a clean Git worktree")
+    _git_output(
+        repo_root,
+        ["merge-base", "--is-ancestor", candidate_commit, "HEAD"],
+        maximum=64,
+    )
+    changed = _git_output(
+        repo_root,
+        ["diff", "--name-only", "-z", f"{candidate_commit}..HEAD"],
+        maximum=MAX_GIT_TREE_BYTES,
+    )
+    try:
+        changed_paths = {
+            _canonical_manifest_path(raw.decode("utf-8"), "release carrier path")
+            for raw in changed.split(b"\x00")
+            if raw
+        }
+    except UnicodeDecodeError as exc:
+        raise ReadinessValidationError("release carrier paths must be UTF-8") from exc
+    if not changed_paths or not changed_paths <= RELEASE_CARRIER_PATHS:
+        _raise(
+            "release carrier may differ from its candidate only in the readiness "
+            "descriptor and repository manifest"
+        )
 
 
 def _validate_row(row: Any, index: int, repo_root: Path) -> dict[str, Any]:
@@ -242,9 +437,7 @@ def _validate_row(row: Any, index: int, repo_root: Path) -> dict[str, Any]:
         )
     domain = _require_nonempty_string(row["domain"], f"{label}.domain")
     if domain != DOMAIN_NAMES[domain_id]:
-        _raise(
-            f"{label}.domain must equal the controlled name for domain {domain_id}"
-        )
+        _raise(f"{label}.domain must equal the controlled name for domain {domain_id}")
 
     for field in (
         "requirement",
@@ -331,10 +524,18 @@ def validate_readiness_document(
 
     if not isinstance(document, dict):
         _raise("readiness document root must be an object")
-    _require_exact_fields(document, TOP_LEVEL_FIELDS, "document")
-
-    if document["schema_version"] != SCHEMA_VERSION:
-        _raise(f"document.schema_version must equal {SCHEMA_VERSION}")
+    schema_version = _require_nonempty_string(
+        document.get("schema_version"), "document.schema_version"
+    )
+    if schema_version == LEGACY_SCHEMA_VERSION:
+        _require_exact_fields(document, LEGACY_TOP_LEVEL_FIELDS, "document")
+    elif schema_version == SCHEMA_VERSION:
+        _require_exact_fields(document, TOP_LEVEL_FIELDS, "document")
+    else:
+        _raise(
+            "document.schema_version must equal one of "
+            f"{[LEGACY_SCHEMA_VERSION, SCHEMA_VERSION]}"
+        )
     as_of = _require_nonempty_string(document["as_of"], "document.as_of")
     try:
         parsed_date = date.fromisoformat(as_of)
@@ -348,6 +549,25 @@ def validate_readiness_document(
     )
     if COMMIT_RE.fullmatch(baseline_commit) is None:
         _raise("document.baseline_commit must be a 40-character lowercase Git SHA")
+
+    candidate_commit: str | None = None
+    candidate_manifest_verified = False
+    if schema_version == SCHEMA_VERSION:
+        candidate_commit = _require_nonempty_string(
+            document["candidate_commit"], "document.candidate_commit"
+        )
+        if COMMIT_RE.fullmatch(candidate_commit) is None:
+            _raise("document.candidate_commit must be a 40-character lowercase Git SHA")
+        candidate_manifest_sha256 = _require_nonempty_string(
+            document["candidate_manifest_sha256"],
+            "document.candidate_manifest_sha256",
+        )
+        if SHA256_RE.fullmatch(candidate_manifest_sha256) is None:
+            _raise("document.candidate_manifest_sha256 must be a lowercase SHA-256")
+        _validate_candidate_snapshot(
+            repo_root, candidate_commit, candidate_manifest_sha256
+        )
+        candidate_manifest_verified = True
 
     candidate_label = _require_nonempty_string(
         document["candidate_label"], "document.candidate_label"
@@ -437,6 +657,8 @@ def validate_readiness_document(
         domain_count=len(domain_ids),
         requirement_count=len(rows),
         blocking_requirement_ids=blocking_ids,
+        candidate_commit=candidate_commit,
+        candidate_manifest_verified=candidate_manifest_verified,
     )
 
 
@@ -458,10 +680,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--config", type=Path, default=DEFAULT_REQUIREMENTS)
     parser.add_argument("--repo-root", type=Path, default=ROOT)
+    parser.add_argument(
+        "--release-mode",
+        action="store_true",
+        help=(
+            "require a clean metadata-only carrier whose candidate commit and "
+            "candidate manifest verify exactly"
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
         report = validate_readiness_file(args.config, repo_root=args.repo_root)
+        if args.release_mode:
+            if report.candidate_commit is None:
+                _raise("release-mode validation requires the current readiness schema")
+            _validate_release_carrier(
+                args.repo_root.resolve(strict=True), report.candidate_commit
+            )
     except (ReadinessValidationError, FileNotFoundError) as exc:
         print(
             json.dumps(

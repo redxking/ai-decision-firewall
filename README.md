@@ -149,6 +149,20 @@ python3 scripts/validate_production_readiness.py \
   --repo-root .
 ```
 
+Once a separate schema `0.2.0` metadata carrier names an immutable candidate
+commit and that candidate's verified manifest digest, validate the clean carrier
+with the stricter ceremony check:
+
+```bash
+python3 scripts/validate_production_readiness.py --release-mode \
+  --config config/production_readiness_requirements.json \
+  --repo-root .
+```
+
+Release mode permits the carrier to differ from the named candidate only in the
+readiness descriptor and regenerated repository manifest. It still returns
+status `2` while mandatory external or owner gates remain blocked.
+
 The readiness command intentionally exits with status `2` while the derived
 state is `BLOCKED`. Stage A now includes an explicit-create, existing-state-only
 loopback reference service and an offline Kubernetes source baseline. Neither is
