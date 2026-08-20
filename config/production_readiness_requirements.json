@@ -2,8 +2,8 @@
   "schema_version": "adf-production-readiness-0.2.0",
   "as_of": "2026-08-20",
   "baseline_commit": "bb6b8f28afba0961bb97b24e6050fccaa94d5702",
-  "candidate_commit": "1060728e15eddd2ec1665c01056730ecf467d2d9",
-  "candidate_manifest_sha256": "692f70cd84c2785e57f2d41b31451810d1c8b850a69132826751ee5f49f790a0",
+  "candidate_commit": "8ee9cc8e9ece72056c119cc4dffe5457a57f5994",
+  "candidate_manifest_sha256": "d9de4a2fffa144f39df5008585a223dce4d138d0197669307df7922e86e359d7",
   "candidate_label": "PRODUCTION_DEVELOPMENT_CANDIDATE",
   "declared_status": "BLOCKED",
   "requirements": [
@@ -453,7 +453,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "UNIT_TESTED",
       "evidence_artifacts": ["Dockerfile", ".dockerignore", ".github/workflows/ci.yml", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "docs/adr/016_offline_stage_a_container_boundary.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "tests/test_container_deployment.py", "tests/test_workflow_supply_chain.py"],
-      "remaining_gate": "Exact implementation candidate 1060728e15eddd2ec1665c01056730ecf467d2d9 and evidence carrier 2f896fe577e0a7cf80cef8b0ec882a3e2b76a575 merged as main Commit acef7d405f1a1c259567d0c49f5b4add81127476; exact-main CI run 32389326640 passed Python 3.11, Python 3.12, and the restricted image fault layer. The mutable successor adds external-container kill and a separate privileged lab derivative; neither changes the production deployment boundary. No approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
+      "remaining_gate": "Exact implementation candidate 8ee9cc8e9ece72056c119cc4dffe5457a57f5994 adds external-container kill to the non-publishing container job and a separately gated privileged lab derivative for local block-device testing; neither changes the production deployment boundary. Exact-candidate remote CI is not yet recorded. No approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "Local raw key bytes are not managed secrets or production key custody."
     },
@@ -498,7 +498,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
       "evidence_artifacts": ["tests/", "docs/TEST_AND_EVALUATION_PLAN.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md", "docs/production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md"],
-      "remaining_gate": "Exact implementation candidate 1060728e15eddd2ec1665c01056730ecf467d2d9 passed 439 warning-fatal local tests and its 344-entry manifest verified against all 345 tracked files except the manifest itself. PR and exact-main CI passed Python 3.11, Python 3.12, and the restricted image fault layer in runs 32389043673 and 32389326640. The mutable successor passed five external-container kill boundaries and five ext4/dm-error boundaries locally, but has no exact-candidate or remote evidence. Resource, fuzz, soak, dm-flakey, torn-write/lost-flush, physical power-loss, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
+      "remaining_gate": "Exact implementation candidate 8ee9cc8e9ece72056c119cc4dffe5457a57f5994 passed 440 warning-fatal local tests with one privileged-lab skip, a 77-test focused selection with two destructive-campaign skips, all five externally killed container boundaries, and all five ext4/dm-error boundaries in the explicitly privileged local lab. Its 350-entry manifest verified against all 351 tracked files except the manifest itself. Exact-candidate remote CI, resource, fuzz, soak, dm-flakey, torn-write/lost-flush, physical power-loss, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
       "release_gate": "VERIFICATION_ACCEPTANCE_GATE",
       "prohibited_inference": "Green CI is implementation evidence, not operational effectiveness."
     },
@@ -528,7 +528,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "UNIT_TESTED",
       "evidence_artifacts": ["MANIFEST.sha256", "config/production_readiness_requirements.json", "scripts/validate_production_readiness.py", "tests/test_production_readiness_gate.py", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "docs/adr/016_offline_stage_a_container_boundary.md", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "tests/test_container_deployment.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 1060728e15eddd2ec1665c01056730ecf467d2d9 and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
+      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 8ee9cc8e9ece72056c119cc4dffe5457a57f5994 and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
       "release_gate": "RELEASE_LIFECYCLE_ACCEPTANCE_GATE",
       "prohibited_inference": "A local commit does not mean pushed, merged, tagged, released, or deployed, and source rollback is not operational rollback."
     },
