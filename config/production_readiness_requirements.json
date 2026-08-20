@@ -1,7 +1,9 @@
 {
-  "schema_version": "adf-production-readiness-0.1.0",
-  "as_of": "2026-08-16",
+  "schema_version": "adf-production-readiness-0.2.0",
+  "as_of": "2026-08-20",
   "baseline_commit": "bb6b8f28afba0961bb97b24e6050fccaa94d5702",
+  "candidate_commit": "4764650cafa5a34f9b3f018f8a7c91ce3236dffc",
+  "candidate_manifest_sha256": "54cb93fbf48f2ce4d2842109bfcf5d35a322685124106a2fcde57ea97e2f5791",
   "candidate_label": "PRODUCTION_DEVELOPMENT_CANDIDATE",
   "declared_status": "BLOCKED",
   "requirements": [
@@ -449,9 +451,9 @@
       "acceptance_criteria": "The intended environment deploys immutable artifacts through reviewed IaC with managed secrets and keys, locked dependencies, SBOM, signed provenance, rotation, and rollback tests.",
       "accountable_owner": "PLATFORM_AND_SUPPLY_CHAIN_OWNERS",
       "owner_acceptance": "NOT_RECORDED",
-      "current_state": "NOT_IMPLEMENTED",
-      "evidence_artifacts": [],
-      "remaining_gate": "Full-commit Action pins, hash-locked Python graphs, and a runtime CycloneDX SBOM now exist as project-controlled source artifacts. No approved service container, IaC, deployment environment, managed KMS or secrets, signature, provenance attestation, vulnerability disposition, rotation evidence, or rollback test exists.",
+      "current_state": "UNIT_TESTED",
+      "evidence_artifacts": ["Dockerfile", ".dockerignore", ".github/workflows/ci.yml", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "docs/adr/016_offline_stage_a_container_boundary.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "tests/test_container_deployment.py", "tests/test_workflow_supply_chain.py"],
+      "remaining_gate": "A digest-pinned non-root image, offline Kubernetes source baseline, projected-secret staging, and non-publishing CI build/smoke mechanism now exist and are statically tested. No exact-candidate container workflow run has yet been observed, and no approved environment, managed KMS, image registry, vulnerability disposition, signed SBOM or artifact, provenance attestation, rotation exercise, CSI/CNI/admission validation, or operational rollback evidence exists.",
       "release_gate": "SUPPLY_CHAIN_GATE",
       "prohibited_inference": "Local raw key bytes are not managed secrets or production key custody."
     },
@@ -496,7 +498,7 @@
       "owner_acceptance": "NOT_RECORDED",
       "current_state": "INTEGRATION_TESTED",
       "evidence_artifacts": ["tests/", "docs/TEST_AND_EVALUATION_PLAN.md", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "Exact implementation Commit 8818d5d2d40faebced66a254d58b1f0d04c9f8b4 passed the recorded focused and complete local suites and CI run 31953570779 succeeded for the exact SHA on Python 3.11 and 3.12. Resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
+      "remaining_gate": "Exact implementation candidate 4764650cafa5a34f9b3f018f8a7c91ce3236dffc passed 425 warning-fatal local tests and its 337-entry manifest verified against all 338 tracked files except the manifest itself. Its newly configured non-publishing container job has not yet run on remote CI. Resource, fuzz, soak, real power-loss, storage-failure, hostile-writer, cross-store-divergence, independent evaluation, and operational acceptance remain open.",
       "release_gate": "VERIFICATION_ACCEPTANCE_GATE",
       "prohibited_inference": "Green CI is implementation evidence, not operational effectiveness."
     },
@@ -524,9 +526,9 @@
       "acceptance_criteria": "An exact commit passes focused and full verification with manifest and evidence binding, and the intended environment demonstrates canary deployment, schema upgrade, artifact rollback, policy and model compatibility, patching, and immediate disable.",
       "accountable_owner": "RELEASE_AND_OPERATIONS_OWNERS",
       "owner_acceptance": "NOT_RECORDED",
-      "current_state": "NOT_IMPLEMENTED",
-      "evidence_artifacts": ["MANIFEST.sha256", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
-      "remaining_gate": "Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Preserve the separately regenerated ER-002 carrier manifest and report that carrier SHA outside its necessarily non-self-referential contents. Demonstrate approved deployment, upgrade, rollback, patch, compatibility, backup/restore, and withdrawal lifecycles.",
+      "current_state": "UNIT_TESTED",
+      "evidence_artifacts": ["MANIFEST.sha256", "config/production_readiness_requirements.json", "scripts/validate_production_readiness.py", "tests/test_production_readiness_gate.py", "docs/production/PRODUCTION_READINESS.md", "docs/operations/STAGE_A_DURABLE_LEDGER_RUNBOOK.md", "docs/operations/STAGE_A_KUBERNETES_RUNBOOK.md", "docs/adr/016_offline_stage_a_container_boundary.md", "deploy/kubernetes/base/kustomization.yaml", "deploy/kubernetes/bootstrap/kustomization.yaml", "tests/test_container_deployment.py", "docs/production/STAGE_A_RECEIPT_RESULT_TRACEABILITY.csv", "docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md"],
+      "remaining_gate": "The schema-0.2 readiness descriptor binds exact implementation candidate 4764650cafa5a34f9b3f018f8a7c91ce3236dffc and its verified manifest, and release mode permits only a metadata-only descriptor/manifest carrier. Preserve schema-v1 control files and initialize a distinct reviewed schema-v2 ledger because no migrator exists. Demonstrate approved deployment, upgrade, artifact and state rollback, patch, compatibility, backup/restore, emergency withdrawal, and decommission lifecycles in the intended environment.",
       "release_gate": "RELEASE_LIFECYCLE_ACCEPTANCE_GATE",
       "prohibited_inference": "A local commit does not mean pushed, merged, tagged, released, or deployed, and source rollback is not operational rollback."
     },
