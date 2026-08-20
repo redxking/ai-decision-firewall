@@ -210,9 +210,12 @@ remain open.
 The second bounded increment is a layered storage-fault campaign. Its initial
 repository-controlled cases use uncatchable process loss at T1, observation,
 T2, audit closure, and T3, plus deterministic audit `fsync` ambiguity and
-post-effect `ENOSPC`. They require zero duplicate effect and explicit recovery,
-but do not stand in for filesystem, block-device, container, CSI, or physical
-power-loss testing. See the
+post-effect `ENOSPC`. The next layer now kills whole containers externally at
+the same five boundaries and uses an isolated ext4 loopback device switched to
+`dm-error`, with raw pre/post-repair image hashes and exact application-level
+restart oracles. These cases require zero duplicate effect and explicit
+recovery. They do not stand in for torn writes, lost flushes, an intended CSI
+implementation, hostile storage, or physical power loss. See the
 [storage-fault campaign](production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md).
 
 ## Phase 3.1B — Approved read-only evidence realism

@@ -144,3 +144,12 @@ jobs:
           tests.test_stage_a_storage_failure_campaign
           tests.container_stage_a_storage_fault
           -q
+      - name: Run external container-kill campaign
+        run: >-
+          ADF_CONTAINER_EXTERNAL_KILL_CAMPAIGN=1
+          PYTHONWARNINGS=error
+          PYTHONDONTWRITEBYTECODE=1
+          PYTHONPATH=src:.
+          python3 -m unittest
+          tests.test_stage_a_container_external_kill
+          -q

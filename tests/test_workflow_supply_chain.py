@@ -153,6 +153,9 @@ class WorkflowSupplyChainTests(unittest.TestCase):
         self.assertIn("tests.test_stage_a_storage_failure_campaign", workflow)
         self.assertIn("tests.container_stage_a_storage_fault", workflow)
         self.assertIn("ADF_CONTAINER_STORAGE_CAMPAIGN=1", workflow)
+        self.assertIn("Run external container-kill campaign", workflow)
+        self.assertIn("tests.test_stage_a_container_external_kill", workflow)
+        self.assertIn("ADF_CONTAINER_EXTERNAL_KILL_CAMPAIGN=1", workflow)
         self.assertIn(
             "--tmpfs /audit-volume:rw,noexec,nosuid,nodev,size=1m,"
             "uid=10001,gid=10001,mode=0700",

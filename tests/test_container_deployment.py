@@ -104,6 +104,22 @@ class ContainerBuildTests(unittest.TestCase):
         self.assertIn('"--require-existing"', dockerfile)
         self.assertNotRegex(dockerfile, r"(?m)^EXPOSE\s")
 
+    def test_privileged_storage_lab_is_separate_and_explicitly_gated(self) -> None:
+        lab = _read(ROOT / "tests" / "Dockerfile.stage-a-storage-lab")
+        runner = _read(ROOT / "scripts" / "run_stage_a_block_device_campaign.py")
+        self.assertIn("ARG ADF_BASE_IMAGE", lab)
+        self.assertIn("dmsetup=2:1.02.185-2", lab)
+        self.assertIn("e2fsprogs", lab)
+        self.assertIn("util-linux", lab)
+        self.assertNotIn("COPY ", lab)
+        self.assertIn("--allow-privileged-lab", runner)
+        self.assertIn('"--privileged"', runner)
+        self.assertIn('"--network=none"', runner)
+        self.assertIn("ADF_CONTAINER_BLOCK_DEVICE_CAMPAIGN=1", runner)
+        self.assertIn("/lab:rw,nosuid,nodev,size=256m", runner)
+        self.assertNotIn("/dev/sd", runner)
+        self.assertNotIn("/dev/nvme", runner)
+
     def test_build_context_is_allowlisted(self) -> None:
         ordered_rows = [
             row.strip()
