@@ -39,6 +39,13 @@
 - Corrected the manual storage-lab workflow so runner-scoped temporary storage
   is resolved inside a step, where GitHub permits that context, and added a
   regression excluding runner expressions from the job-level definition.
+- Extended the block-device failure oracle to recognize SQLite's bounded
+  `unable to open database file` result after an injected flakey write error;
+  the outer control-ledger error remains fail-closed and recovery still must
+  prove exact receipt count, correlated history, and no second effect.
+- Advanced the evidence upload action to immutable v7.0.1 after the hosted run
+  reported the v4 Node 20 runtime deprecation; the new official action uses
+  Node 24 and retains the same bounded artifact inputs.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 

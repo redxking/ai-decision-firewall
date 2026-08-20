@@ -133,6 +133,7 @@ class ContainerBuildTests(unittest.TestCase):
         self.assertIn("ADF_BLOCK_DEVICE_FAULT_MODE", runner)
         self.assertIn('if "flakey" not in available:', campaign)
         self.assertIn("device-mapper flakey target", campaign)
+        self.assertIn("unable to open database file", campaign)
         self.assertIn("/lab:rw,nosuid,nodev,size=256m", runner)
         self.assertNotIn("/dev/sd", runner)
         self.assertNotIn("/dev/nvme", runner)

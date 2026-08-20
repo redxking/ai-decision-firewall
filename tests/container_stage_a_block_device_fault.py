@@ -329,6 +329,7 @@ class StageABlockDeviceFaultTests(unittest.TestCase):
                         in {
                             "attempt to write a readonly database",
                             "disk I/O error",
+                            "unable to open database file",
                         }
                     )
                     for error in chain
