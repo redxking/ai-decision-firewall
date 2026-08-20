@@ -204,15 +204,22 @@ opt-in Linux container lab that keeps the firewall unprivileged and networkless,
 places `CAP_NET_ADMIN` only in a disposable target namespace, separates command
 and observation processes and keys, and exposes neither a container-runtime
 socket nor an external route. Its first contract-only increment is now
-implemented: three closed v0.4.0 schemas plus duplicate-safe, bounded,
+implemented: four closed v0.4.0 schemas plus duplicate-safe, bounded,
 offset-aware validators; domain-separated canonical HMAC bindings; exact
 command/receipt/observation correlation; and executor/observer key-separation
 checks. A subsequent transport-only increment adds explicit opt-in Linux
 `SOCK_SEQPACKET` framing, exact `SO_PEERCRED` UID checks, owner-private socket
 paths, inode revalidation, bounded deadlines, and one-packet request/response
-limits. Contract-specific executor/observer handlers, durable replay state,
-target mutation, independent probes, and the container harness remain
-unimplemented. This is not Stage 4 authorization.
+limits. The next increment adds explicitly enabled contract-specific executor
+and observer handlers. The executor writes a durable reservation before any
+target read, returns the identical stored receipt for an exact completed
+duplicate, rejects conflicting idempotency reuse, and fences unfinished
+reservations for reconciliation. The observer accepts only its separately
+authenticated read request and performs a fresh code-owned read. The executor
+is deliberately pre-effect and returns `NO_EFFECT`; kernel target mutation,
+independent network probes, executable recovery, continuous service launchers,
+and the container harness remain unimplemented. This is not Stage 4
+authorization.
 
 The first bounded increment in that gate is a fail-closed cold backup/restore
 mechanism for the correlated three-artifact state. It uses the cooperative

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from adf_poc.lab_contracts import (
     COMMAND,
     OBSERVATION,
+    OBSERVATION_REQUEST,
     RECEIPT,
     LabContractError,
     lab_message_sha256,
@@ -142,6 +143,47 @@ def _observation(command: dict, receipt: dict) -> dict:
 
 
 class IsolatedLabContractTests(unittest.TestCase):
+    def test_observation_request_uses_a_distinct_message_domain(self) -> None:
+        command = _command()
+        request = sign_lab_message(
+            {
+                "schema_version": "0.4.0",
+                "message_type": OBSERVATION_REQUEST,
+                "lab_session_id": command["lab_session_id"],
+                "request_id": command["request_id"],
+                "decision_id": command["decision_id"],
+                "command_sha256": lab_message_sha256(command),
+                "idempotency_key": command["idempotency_key"],
+                "target_id": command["target_id"],
+                "target_boot_id": command["target_boot_id"],
+                "sequence": command["sequence"],
+                "nonce": "5" * 32,
+                "issued_at": _timestamp(NOW),
+                "expires_at": _timestamp(NOW + timedelta(seconds=90)),
+            },
+            message_type=OBSERVATION_REQUEST,
+            key_id=OBSERVER_KEY_ID,
+            key=OBSERVER_KEY,
+            now=NOW,
+        )
+        decoded = load_authenticated_lab_message(
+            canonical_json(request),
+            message_type=OBSERVATION_REQUEST,
+            expected_key_id=OBSERVER_KEY_ID,
+            key=OBSERVER_KEY,
+            now=NOW,
+        )
+        self.assertEqual(decoded, request)
+        with self.assertRaises(LabContractError) as raised:
+            load_authenticated_lab_message(
+                canonical_json(request),
+                message_type=COMMAND,
+                expected_key_id=OBSERVER_KEY_ID,
+                key=OBSERVER_KEY,
+                now=NOW,
+            )
+        self.assertEqual(raised.exception.reason_code, "LAB_AUTHENTICATION_INVALID")
+
     def test_signed_command_receipt_and_observation_round_trip(self) -> None:
         command = _command()
         receipt = _receipt(command)

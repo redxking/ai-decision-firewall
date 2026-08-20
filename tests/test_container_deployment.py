@@ -93,6 +93,7 @@ class ContainerBuildTests(unittest.TestCase):
         for name in (
             "lab-execution-command.schema.json",
             "lab-executor-receipt.schema.json",
+            "lab-observation-request.schema.json",
             "lab-observation.schema.json",
         ):
             self.assertIn(
@@ -148,6 +149,7 @@ class ContainerBuildTests(unittest.TestCase):
             "!contracts/v0.3.0/phase3-policy.schema.json",
             "!contracts/v0.4.0/lab-execution-command.schema.json",
             "!contracts/v0.4.0/lab-executor-receipt.schema.json",
+            "!contracts/v0.4.0/lab-observation-request.schema.json",
             "!contracts/v0.4.0/lab-observation.schema.json",
             "!artifacts/supply-chain/runtime.cdx.json",
         ):
