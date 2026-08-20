@@ -46,6 +46,10 @@
 - Advanced the evidence upload action to immutable v7.0.1 after the hosted run
   reported the v4 Node 20 runtime deprecation; the new official action uses
   Node 24 and retains the same bounded artifact inputs.
+- Released failed-operation traceback references before block-device repair and
+  added a one-second bounded ordinary-unmount retry. The lab never uses lazy
+  unmount; persistent open handles still fail the campaign and are left to the
+  disposable container boundary for cleanup.
 
 ## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
 
