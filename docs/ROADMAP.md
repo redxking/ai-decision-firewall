@@ -1,326 +1,312 @@
-# Engineering roadmap
+# AI Decision Firewall engineering roadmap
 
-## Current boundary — 2026-08-16
+| Roadmap control | State |
+|---|---|
+| As of | 2026-08-20 |
+| Planning horizon | 12–18 months |
+| Audited implementation baseline after base-drift recheck | [`83d754846fbd1460e0bb231d1dfab201f4d58c0d`](https://github.com/redxking/ai-decision-firewall/commit/83d754846fbd1460e0bb231d1dfab201f4d58c0d), merged through [PR #35](https://github.com/redxking/ai-decision-firewall/pull/35) |
+| Latest tagged developer prerelease | [`v0.4.0-alpha.2`](https://github.com/redxking/ai-decision-firewall/releases/tag/v0.4.0-alpha.2), published from exact commit [`d5c1571930a29d78b31210c219465ecc4d1a793a`](https://github.com/redxking/ai-decision-firewall/commit/d5c1571930a29d78b31210c219465ecc4d1a793a) |
+| Authoritative gate state | Production `BLOCKED` under readiness candidate [`8ee9cc8e9ece72056c119cc4dffe5457a57f5994`](https://github.com/redxking/ai-decision-firewall/commit/8ee9cc8e9ece72056c119cc4dffe5457a57f5994); model promotion `NOT_AUTHORIZED`; historical-data, live-integration, external-target, and action authority not granted |
 
-- Exact Phase 2.5 Commit
-  `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main`; its
-  exact-commit CI and Dependency Graph checks passed.
-- `P2-CE-001` through `P2-CE-004` retain their version-bound evidence claims.
-  `P2-CE-005` was not executed or published and remains CE-0
-  `NOT_EVALUATED`.
-- Exact Phase 3 Commit
-  `423685d105be813056617db738297eba83d3d9d0` is published on `main`; exact-commit
-  CI and Dependency Graph checks passed. Its simulation-only boundary includes
-  57/57 focused tests, two demonstration checks PASS, a 46/46 corpus and the
-  then-current 288/288 repository aggregate.
-- Phase 3.1 `0.3.1-alpha.1` is published at exact Commit `bb6b8f28`; its
-  focused module passed 11/11 and the then-current repository suite passed
-  299/299 locally and in exact-commit CI. No historical/live adapter, owner
-  promotion threshold or action path exists.
-- The unreleased `0.4.0-alpha.2` Stage A production-development implementation
-  is published on `main` at exact Commit
-  [`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4).
-  It adds
-  single-host durable request, authorization, attempt, and audit-outbox state
-  plus a separate durable offline synthetic-adapter state/receipt database and
-  an authority-free terminal-result lookup. Bounded cooperative same-host
-  fencing, strict store/cross-store validation, and recovery-audit closure are
-  implemented, but the store-local transactions and JSONL audit are not
-  cross-store atomic. Exact local verification passed 43/43 focused Stage A in
-  8.248 seconds, 18/18 readiness-gate, the warning-fatal 360/360 repository suite
-  in 48.995 seconds, 57/57 focused Phase 3, and 46/46 corpus checks with
-  `live_actions_possible=false`; the 307-entry implementation manifest verified
-  307/307. Exact-SHA CI run 31953570779 succeeded on Python 3.11/3.12 and
-  Dependency Graph run 31953572482 succeeded. These are project-controlled
-  mechanism observations; no tag, GitHub Release, deployment, or exact-SHA Pages
-  run was created. Its machine-derived production gate is `BLOCKED`; no Stage B
-  or C activity is authorized. See
-  [`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
-- No historical organizational data, approved Gate B package, live feed,
-  test-tenant/production connector, operational credential, or live action is
-  authorized or present.
+This roadmap is a sequencing and evidence plan. It is not an authorization,
+release record, operational commitment, or claim that a planned control is
+implemented. Horizons express dependency order and planning confidence; they
+are not delivery dates because approved staffing, capacity, intended
+environments, and owner availability have not been established.
 
-## Phase 0 — Concept convergence
+## Executive decision frame
 
-Completed. The program narrowed broad autonomous-SOC concerns to an
-evidence-and-authority decision boundary for privileged-identity containment.
+The project has a released, offline synthetic developer prerelease and a later
+merged-but-unreleased engineering baseline. The later baseline adds Stage A
+durability and recovery work, storage-fault evidence, supply-chain controls,
+and a Phase 4 authenticated IPC and container-lab foundation. Its default-off
+surrogate-effect matrix now covers loss after mutation and after durable
+completion, globally fences new commands behind an unresolved reservation, and
+closes invalid pre/post-effect results conservatively. Shipped lab nodes still
+omit the mutation port and return `NO_EFFECT`: there is no reachable kernel
+mutation, live connector, operational credential, designated external target,
+or production deployment.
 
-## Phase 1 — Synthetic executable baseline (v0.1)
-
-Completed at its historical boundary. The package contains deterministic
-synthetic scenarios, an advisory logistic model, evidence-quality controls,
-bounded policy, a verifier, legacy scoped simulator tokens/actions, post-action
-checks, hash-linked audit, metrics, diagrams, and tests.
-
-**Evidence boundary:** generator-consistent software/safety controls only; no
-operational efficacy, production safety, or portable retraining claim.
-
-## Phase 2 — Read-only replay and assurance (v0.2)
-
-Implementation increments 2.0 through 2.5 are present. Phase 2 has strict
-read-only `historical_replay` and `shadow_read_only` semantics, record
-qualification, Gate B preflight, exact audit checks, typed/source-authorized
-features, reference feature projection, and same-project source-to-decision
-recomputation. Authorization, broker, target construction, and effects remain
-structurally absent in both modes.
-
-Published synthetic CE-2 records `P2-CE-001` through `P2-CE-004` remain narrow,
-SELF, project-controlled results. Phase 2.5 Commit `854b15c` and its green CI
-support package/implementation status only. They do not create an observed
-`P2-CE-005` campaign result.
-
-### Separate Phase 2 workstreams still open
-
-1. **Optional `P2-CE-005` campaign:** if still programmatically useful,
-   explicitly designate a governed Commit A, run the clean detached frozen
-   campaign without repair/retry, and publish a separate validated evidence-only
-   Commit B. Do not relabel the already-published Phase 2.5 commit as evidence.
-2. **External Gate B pilot:** accountable owners must authenticate authority,
-   privacy/de-identification, custody, source mapping, sample selection,
-   adjudication, stop conditions, and complete-intake reporting before any
-   historical payload is accessed.
-
-## Phase 3 — Simulation-only operational decision control (`0.3.0-alpha.1` published)
-
-### Published baseline
-
-- strict external v0.3.0 raw request and policy contracts;
-- opaque invocation credentials resolved to signed principals, plus trusted
-  source, action, target, policy, and time context;
-- runtime HMAC evidence attestation with content, semantic, time, provenance,
-  and subject-target binding;
-- deterministic authority/evidence/consequence evaluation and `ALLOW`, `DENY`,
-  `ESCALATE`, `ALLOW_CONSTRAINED` decisions;
-- functionally separate deterministic decision verification and code-owned
-  policy safety floors for evidence, consequence, rule precedence, and Tier-0
-  domain controllers;
-- exact-scope, signed, short-lived, single-use process-local authorization;
-- mandatory broker and private-capability in-memory target mutation;
-- functionally separate same-project read-only target observation and five-way
-  verification status;
-- separate opaque-human-credential approval that emits an exact-scope signed
-  reevaluation-only receipt;
-- correlated lifecycle audit, in-process metrics, two required demos, and a
-  deterministic 46-scenario adversarial corpus.
-
-Adversarial review found and closed release-blocking defects across consequence
-and evidence binding, credential/key-domain handling, immutable exact-type
-security values, machine-policy safety floors, replay/receipt atomicity,
-dependency-failure closure, and executed-path/post-effect audit semantics. The
-baseline remains synthetic and CE-1 only. Its application boundaries are
-not OS/process security; request/token ledgers are not durable/distributed;
-runtime HMAC fixture keys and self-custodied audit are not enterprise trust; and
-same-project verification is not external independence.
-
-**Exit condition:** met for the published simulation-only code baseline at
-`423685d`. This exit does not authorize live data or action.
-
-## Phase 3.1A — Governed model-validation groundwork (`0.3.1-alpha.1` published baseline)
-
-The published baseline adds closed plan/result contracts, SHA-256-bound synthetic
-source pools, a disjoint temporal training/calibration/evaluation split, one
-logistic baseline, one Platt calibration challenger, aggregate discrimination,
-calibration, threshold, Wilson-interval, selective-risk and subgroup metrics,
-and an unconditional `NOT_AUTHORIZED` promotion state.
-
-The current mechanism observation uses 720 training, 240 calibration and 240
-evaluation rows. It demonstrates reproducible comparison mechanics only. It
-does not establish source realism, operational calibration, practical
-significance, model superiority or promotion eligibility.
-
-### Remaining gates
-
-1. Before any historical payload access, obtain an authenticated external Gate
-   B package covering data authority, custody, privacy, source mapping,
-   adjudication, temporal split, owner thresholds and stop conditions.
-2. Keep the final temporal holdout evaluator-controlled and prohibit repeated
-   candidate selection against it.
-
-**Exit condition:** published synthetic evaluation mechanism with green
-exact-commit CI and no model-promotion claim. Historical evaluation remains a
-separate authority state.
-
-## Stage A — Two-store offline synthetic durability (`0.4.0-alpha.2` implementation)
-
-The first bounded increment corrected the verified process-restart replay path
-with an explicitly configured SQLite/WAL authority ledger. ADR-015 extends the
-candidate with a second SQLite database owned by the offline synthetic adapter.
-The adapter transaction validates the exact idempotency binding, updates only
-durable synthetic target state, and inserts one immutable receipt. After
-same-project read-only observation, the authority ledger can atomically close
-the attempt/request and persist one sanitized `RequestLookupResult` that
-contains no token, nonce, signature, credential, raw audit rows, or executable
+The readiness decision remains fail-closed. The authoritative readiness record
+contains 18 domains and 36 mandatory requirements; its recorded snapshot has
+36 blocking requirements and 36/36 owner acceptances `NOT_RECORDED`. That
+snapshot is bound to exact readiness candidate
+[`8ee9cc8e9ece72056c119cc4dffe5457a57f5994`](https://github.com/redxking/ai-decision-firewall/commit/8ee9cc8e9ece72056c119cc4dffe5457a57f5994),
+not silently re-derived for a later branch or this documentation change. Green
+tests, architecture, or completed development work cannot promote an evidence
+state, record owner acceptance, authorize a model, or grant operational
 authority.
 
-The normal path has three distinct database transactions: T1 authority
-reservation, T2 adapter state plus receipt, and T3 terminal authority/result
-closure. T3 follows successful readback of the valid normal JSONL lifecycle.
-The control database, adapter database, and JSONL audit are three authoritative
-artifacts; the audit is an additional commit boundary, not a fourth artifact.
-No transaction spans them. Exact receipt or terminal-result repeats are
-idempotent; changed bindings conflict. Cross-store correlation binds
-overlapping principal, request, decision/context, authority, policy, receipt,
-and terminal target facts and rejects missing required or orphan receipts and
-recomputed substitutions.
+The audited implementation baseline's
+[post-merge CI](https://github.com/redxking/ai-decision-firewall/actions/runs/32426057568)
+succeeded on Python 3.11 and 3.12 after running 514 tests with four skips in
+each job, plus the restricted container build and smoke path, supply-chain
+checks, and its 379-entry manifest. Those observations apply only to exact
+commit `83d7548`; they are implementation verification, not a release,
+independent assessment, production evidence, or authorization.
 
-Startup and durable request, lookup, approval, and recovery operations use
-bounded cooperative same-host fencing. Explicit quiesced recovery never invokes
-the adapter command or reopens/replaces authorization. It writes and reads back
-the exact contiguous `RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, and
-`RECOVERY_FINALIZED` trio before T3; audit failure suppresses T3, a partial
-prefix resumes exactly, and the pending recovery owner fences other durable
-writers until terminal commit. The trio records the original lifecycle as
-`COMPLETE`, `INCOMPLETE`, or `UNRESOLVED`. Receipt evidence remains
-adapter-reported and never equals independent verification.
+## Status and priority vocabulary
 
-**Published implementation evidence for this increment:** exact duplicate lookup
-returns only an authority-free replay result and never a second effect;
-receipt/result binding, conflict, corruption, recovery, audit ambiguity,
-startup concurrency, and independent-process races passed their focused local
-checks; the full suite remained green; and the 18-domain production gate
-derived `BLOCKED`. Exact implementation Commit `8818d5d2` is on `main`. Its
-recorded local observations are 43/43 focused Stage A in 8.248 seconds, 18/18
-readiness-gate, warning-fatal 360/360 repository in 48.995 seconds, 57/57 focused
-Phase 3, and 46/46 corpus with `live_actions_possible=false`; the integrated
-exact-once race passed 5/5 parallel repetitions. The manifest
-verified 307/307, and exact-SHA CI plus Dependency Graph succeeded. A version
-tag, GitHub Release, deployment, exact-SHA Pages run, owner acceptance, and
-operational effectiveness remain absent. This is not exit from Stage A as a
-whole.
+| Status | Meaning |
+|---|---|
+| `Released` | Present in a tagged public developer release. Release status does not imply deployment, acceptance, or operational authorization. |
+| `Merged / Unreleased` | Present in repository history after the latest tag, but not included in a later tagged release. |
+| `Active` | In the current bounded engineering horizon; completion still requires the stated exit evidence. |
+| `Gated` | Sequenced next, but entry is prohibited until the stated prerequisites and approvals exist. |
+| `Directional` | A planning direction whose scope and investment decision depend on earlier evidence. |
+| `Not Authorized` | Explicitly prohibited from execution in the stated environment or authority boundary. |
 
-**Next safe gate:** expand the local campaign beyond the selected process-kill,
-audit-failure, corruption, and concurrency cases to cover power loss,
-filesystem/disk exhaustion, backup/restore, retention/compaction, bounded load,
-and cross-store recovery at every boundary. Then design distributed execution
-ownership with leases/epochs/fencing and process-isolated authenticated IPC.
-The current cooperative fence is same-host only. The adapter receipt remains
-same-project evidence, not independent target verification. External identity,
-connectors, targets, representative data, and deployment remain separately
-authorized activities.
+| Priority | Decision meaning |
+|---|---|
+| `P0` | Required to preserve safety, evidence integrity, or a near-term gate decision. |
+| `P1` | Required before a later evaluation or controlled integration can begin. |
+| `P2` | Valuable only after P0/P1 evidence and owner decisions justify the investment. |
 
-The proposed next trust-boundary increment is defined in
-[ADR-017](adr/017_process_isolated_nonproduction_adapter_lab.md): an explicitly
-opt-in Linux container lab that keeps the firewall unprivileged and networkless,
-places `CAP_NET_ADMIN` only in a disposable target namespace, separates command
-and observation processes and keys, and exposes neither a container-runtime
-socket nor an external route. Its first contract-only increment is now
-implemented: four closed v0.4.0 schemas plus duplicate-safe, bounded,
-offset-aware validators; domain-separated canonical HMAC bindings; exact
-command/receipt/observation correlation; and executor/observer key-separation
-checks. A subsequent transport-only increment adds explicit opt-in Linux
-`SOCK_SEQPACKET` framing, exact `SO_PEERCRED` UID checks, owner-private socket
-paths, inode revalidation, bounded deadlines, and one-packet request/response
-limits. The next increment adds explicitly enabled contract-specific executor
-and observer handlers. The executor writes a durable reservation before any
-target read, returns the identical stored receipt for an exact completed
-duplicate, rejects conflicting idempotency reuse, and fences unfinished
-reservations for reconciliation. The observer accepts only its separately
-authenticated read request and performs a fresh code-owned read. The executor
-now has an explicitly enabled, default-off, closed-result mutation port; the
-shipped node supplies neither enablement nor an implementation and still
-returns `NO_EFFECT`. Kernel target mutation, executable recovery, and
-continuous service launchers remain unimplemented. A
-subsequent bounded increment now composes those handlers in a disposable Docker
-topology: separate executor, observer, and target-facts volumes; an internal
-bridge with no external route; a networkless control client; separately mounted
-keys; exact immutable local image-ID and runtime inspection; and exact resource
-cleanup. The target exposes fixed synthetic management and beacon listeners,
-but the executor still contains no mutation primitive. See the
-[container-lab runbook](operations/PHASE4_CONTAINER_LAB_RUNBOOK.md) and
-[evidence record](production/PHASE4_CONTAINER_LAB_EVIDENCE_RECORD.md). This is
-not Stage 4 authorization.
+## Audited baseline and release separation
 
-The crash campaign now covers real-process and externally controlled container
-loss after durable reservation and durable `NO_EFFECT` completion, plus
-container loss after the observer has signed but not delivered its observation.
-A create-once control volume preserves the exact signed command across restart;
-stale sockets are removed only by an explicit owner-checked recovery
-initializer after the controller confirms the service container was killed.
-The open reservation remains fenced, while durable completion and fresh
-observation paths complete exact correlation without another effect. The
-process matrix additionally uses a code-owned, fsync-durable effect marker to
-prove `SIGKILL` after mutation but before completion leaves one effect and an
-unresolved reservation that fences all new command keys before target read or
-execution. A kill after durable `APPLIED` completion replays the exact receipt
-with the same one effect. Failed or malformed pre-effect reads close as
-`TARGET_UNAVAILABLE_PRE_EFFECT` with no mutation and an explicitly unknown
-poststate; invalid post-effect returns close as `AMBIGUOUS`. Control-client
-service and facts mounts are read-only. This is not the full ADR-017 kill
-matrix: directional signatures, distinct service identities, durable
-completion-state reconciliation, live containerized kernel mutation and
-readback, pre-reservation, observation, audit, terminal-result, and rollback
-boundaries remain open.
+| Baseline | Status | Implemented outcome | Evidence and authority boundary |
+|---|---|---|---|
+| Phase 0–1 | `Released` | Concept convergence and the deterministic offline synthetic transaction baseline, incorporated into the tagged developer prerelease | Historical compatibility and synthetic mechanism evidence only |
+| Phase 2 through 2.5 | `Released` | Code-owned read-only replay modes, record qualification, Gate B preflight, reference feature projection, and source-to-decision assurance, incorporated into the tagged developer prerelease | No historical cases are included; optional `P2-CE-005` remains CE-0 `NOT_EVALUATED` |
+| Phase 3 | `Released` | Simulation-only request, identity, policy, authorization, broker, receipt, and readback controls, incorporated into the tagged developer prerelease | In-memory synthetic target only; no live connector or action authority |
+| Phase 3.1 | `Released` | Synthetic temporal model evaluation and calibration comparison, incorporated into the tagged developer prerelease | Model promotion remains `NOT_AUTHORIZED`; no representative-data or operational-performance inference |
+| Stage A `v0.4.0-alpha.2` | `Released` | Single-host durable request, authorization, receipt, recovery, audit-outbox, sanitized lookup, restricted preview, and local cold backup/restore mechanisms | Developer prerelease only; same-host, offline, synthetic, self-custodied, and production `BLOCKED` |
+| Post-release Stage A and Phase 4 through `83d7548` | `Merged / Unreleased` | Expanded storage and process-kill campaigns, bounded load checks, release-integrity controls, closed Phase 4 IPC and container-lab foundation, a default-off action seam, a global unresolved-reservation fence, surrogate-effect kill evidence, and conservative pre/post-effect failure states | No later tag or release; shipped nodes remain `NO_EFFECT`; kernel mutation, completion-state reconciliation, directional signatures, distinct service identities, independent custody, intended-environment validation, and external authority remain open |
 
-The first bounded increment in that gate is a fail-closed cold backup/restore
-mechanism for the correlated three-artifact state. It uses the cooperative
-durable/audit lock, refuses active SQLite sidecars and invalid/incomplete state,
-publishes an atomic digest/size-bound backup directory, and restores only into
-the exact empty configured path before regenerating the inode-bound service
-marker. This is local recoverability mechanics only; power-loss behavior,
-continuous backup, rollback selection, external custody, DR, RPO, and RTO
-remain open.
+The recorded hosted `dm-flakey error_writes` campaign passed five of five
+effect-adjacent boundaries at exact candidate `662cb668`; combined with the
+earlier `dm-error` campaign, this is ten mode/boundary cases. The result is
+repository-controlled development evidence, not independent or
+intended-environment storage validation. Results and denominators recorded for
+older commits remain bound to those commits and are not inherited by later
+source.
 
-The second bounded increment is a layered storage-fault campaign. Its
-repository-controlled cases now use uncatchable process loss at request claim,
-authorization issuance, T1, observation, T2, audit closure, and T3; T3 also
-models response loss after durable terminal commit. Deterministic audit cases
-cover repeated short writes, partial-row write `EIO`, transient read `EIO`,
-complete-row `fsync` ambiguity, and post-effect `ENOSPC`. The container layer
-kills whole containers externally at the same seven boundaries. An isolated
-ext4 loopback layer has verified full-device `dm-error` at the original five
-effect-adjacent boundaries, with raw pre/post-repair image hashes and exact
-application-level restart oracles. The separately selectable `dm-flakey
-error_writes` mode also passed all five boundaries through a manual exact-SHA
-GitHub-hosted Ubuntu 24.04 carrier without adding publish authority. These
-cases require zero
-duplicate effect and explicit
-recovery. They do not stand in for torn writes, lost flushes, an intended CSI
-implementation, hostile storage, or physical power loss. See the
-[storage-fault campaign](production/STAGE_A_STORAGE_FAULT_CAMPAIGN.md).
+## Now — current to 30 days
 
-A first bounded load slice now drives 16 unique durable requests and terminal
-lookups through four concurrent workers. It verifies exact receipt/outbox
-accounting, audit-chain growth, reopen, generous operation deadlines, artifact
-size bounds, and basic thread/descriptor cleanup. This is a regression-scale
-reliability check, not capacity, soak, SLO, or intended-environment evidence.
+### N1 — Close bounded Stage A durability and recovery gaps
 
-## Phase 3.1B — Approved read-only evidence realism
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Active` / `P0` |
+| Outcome | Close the highest-risk single-host storage, recovery-prefix, response-loss, audit, and cross-store cases without widening the offline synthetic boundary. Add `dm-flakey drop_writes`, torn-write/lost-flush, directory-entry and individual SQLite/WAL/audit faults, destructive power-loss evidence, and one approved intended-filesystem/CSI campaign. Define bounded reliability, RPO, and RTO observations before making any availability claim. |
+| Accountable role(s) | `SERVICE_OWNER`; required acceptance from `OPERATIONS_OWNER`, `AUDIT_OWNER`, `RECORDS_AND_AUDIT_OWNER`, and `VERIFICATION_OWNER` |
+| Dependencies / entry condition | Exact candidate, immutable manifest, approved disposable fault environment, quiescence and evidence-custody procedure, predeclared boundaries and stop conditions |
+| Exit evidence | Exact-candidate fault matrix and warning-fatal regression; zero duplicate effect; conservative `UNKNOWN_EFFECT` or quarantine on ambiguity; raw pre-repair capture; validated recovery/audit correlation; separately recorded intended-environment limitations and owner dispositions |
+| Prohibited inference | Single-host SQLite, a local backup, a passing chaos campaign, or an RPO/RTO observation does not establish distributed linearizability, HA/DR, hostile-writer resistance, operational availability, or production readiness. |
 
-After the external Gate B package and an offline historical pilot, evaluate an
-approved live read-only shadow service with authenticated sources, independent
-custody, analyst adjudication, temporal holdout, calibration, abstention cost,
-source ablation, and workflow/consequence analysis.
+### N2 — Complete the opt-in Phase 4 controlled-action lab
 
-**Exit condition:** data-handling controls hold; schema/source mapping is stable;
-traceability and analyst agreement are measured; false-containment risk and
-abstention behavior have defensible origin-stratified bounds. No action
-credential is present.
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Active` / `P0` |
+| Outcome | Implement the fixed namespace-local kernel driver for `NETWORK_ISOLATE`, separate readback, expiry and separately authorized rollback, reconciliation, and the full kill, ambiguity, rollback-failure, cleanup, and adversarial matrices in the disposable local lab. |
+| Accountable role(s) | `EXECUTION_SERVICE_OWNER`; required acceptance from `TARGET_SYSTEM_OWNER`, `SECURITY_AUTHORITY`, `OPERATIONS_OWNER`, and `VERIFICATION_OWNER` |
+| Dependencies / entry condition | Default-off mutation seam and surrogate-effect kill evidence; closed command/receipt/observation contracts; separate executor and observer processes in the bounded lab; exact topology and capability inspection; explicit opt-in; no external route or reusable credential |
+| Exit evidence | Fixed-effect kernel observation with management path preserved; independently keyed observer correlation; durable completion-state reconciliation; no automatic retry or duplicate effect across the remaining pre-reservation, observation, audit, terminal-result, rollback, and containerized-kernel kill boundaries; verified expiry/rollback and rollback-failure dispositions; adversarial and resource cleanup evidence; reviewed lab evidence record |
+| Prohibited inference | A real kernel effect in a disposable namespace does not authorize a test tenant, external endpoint, vendor connector, operational containment, or production action. Project-controlled observation is not independent custody. |
 
-## Phase 4 — Controlled non-production actions
+### N3 — Make the optional `P2-CE-005` decision
 
-Design a new approved test-tenant architecture with service/process isolation,
-managed source/token keys, durable distributed idempotency, vendor-specific
-least-privilege broker adapters, independent target-side readback, rollback and
-reconciliation, rate/circuit limits, kill switch, externally anchored audit,
-change control, and human approval.
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Active` / `P1` |
+| Outcome | Record an explicit go/no-go decision on whether the fixed source-to-decision synthetic campaign remains decision-useful. If go, execute only the existing two-commit protocol; if no-go, close the workstream without manufacturing a result. |
+| Accountable role(s) | `PROJECT_RELEASE_OWNER`; required concurrence from `EVIDENCE_OWNER`, `VERIFICATION_OWNER`, and `MISSION_OWNER` |
+| Dependencies / entry condition | Written decision purpose and decision threshold; clean governed Commit A; frozen plan, schemas, generator, evaluator, validator, and destination controls; no repair, retry, or denominator change |
+| Exit evidence | Either a dated no-go disposition with rationale, or a separate evidence-only Commit B whose frozen evaluator validates the complete campaign and exact nonclaims |
+| Prohibited inference | The existing plan, implementation, green CI, or expected 40 observations is not an observed result. Any future SELF campaign cannot establish historical validity, independence, efficacy, or production readiness. |
 
-**Exit condition:** authorized action classes demonstrate idempotency,
-precondition handling, independent verification, rollback/recovery, and stop
-conditions under failure injection in a non-production environment.
+### N4 — Establish readiness ownership and release integrity
 
-## Phase 5 — Limited operational pilot
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Active` / `P0` |
+| Outcome | Confirm accountable roles for every mandatory row across all 18 readiness domains; preserve explicit acceptance states; complete vulnerability disposition, trusted-build and provenance design, artifact/SBOM signing plan, release rollback controls, and evidence-to-source integrity checks. |
+| Accountable role(s) | `RELEASE_OWNER`; each requirement remains accountable to the role recorded in the readiness configuration, with `SECURITY_OWNER`, `PLATFORM_AND_SUPPLY_CHAIN_OWNERS`, and `INDEPENDENT_VERIFICATION_AUTHORITY` governing their respective decisions |
+| Dependencies / entry condition | The 36-row machine-readable matrix, immutable source identity, dependency lock and SBOM, threat register, and defined approver separation |
+| Exit evidence | No unassigned mandatory row; role-to-gate decision register; every acceptance remains explicit rather than inferred; vulnerability inventory with disposition and risk owner; reproducible and independently verifiable provenance design; exercised release withdrawal and rollback procedure |
+| Prohibited inference | An assigned role, signed artifact, clean vulnerability scan, complete manifest, or green CI is not owner acceptance, operational effectiveness, or authority to deploy. |
 
-Restrict use to a small approved population and require human approval for every
-action. Measure operational false-positive/negative outcomes, workflow effects,
-mission consequences, recovery behavior, and control reliability under formal
-incident and change authority.
+## Next — 1 to 3 months
 
-**Exit condition:** the authorizing official accepts residual risk and the
-approved action classes meet predeclared statistical and operational gates.
+Entry to this horizon requires the relevant Now exit evidence, an exact scoped
+candidate, and named owners for the work being started. Activities may proceed
+independently where the dependency diagram permits; none may bypass Gate B,
+security, target-owner, or operational authority.
 
-## Phase 6 — Productization
+### X1 — Validate distributed authority and service resilience
 
-Only after the preceding evidence gates: add multi-tenant policy packs,
-vendor-neutral integrations, secure update/supply-chain controls, HA, continuous
-calibration, compliance mappings, operator workflows, and sector-specific
-mission-consequence models.
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Gated` / `P1` |
+| Outcome | Design and validate consensus-backed leases, node identity, epochs, stale-writer fencing, partition behavior, idempotent delivery, HA/failover, backup/restore promotion, and bounded DR in a non-production environment. |
+| Accountable role(s) | `SERVICE_OWNER`; required acceptance from `OPERATIONS_OWNER`, `AUDIT_OWNER`, and `INDEPENDENT_VERIFICATION_AUTHORITY` |
+| Dependencies / entry condition | N1 exit; declared consistency model and failure assumptions; approved non-production platform; target-side stale-epoch rejection; predeclared RPO/RTO/SLOs and partition matrix |
+| Exit evidence | No duplicate effect under failover, partition, stale-writer, replay, and recovery tests; independently captured recovery-point and audit correlation; accepted RPO/RTO/SLO results; fail-closed split-brain and rollback behavior |
+| Prohibited inference | A distributed design, vendor SLA, or passing lab does not establish operational availability, safe scale, or production acceptance. |
+
+### X2 — Build the enterprise control and observation foundation
+
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Gated` / `P1` |
+| Outcome | Integrate managed workload identity, least-privilege policy enforcement, KMS/HSM-backed keys, rotation and revocation, independently custodied observation and audit export, monitoring, alerting, incident workflows, and immutable deployment provenance. |
+| Accountable role(s) | `IDENTITY_AND_ACCESS_OWNER`; required acceptance from `POLICY_OWNER`, `SECURITY_OWNER`, `AUDIT_OWNER`, `OPERATIONS_AND_INCIDENT_RESPONSE_OWNERS`, and `PLATFORM_AND_SUPPLY_CHAIN_OWNERS` |
+| Dependencies / entry condition | N2 and N4 exit; approved architecture and threat model; managed non-production services; separation-of-duty and data-retention decisions |
+| Exit evidence | Authenticated workload-to-workload paths; tested key compromise/rotation/revocation; independent observation and audit loss detection; SLO dashboards and operator drills; trusted-build provenance and deployed-artifact verification; independent security/red-team report with tracked dispositions |
+| Prohibited inference | Enterprise components or a completed assessment do not authorize a target, prove control effectiveness under mission load, or satisfy any unrecorded owner acceptance. |
+
+### X3 — Obtain Gate B and run a bounded offline historical pilot
+
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Gated` / `P0` |
+| Outcome | Obtain an authenticated Gate B package and conduct the approved, read-only, offline historical pilot with complete-intake accounting, source mapping, independent labels, declared exclusions, stop conditions, and evidence custody. |
+| Accountable role(s) | `DATA_AND_EVIDENCE_OWNER`; required acceptance from `DATA_PRIVACY_AND_LEGAL_OWNERS`, `RECORDS_AND_AUDIT_OWNER`, `MISSION_OWNER`, and `SECURITY_OWNER` |
+| Dependencies / entry condition | Signed Gate B authority before payload access; approved purpose, dataset, custodian, environment, retention, de-identification, source mapping, sampling, adjudication, and reporting protocol |
+| Exit evidence | Validated authorization package; immutable intake ledger; qualification and rejection accounting; independent adjudication record; reproducible read-only outputs; privacy/security/records closeout and an explicit continue/stop decision |
+| Prohibited inference | Gate B conformance or a bounded retrospective result does not prove legal authority beyond the package, source truth, prospective performance, live safety, causality, or action authority. |
+
+### X4 — Evaluate representative performance and independent assurance
+
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Gated` / `P0` |
+| Outcome | Evaluate the fixed model and policy against the approved representative slice; quantify calibration, abstention, shift, subgroup behavior, operational error costs, and threshold sensitivity; complete independent security, abuse, and red-team assessment. |
+| Accountable role(s) | `MODEL_OWNER`; required acceptance from `MISSION_OWNER`, `POLICY_OWNER`, `SECURITY_AUTHORITY`, and `INDEPENDENT_VERIFICATION_AUTHORITY` |
+| Dependencies / entry condition | X3 complete and its evidence accepted for this purpose; frozen evaluation protocol; owner-defined metrics, minimums, stop conditions, challenger rules, and prohibited-use cases |
+| Exit evidence | Version-bound model/evaluation package; uncertainty and limitation analysis; signed threshold or no-promotion decision; exercised rollback/revocation; independent assessment findings closed, accepted, or explicitly blocking |
+| Prohibited inference | Representative evaluation does not grant model promotion, prove future or out-of-distribution performance, establish mission benefit, or authorize live observation or action. |
+
+## Later — 3 to 18 months
+
+### L1 — Phase 3.1B approved read-only shadow evaluation
+
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Gated` / `P1` |
+| Outcome | Operate an approved live read-only shadow path with no authorization signer, broker, action credential, or target mutation; measure freshness, drift, abstention, operator workflow, and monitoring behavior. |
+| Accountable role(s) | `MISSION_OWNER`; required acceptance from `DATA_OWNER`, `MODEL_OWNER`, `SECURITY_OWNER`, `OPERATIONS_OWNER`, and `RECORDS_AND_AUDIT_OWNER` |
+| Dependencies / entry condition | X3 and X4 accepted; Gate C package; approved live sources, identity, retention, incident, stop, and rollback-to-offline procedures; structural absence of action capability |
+| Exit evidence | Time-bounded shadow report; complete intake/decision accounting; data quality and drift results; operator and incident observations; independent audit reconciliation; explicit stop/continue decision |
+| Prohibited inference | Read-only shadow agreement, availability, or operator usefulness does not prove causal benefit, authorize model promotion, or grant action authority. |
+
+### L2 — Controlled non-production test-tenant action
+
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Not Authorized` / `P1` |
+| Outcome | Only after reliability, isolation, independent observation, target-owner, security, and operations gates, consider one fixed reversible action in an approved test-tenant target with human approval for each action. |
+| Accountable role(s) | `TARGET_SYSTEM_OWNER`; required acceptance from `MISSION_OWNER`, `SECURITY_AUTHORITY`, `IDENTITY_AND_ACCESS_OWNER`, `OPERATIONS_OWNER`, and `INDEPENDENT_VERIFICATION_AUTHORITY` |
+| Dependencies / entry condition | N1, N2, X1, and X2 accepted; exact target and action envelope; managed identity; stale-epoch fencing; independent observation; tested rollback and kill switch; separate written non-production authorization |
+| Exit evidence | Exact-target campaign with zero scope escape or duplicate effect; independent effect and rollback evidence; exercised incident/kill-switch paths; accepted residual risk; authority expiry and credential revocation verified |
+| Prohibited inference | Test-tenant success does not authorize another target, action, population, environment, credential, pilot, or production use. |
+
+### L3 — Human-approved limited operational pilot
+
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Not Authorized` / `P2` |
+| Outcome | Consider a narrowly bounded operational pilot only when both evidence paths are accepted, all mandatory technical gates have objective evidence, every required owner acceptance is recorded, and a human authorizes every action. |
+| Accountable role(s) | `AUTHORIZING_OFFICIAL`; required acceptance from every role applicable to the 18-domain readiness matrix, including mission, target, security, model, data, policy, operations, audit, platform, release, and independent verification owners |
+| Dependencies / entry condition | L1 and L2 accepted; project gate no longer `BLOCKED` for the exact pilot envelope; signed authorization, rules of engagement, population, duration, thresholds, stop criteria, liability/records decisions, staffing, monitoring, rollback, and independent observation |
+| Exit evidence | Complete pilot ledger and independent custody; human-approval accounting; safety, performance, incident, rollback, and mission-outcome report; authorizing-official closeout; explicit terminate, extend, or productization decision |
+| Prohibited inference | A limited pilot authorizes only its exact envelope. It does not establish general autonomy, unrestricted production authority, portfolio-wide efficacy, or transferable acceptance. |
+
+### L4 — Productization and scaled lifecycle
+
+| Field | Roadmap commitment |
+|---|---|
+| Status / priority | `Directional` / `P2` |
+| Outcome | Decide whether to productize based on pilot evidence, mission value, lifecycle cost, security residual risk, operability, support model, compliance obligations, and an approved decommissioning path. |
+| Accountable role(s) | `PROJECT_RELEASE_OWNER` and `MISSION_OWNER`; required governance from `SYSTEM_SECURITY_AND_RECORDS_OWNERS`, `RELEASE_AND_OPERATIONS_OWNERS`, and the `AUTHORIZING_OFFICIAL` |
+| Dependencies / entry condition | L3 complete; validated business/mission case; funded operating model; approved architecture, accreditation path, service ownership, supply chain, upgrade/rollback, support, and end-of-life plan |
+| Exit evidence | Approved product baseline and authorization envelope; independently reproduced release; service SLOs and support model; upgrade, rollback, emergency withdrawal, records retention, and decommissioning exercises; ongoing model/policy/security reauthorization cadence |
+| Prohibited inference | Pilot evidence, release status, or authorization for one baseline does not transfer across models, policies, actions, target classes, environments, customers, upgrades, or threat conditions. |
+
+## Gate dependency view
+
+```mermaid
+flowchart LR
+    GB["Gate B approval"] --> HP["Bounded offline historical pilot"]
+    HP --> ME["Representative model evaluation"]
+    ME --> RS["Approved read-only shadow"]
+
+    SA["Stage A reliability"] --> CA["Controlled non-production action"]
+    PI["Process isolation"] --> CA
+    IO["Independent observation"] --> CA
+    SO["Security and operations acceptance"] --> CA
+
+    RS --> LP["Human-approved limited operational pilot"]
+    CA --> LP
+    OA["All mandatory owner acceptances recorded"] --> LP
+    LP --> PD["Productization decision"]
+```
+
+Arrows are prerequisites, not automatic promotions. The historical/shadow
+evidence path and the controlled-action path must both close, and every
+applicable mandatory owner acceptance must be recorded, before a limited pilot
+can be considered.
+
+## Production-readiness workstream allocation
+
+This allocation maps all 18 domains into the roadmap without restating the 36
+machine-readable requirements. Requirement wording, acceptance criteria,
+evidence state, owner-acceptance state, release gate, and prohibited inference
+remain authoritative in
+[`config/production_readiness_requirements.json`](../config/production_readiness_requirements.json).
+
+| Domain | Accountable role(s) recorded in the readiness source | Primary roadmap workstreams |
+|---|---|---|
+| 01 Mission and operational requirements | `MISSION_OWNER` | N4, X3, X4, L1, L3, L4 |
+| 02 Supported and prohibited use cases | `PROJECT_RELEASE_OWNER`; `SECURITY_AND_RELEASE_OWNERS` | N3, N4, L1, L2, L3 |
+| 03 Identity, authentication, authorization, and human authority | `IDENTITY_AND_ACCESS_OWNER`; `SECURITY_OWNER` | N2, X2, L2, L3 |
+| 04 Evidence provenance, freshness, integrity, and source independence | `DATA_AND_EVIDENCE_OWNER`; `EVIDENCE_OWNER` | N3, X3, X4, L1, L3 |
+| 05 Model performance, calibration, abstention, drift, and promotion | `MODEL_OWNER` | X4, L1, L3, L4 |
+| 06 Policy correctness and change control | `POLICY_OWNER` | X2, X4, L2, L3, L4 |
+| 07 Durable replay prevention and idempotency | `SERVICE_OWNER` | N1, N2, X1, L2 |
+| 08 Broker and target-adapter isolation | `EXECUTION_SERVICE_OWNER` | N2, X2, L2 |
+| 09 Independent post-action observation | `TARGET_SYSTEM_OWNER`; `VERIFICATION_OWNER` | N2, X2, L2, L3 |
+| 10 Failure handling, reconciliation, rollback, and recovery | `OPERATIONS_OWNER` | N1, N2, X1, L2, L3 |
+| 11 Audit durability, authenticity, retention, and external custody | `AUDIT_OWNER`; `RECORDS_AND_AUDIT_OWNER` | N1, X1, X2, X3, L1, L3 |
+| 12 Availability, concurrency, scaling, and disaster recovery | `OPERATIONS_OWNER`; `SERVICE_OWNER` | N1, X1, X2, L3, L4 |
+| 13 Security architecture and threat-model closure | `SECURITY_AUTHORITY`; `SECURITY_OWNER` | N2, N4, X2, X4, L1, L2, L3 |
+| 14 Privacy, data governance, records, and legal constraints | `DATA_OWNER`; `DATA_PRIVACY_AND_LEGAL_OWNERS` | X3, X4, L1, L3, L4 |
+| 15 Deployment, configuration, secrets, keys, and supply chain | `PLATFORM_AND_SUPPLY_CHAIN_OWNERS`; `RELEASE_OWNER` | N4, X1, X2, L2, L4 |
+| 16 Monitoring, alerting, incident response, and runbooks | `OPERATIONS_AND_INCIDENT_RESPONSE_OWNERS`; `OPERATIONS_OWNER` | N1, N2, X1, X2, L1, L2, L3, L4 |
+| 17 Verification, validation, red team, and operational acceptance | `INDEPENDENT_VERIFICATION_AUTHORITY`; `VERIFICATION_OWNER` | N1–N4, X1–X4, L1–L3 |
+| 18 Release, rollback, upgrade, and decommissioning | `RELEASE_AND_OPERATIONS_OWNERS`; `SYSTEM_SECURITY_AND_RECORDS_OWNERS` | N4, X2, L2, L3, L4 |
+
+## Cross-cutting risks and decision dependencies
+
+| Risk or dependency | Current treatment | Decision needed |
+|---|---|---|
+| Owner and capacity uncertainty | Horizons remain ranges; no detailed dates or throughput commitments | Confirm accountable people, allocation, and independent-review availability before committing schedule |
+| Evidence portability | Every result remains bound to exact source, data, environment, protocol, and custody | Require a new evidence decision when any bound element changes |
+| Authority expansion | Live data, connectors, credentials, targets, and actions remain prohibited by default | Require a separate signed authorization package before crossing each boundary |
+| Distributed-state complexity | Single-host evidence is not extrapolated to consensus, failover, or DR | Approve consistency model, platform, SLO/RPO/RTO, and destructive validation plan before X1 |
+| Independent assurance | Project-controlled tests and readback are not independent validation | Fund and schedule independent security, model, target, and evidence review |
+| Productization economics | No headcount, support, compliance, or lifecycle-cost baseline exists | Build the mission/business case only after bounded pilot evidence exists |
+
+## Sources of truth and change control
+
+1. [`config/production_readiness_requirements.json`](../config/production_readiness_requirements.json)
+   and the
+   [production-readiness control record](production/PRODUCTION_READINESS.md)
+   govern readiness requirements, evidence state, owner acceptance, prohibited
+   inference, and the fail-closed production gate.
+2. The [README](../README.md) and [CHANGELOG](../CHANGELOG.md) govern public
+   release and repository-state summaries. A tag or release is never inferred
+   from a merge.
+3. Exact-commit evidence records and CI runs govern historical observations and
+   test denominators. Results are not rebased onto later source.
+4. This roadmap governs intended sequencing only. It cannot authorize work,
+   change a machine-readable gate, or supersede an evidence record.
+
+The roadmap is reviewed monthly by the project release, mission, security,
+operations, evidence, model, and verification roles. It is also updated within
+five business days of any tagged release, evidence-changing merge, gate
+decision, newly recorded owner acceptance, material risk discovery, or change
+to an authorization boundary. Each update must state the as-of date, audited
+source SHA, evidence delta, changed owner decision, and any resulting horizon
+or dependency change.
