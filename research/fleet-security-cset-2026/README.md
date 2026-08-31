@@ -1,60 +1,102 @@
 # Fleet Security CSET 2026 Experiment Harness
 
-Reproducible research code supporting the paper **From Single-Agent Safety to Fleet Security: A Reproducible Experimental Methodology for Evaluating Agentic AI at Scale**.
+Reproducible research code supporting the paper:
 
-Project lead: Angelis Pseftis
+**From Single-Agent Safety to Fleet Security: A Reproducible Experimental Methodology for Evaluating Agentic AI at Scale**
 
-## Purpose
+Author/project lead: Angelis Pseftis
 
-This repository implements a controlled synthetic experiment harness for testing the CSET 2026 methodology. It measures compromise propagation, authorization-integrity loss, privilege-weighted blast radius, containment latency, supervisory/security signals, and security-qualified throughput as agent populations and architectures scale.
+## What this is
 
-The included simulator does **not** claim to reproduce any commercial LLM or agent platform. It validates the experiment architecture, metrics, reproducibility pipeline, and falsification tests before real agent runtimes are substituted.
+This repository implements a controlled synthetic experiment harness for testing the methodology in the CSET 2026 preliminary-work paper. It measures how compromise propagation, authorization failure, privilege-weighted blast radius, containment latency, and security-qualified throughput change as agent populations and architectures scale.
+
+It is intentionally conservative about claims. The included simulator does not claim to reproduce any specific commercial LLM or agent platform. Its purpose is to verify the experimental architecture, metrics, reproducibility pipeline, and falsification tests before substituting real agent runtimes.
 
 ## Requirements
 
-Python 3.10+ is sufficient for the baseline. No API keys or cloud resources are required.
+- Python 3.10+
+- `pytest` only for the optional test suite
+- No API keys or cloud infrastructure required for the synthetic baseline
 
-## Run without installing
-
-```bash
-cd research/fleet-security-cset-2026
-export PYTHONPATH="$PWD/src"
-bash scripts/verify.sh
-bash scripts/run_baseline.sh
-```
-
-## Optional editable install
+## Install
 
 ```bash
+git clone <repository-url>
+cd fleet-security-cset-2026
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-If build isolation is blocked but setuptools is already available:
+The core synthetic runner can also execute directly with `PYTHONPATH=src` and requires only the Python standard library.
+
+## Verify the code
 
 ```bash
-python -m pip install --no-build-isolation -e ".[dev]"
+bash scripts/verify.sh
 ```
 
-## Baseline experiment
+## Run the publication baseline
 
-The publication baseline evaluates N={1,4,16,64}, least-privilege and shared-privilege authorization models, 30 deterministic repetitions per configuration, and 20 simulation steps. The fixed root seed is 20260831.
+```bash
+bash scripts/run_baseline.sh
+```
 
-Outputs:
-- `results/raw.csv`: one row per trial.
-- `results/summary.csv`: grouped means and bounded 95% confidence intervals.
-- `results/manifest.json`: configuration, environment, and SHA-256 of the raw result file.
+## Extended scale sweep
 
-## Claim boundaries
+Run populations through 1,024 agents across six communication topologies and two authorization models:
 
-Synthetic results validate the **method and software pipeline**, not the security properties of OpenAI, Anthropic, Google, Microsoft, or any other vendor. Vendor-specific claims require a real-agent adapter and separately identified runs.
+```bash
+PYTHONPATH=src python scripts/run_extended.py
+```
 
-See `docs/TUNING.md`, `docs/PROVING.md`, and `docs/ARCHITECTURE.md` before modifying the experiment or using its outputs in a publication.
+The default extended design executes 720 deterministic synthetic trials: 6 populations x 6 topologies x 2 authorization models x 10 repetitions. It records end-state, ever-compromised, and peak-compromise exposure plus authorization-integrity loss, privilege-weighted blast radius, containment latency, and security-qualified throughput. Bootstrap confidence intervals are generated for grouped results.
+
+## Real-model evaluation
+
+The repository includes adapters for OpenAI Responses API, Anthropic Messages API, and local Ollama. The real-model experiment measures unsafe-action proposals under a controlled indirect-prompt-injection condition while keeping authorization external to the model.
+
+OpenAI example:
+
+```bash
+export OPENAI_API_KEY='...'
+PYTHONPATH=src python scripts/run_llm_eval.py --provider openai --model gpt-5.6-luna --trials 20 --output results/openai_eval.csv
+```
+
+Claude example:
+
+```bash
+export ANTHROPIC_API_KEY='...'
+PYTHONPATH=src python scripts/run_llm_eval.py --provider anthropic --model claude-sonnet-4-6 --trials 20 --output results/claude_eval.csv
+```
+
+Local Ollama example, no API key required:
+
+```bash
+ollama pull gemma3
+PYTHONPATH=src python scripts/run_llm_eval.py --provider ollama --model gemma3 --trials 20 --output results/ollama_gemma3_eval.csv
+```
+
+See `docs/REAL_MODELS.md` for provider details and claim boundaries.
+
+## Output and provenance
+
+- `results/raw.csv`: baseline trial-level observations.
+- `results/summary.csv`: baseline grouped statistics.
+- `results/manifest.json`: environment, parameters, and SHA-256 of baseline raw data.
+- `results/extended_raw.csv`: extended topology/population trial-level data when generated.
+- `results/extended_summary.csv`: bootstrap summaries when generated.
+
+Publishable runs must preserve source commit, parameters, seeds, raw data, and manifests. See `docs/PROVING.md`.
+
+## Research claim boundaries
+
+Synthetic results validate the method and software pipeline, not the security properties of a vendor model. Model-specific claims require separately identified real-model runs. A model proposing a prohibited action is not itself an authorization failure; authorization-integrity loss occurs only if the external enforcement boundary allows a protected action contrary to reference policy.
 
 ## Safety
 
-The baseline uses synthetic principals, resources, and effects only. It performs no exploitation of external systems, credential theft, or destructive action.
+The baseline uses synthetic principals, synthetic resources, and non-destructive action labels. It does not exploit external services, steal credentials, or execute destructive operations.
 
 ## License
 

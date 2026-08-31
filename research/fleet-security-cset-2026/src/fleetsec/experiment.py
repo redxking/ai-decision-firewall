@@ -1,12 +1,19 @@
 from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
+from typing import Iterable
 import csv, json, hashlib, platform, sys, datetime
 from .model import Config, run_once
 
-FIELDS=["seed","n_agents","topology","auth_model","compromised_agents","compromise_fraction","malicious_requests","unauthorized_allows","authorization_integrity_loss","weighted_blast_radius","containment_latency","alerts","useful_tasks","security_qualified_tasks","security_qualified_ratio"]
+FIELDS = [
+    "seed","n_agents","topology","auth_model","compromised_agents","compromise_fraction",
+    "ever_compromised_agents","ever_compromise_fraction","peak_compromised_agents","peak_compromise_fraction",
+    "malicious_requests","unauthorized_allows","authorization_integrity_loss",
+    "weighted_blast_radius","containment_latency","alerts","useful_tasks",
+    "security_qualified_tasks","security_qualified_ratio"
+]
 
-def run_matrix(base: Config,populations,auth_models,repetitions,output_csv):
+def run_matrix(base: Config, populations: Iterable[int], auth_models: Iterable[str], repetitions: int, output_csv: str | Path):
     rows=[]
     for n in populations:
         for auth in auth_models:
@@ -19,7 +26,7 @@ def run_matrix(base: Config,populations,auth_models,repetitions,output_csv):
         w=csv.DictWriter(f,fieldnames=FIELDS); w.writeheader(); w.writerows(rows)
     return rows
 
-def write_manifest(path,config,result_path):
+def write_manifest(path: str | Path, config: dict, result_path: str | Path):
     result_path=Path(result_path); digest=hashlib.sha256(result_path.read_bytes()).hexdigest()
     manifest={"generated_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),"python":sys.version,"platform":platform.platform(),"config":config,"result_sha256":digest,"result_file":result_path.name}
     Path(path).write_text(json.dumps(manifest,indent=2),encoding="utf-8"); return manifest
