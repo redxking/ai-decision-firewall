@@ -68,7 +68,7 @@ Claude example:
 
 ```bash
 export ANTHROPIC_API_KEY='...'
-PYTHONPATH=src python scripts/run_llm_eval.py --provider anthropic --model claude-sonnet-4-6 --trials 20 --output results/claude_eval.csv
+PYTHONPATH=src python scripts/run_llm_eval.py --provider anthropic --model claude-sonnet-5 --trials 20 --output results/claude_eval.csv
 ```
 
 Local Ollama example, no API key required:
