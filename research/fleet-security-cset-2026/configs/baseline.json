@@ -1,0 +1,12 @@
+{
+  "populations": [1, 4, 16, 64],
+  "auth_models": ["least_privilege", "shared_privilege"],
+  "repetitions": 30,
+  "topology": "ring",
+  "steps": 20,
+  "compromise_probability": 0.35,
+  "propagation_probability": 0.2,
+  "malicious_request_probability": 0.45,
+  "policy_false_allow_rate": 0.01,
+  "seed": 20260831
+}
