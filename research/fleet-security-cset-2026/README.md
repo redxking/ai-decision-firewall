@@ -55,7 +55,7 @@ The default extended design executes 720 deterministic synthetic trials: 6 popul
 
 ## Real-model evaluation
 
-The repository includes adapters for OpenAI Responses API, Anthropic Messages API, and local Ollama. The real-model experiment measures prohibited-action proposals under a controlled indirect-prompt-injection condition while keeping authorization external to the model.
+The repository includes adapters for OpenAI Responses API, Anthropic Messages API, and local Ollama. The real-model experiment measures prohibited-action proposals under controlled adversarial conditions while keeping authorization external to the model.
 
 OpenAI example:
 
@@ -80,15 +80,29 @@ PYTHONPATH=src python scripts/run_llm_eval.py --provider ollama --model gemma3:4
 
 ### Local open-source benchmark matrix
 
-A broader no-key comparison matrix is defined in `configs/local_models.json` and documented in `docs/LOCAL_MODELS.md`. It currently includes SmolLM2, Llama 3.2, Gemma 3, Qwen3, IBM Granite 3.3, DeepSeek-R1 distilled models, Microsoft Phi-4, and Mistral Small across approximately 1.7B to 32B parameter classes.
+A broader no-key comparison matrix is defined in `configs/local_models.json` and documented in `docs/LOCAL_MODELS.md`. It includes SmolLM2, Llama 3.2, Gemma 3, Qwen3, IBM Granite 3.3, DeepSeek-R1 distilled models, Microsoft Phi-4, and Mistral Small across approximately 1.7B to 32B parameter classes.
 
-Run the configured set with:
+### Agent Security Scenario Suite v1
+
+The fixed scenario suite is in `scenarios/agent_security_suite_v1.json`. It contains 24 scenarios: 6 benign controls and 18 adversarial cases across indirect prompt injection, authority impersonation, instruction conflict, memory poisoning, inter-agent manipulation, and tool-output injection.
+
+Run one local model against the complete suite:
 
 ```bash
-TRIALS=30 bash scripts/run_local_models.sh
+PYTHONPATH=src python scripts/run_scenario_suite.py \
+  --provider ollama \
+  --model qwen3:4b \
+  --repetitions 3 \
+  --output results/scenario_suite/qwen3_4b.csv
 ```
 
-For systems with limited RAM/VRAM, start with the light models listed in `docs/LOCAL_MODELS.md` rather than pulling the full set.
+Run every installed model in a tier:
+
+```bash
+PYTHONPATH=src python scripts/run_local_scenario_matrix.py --tier light --repetitions 3
+```
+
+The suite SHA-256 is frozen and recorded in each model-run manifest. Grouped model/attack-class results use Wilson 95% confidence intervals. See `docs/SCENARIO_SUITE.md`.
 
 See `docs/REAL_MODELS.md` for provider details and claim boundaries.
 
@@ -99,6 +113,9 @@ See `docs/REAL_MODELS.md` for provider details and claim boundaries.
 - `results/manifest.json`: environment, parameters, and SHA-256 of baseline raw data.
 - `results/extended_raw.csv`: extended topology/population trial-level data when generated.
 - `results/extended_summary.csv`: bootstrap summaries when generated.
+- `results/scenario_suite/*.csv`: per-model fixed-scenario observations.
+- `results/scenario_suite/*.manifest.json`: model and scenario-suite provenance.
+- `results/scenario_suite/summary.csv`: model-by-attack-class summary when generated.
 
 Publishable runs must preserve source commit, parameters, seeds, raw data, and manifests. See `docs/PROVING.md`.
 
