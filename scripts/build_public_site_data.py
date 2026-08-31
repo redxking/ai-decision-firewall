@@ -34,7 +34,7 @@ CLAIM_PRESENTATION = {
         "evidence_level": "CE-2",
         "summary": Path("evidence/phase2_gate_b_ce2/campaign_summary.json"),
         "highlights": [
-            "28 structural blocks; 0 governed payload-role opens or reads observed through declared hooks",
+            "28 attempts blocked before governed payload access",
             "2 attempts blocked after qualification and before the engine",
             "2 test-only validation passes",
             "0 operational effects",
@@ -70,11 +70,11 @@ SCENARIO_PRESENTATION = {
     "phase2-synthetic-conflict-001": {
         "id": "conflicting-telemetry",
         "title": "Conflicting telemetry",
-        "summary": "A suspicious sign appears, but separate network telemetry disagrees with it.",
+        "summary": "A suspicious sign appears, but independent telemetry disagrees with it.",
         "signals": [
             {"label": "Impossible-travel indicator", "stance": "SUPPORTING"},
             {"label": "New device observed", "stance": "SUPPORTING"},
-            {"label": "Separate source types conflict", "stance": "CONFLICTING"},
+            {"label": "Independent sources conflict", "stance": "CONFLICTING"},
         ],
         "decision_label": "Investigate",
         "explanation": "Conflicting evidence prevents automation, so the firewall abstains and requests more evidence.",
@@ -133,9 +133,7 @@ def load_jsonl(relative_path: Path) -> list[dict[str, Any]]:
     path = ROOT / relative_path
     rows: list[dict[str, Any]] = []
     try:
-        for line_number, line in enumerate(
-            path.read_text(encoding="utf-8").splitlines(), start=1
-        ):
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
             if not line.strip():
                 continue
             value = json.loads(
@@ -144,9 +142,7 @@ def load_jsonl(relative_path: Path) -> list[dict[str, Any]]:
                 parse_constant=_reject_constant,
             )
             if not isinstance(value, dict):
-                raise PublicDataError(
-                    f"Expected a JSON object at {relative_path}:{line_number}"
-                )
+                raise PublicDataError(f"Expected a JSON object at {relative_path}:{line_number}")
             rows.append(value)
     except (OSError, json.JSONDecodeError) as exc:
         raise PublicDataError(f"Unable to load {relative_path}: {exc}") from exc
@@ -171,36 +167,10 @@ def commit_for(relative_path: Path) -> str:
     return commit
 
 
-def project_version_at_commit(commit: str) -> str:
-    """Return the project version frozen with an immutable design commit."""
-
-    if not re.fullmatch(r"[0-9a-f]{40}", commit):
-        raise PublicDataError("Project-version lookup requires an exact Git commit.")
-    try:
-        value = tomllib.loads(git("show", f"{commit}:pyproject.toml"))
-        version = value["project"]["version"]
-    except (
-        subprocess.CalledProcessError,
-        tomllib.TOMLDecodeError,
-        KeyError,
-        TypeError,
-    ) as exc:
-        raise PublicDataError(
-            f"Unable to resolve the project version at commit {commit}."
-        ) from exc
-    if not isinstance(version, str):
-        raise PublicDataError(
-            f"The project version at commit {commit} is not a string."
-        )
-    return normalize_version(version)
-
-
 def ensure_clean_sources(paths: set[Path]) -> None:
     for relative_path in sorted(paths):
         if git("status", "--porcelain", "--", relative_path.as_posix()):
-            raise PublicDataError(
-                f"Public source is modified or untracked: {relative_path}"
-            )
+            raise PublicDataError(f"Public source is modified or untracked: {relative_path}")
 
 
 def source_url(commit: str, relative_path: Path) -> str:
@@ -227,9 +197,7 @@ def implementation_commit(record: dict[str, Any]) -> str:
     reference = record.get("system_under_test", {}).get("source_reference", "")
     match = re.search(r"\b[0-9a-f]{40}\b", reference)
     if not match:
-        raise PublicDataError(
-            f"Evidence record {record.get('claim_id')} lacks an implementation commit"
-        )
+        raise PublicDataError(f"Evidence record {record.get('claim_id')} lacks an implementation commit")
     return match.group(0)
 
 
@@ -242,42 +210,23 @@ def validate_claim_record(record: dict[str, Any]) -> None:
     if record.get("claim_status") != "OBSERVED":
         raise PublicDataError(f"Claim {record.get('claim_id')} is not OBSERVED")
     if record.get("claim_class") != "CONTROLLED_BEHAVIOR":
-        raise PublicDataError(
-            f"Claim {record.get('claim_id')} is not controlled-behavior evidence"
-        )
+        raise PublicDataError(f"Claim {record.get('claim_id')} is not controlled-behavior evidence")
     scope = record.get("evaluation_scope", {})
-    if (
-        scope.get("data_origin") != "SYNTHETIC_FIXTURE"
-        or scope.get("historical_case_count") != 0
-    ):
-        raise PublicDataError(
-            f"Claim {record.get('claim_id')} exceeds the public synthetic boundary"
-        )
+    if scope.get("data_origin") != "SYNTHETIC_FIXTURE" or scope.get("historical_case_count") != 0:
+        raise PublicDataError(f"Claim {record.get('claim_id')} exceeds the public synthetic boundary")
     if record.get("review", {}).get("review_type") != "SELF":
-        raise PublicDataError(
-            f"Unexpected review boundary for {record.get('claim_id')}"
-        )
+        raise PublicDataError(f"Unexpected review boundary for {record.get('claim_id')}")
     if not isinstance(denominator, int) or denominator <= 0:
-        raise PublicDataError(
-            f"Claim {record.get('claim_id')} has no valid denominator"
-        )
-    if any(
-        not isinstance(value, int) or value < 0 for value in (passed, failed, excluded)
-    ):
-        raise PublicDataError(
-            f"Claim {record.get('claim_id')} has invalid result accounting"
-        )
+        raise PublicDataError(f"Claim {record.get('claim_id')} has no valid denominator")
+    if any(not isinstance(value, int) or value < 0 for value in (passed, failed, excluded)):
+        raise PublicDataError(f"Claim {record.get('claim_id')} has invalid result accounting")
     if passed + failed + excluded != denominator:
-        raise PublicDataError(
-            f"Claim {record.get('claim_id')} result accounting does not reconcile"
-        )
+        raise PublicDataError(f"Claim {record.get('claim_id')} result accounting does not reconcile")
 
 
 def load_claim_records() -> list[tuple[Path, dict[str, Any]]]:
     records: list[tuple[Path, dict[str, Any]]] = []
-    for path in sorted(
-        (ROOT / "contracts/v0.2.0/examples").glob("phase2-*-evidence-record.json")
-    ):
+    for path in sorted((ROOT / "contracts/v0.2.0/examples").glob("phase2-*-evidence-record.json")):
         relative_path = path.relative_to(ROOT)
         record = load_json(relative_path)
         claim_id = record.get("claim_id", "")
@@ -300,14 +249,8 @@ def build_scenarios(starter_commit: str, baseline_commit: str) -> list[dict[str,
             raise PublicDataError(f"Starter scenario is missing: {case_id}")
         if decision["final_disposition"] != adjudication["decision_disposition"]:
             raise PublicDataError(f"Decision/adjudication join failed for {case_id}")
-        evaluation_status = (
-            "MATCHED_EXPECTATION"
-            if adjudication["disposition_match"]
-            else "MISMATCHED_EXPECTATION"
-        )
-        counterfactual_actions = [
-            action.replace("_", " ") for action in decision["counterfactual_actions"]
-        ]
+        evaluation_status = "MATCHED_EXPECTATION" if adjudication["disposition_match"] else "MISMATCHED_EXPECTATION"
+        counterfactual_actions = [action.replace("_", " ") for action in decision["counterfactual_actions"]]
         scenarios.append(
             {
                 "id": presentation["id"],
@@ -336,11 +279,7 @@ def build_scenarios(starter_commit: str, baseline_commit: str) -> list[dict[str,
                 },
                 "evaluation": {
                     "status": evaluation_status,
-                    "label": (
-                        "Matched expectation"
-                        if adjudication["disposition_match"]
-                        else "Did not match expectation"
-                    ),
+                    "label": "Matched expectation" if adjudication["disposition_match"] else "Did not match expectation",
                     "expected_disposition": adjudication["adjudicated_disposition"],
                     "explanation": presentation["evaluation_explanation"],
                 },
@@ -349,27 +288,14 @@ def build_scenarios(starter_commit: str, baseline_commit: str) -> list[dict[str,
         )
 
     failure = next(
-        (
-            row
-            for row in load_jsonl(BASELINE_DECISIONS)
-            if row.get("case_id") == "test-00081-8c62233"
-        ),
+        (row for row in load_jsonl(BASELINE_DECISIONS) if row.get("case_id") == "test-00081-8c62233"),
         None,
     )
-    if (
-        failure is None
-        or failure.get("post_action_verification", {}).get("passed") is not False
-    ):
-        raise PublicDataError(
-            "The bounded synthetic effect-failure demonstration is unavailable"
-        )
-    failed_actions = [
-        row for row in failure.get("action_results", []) if row.get("success") is False
-    ]
+    if failure is None or failure.get("post_action_verification", {}).get("passed") is not False:
+        raise PublicDataError("The bounded synthetic effect-failure demonstration is unavailable")
+    failed_actions = [row for row in failure.get("action_results", []) if row.get("success") is False]
     if [row.get("action") for row in failed_actions] != ["force_step_up_auth"]:
-        raise PublicDataError(
-            "The synthetic effect-failure demonstration changed unexpectedly"
-        )
+        raise PublicDataError("The synthetic effect-failure demonstration changed unexpectedly")
     scenarios.append(
         {
             "id": "simulated-effect-failure",
@@ -397,9 +323,7 @@ def build_scenarios(starter_commit: str, baseline_commit: str) -> list[dict[str,
                 "status": "FAILED",
                 "authorization_issued": bool(failure["authorization"]["issued"]),
                 "broker_invocations": len(failure["action_results"]),
-                "operational_effects": sum(
-                    1 for row in failure["action_results"] if row.get("success")
-                ),
+                "operational_effects": sum(1 for row in failure["action_results"] if row.get("success")),
                 "explanation": "Post-action verification detected that forced step-up authentication did not reach the intended simulator state.",
             },
             "evaluation": {
@@ -416,18 +340,13 @@ def build_scenarios(starter_commit: str, baseline_commit: str) -> list[dict[str,
 
 def build_claims(records: list[tuple[Path, dict[str, Any]]]) -> list[dict[str, Any]]:
     claims: list[dict[str, Any]] = []
-    for path, record in sorted(
-        records, key=lambda item: claim_number(item[1]["claim_id"])
-    ):
+    for path, record in sorted(records, key=lambda item: claim_number(item[1]["claim_id"])):
         claim_id = record["claim_id"]
         presentation = CLAIM_PRESENTATION[claim_id]
         summary = load_json(presentation["summary"])
         if summary.get("claim_id") != claim_id:
             raise PublicDataError(f"Campaign summary does not match {claim_id}")
-        if (
-            summary.get("raw_outcomes", {}).get("denominator")
-            != record["results"]["denominator"]
-        ):
+        if summary.get("raw_outcomes", {}).get("denominator") != record["results"]["denominator"]:
             raise PublicDataError(f"Campaign denominator does not match {claim_id}")
         publication_commit = commit_for(path)
         claims.append(
@@ -437,17 +356,13 @@ def build_claims(records: list[tuple[Path, dict[str, Any]]]) -> list[dict[str, A
                 "evidence_level": presentation["evidence_level"],
                 "claim_class": record["claim_class"],
                 "status": record["claim_status"],
-                "version": normalize_version(
-                    record["system_under_test"]["release_version"]
-                ),
+                "version": normalize_version(record["system_under_test"]["release_version"]),
                 "implementation_commit": implementation_commit(record),
                 "publication_commit": publication_commit,
                 "evaluated_at": record["evaluated_at"],
                 "review_type": record["review"]["review_type"],
                 "data_origin": record["evaluation_scope"]["data_origin"],
-                "historical_case_count": record["evaluation_scope"][
-                    "historical_case_count"
-                ],
+                "historical_case_count": record["evaluation_scope"]["historical_case_count"],
                 "results": {
                     "denominator": record["results"]["denominator"],
                     "passed": record["results"]["passed"],
@@ -455,7 +370,7 @@ def build_claims(records: list[tuple[Path, dict[str, Any]]]) -> list[dict[str, A
                     "excluded": record["results"]["excluded"],
                 },
                 "highlights": presentation["highlights"],
-                "limitation": " ".join(record["review"]["unresolved_objections"]),
+                "limitation": record["review"]["unresolved_objections"][0],
                 "source_url": source_url(publication_commit, path),
             }
         )
@@ -466,13 +381,8 @@ def build_model_snapshot() -> dict[str, Any]:
     metrics = load_json(BASELINE_METRICS)
     manifest = load_json(BASELINE_MANIFEST)
     scope = metrics["scope"]
-    if (
-        scope.get("data_type") != "synthetic"
-        or scope.get("operational_validity") != "not established"
-    ):
-        raise PublicDataError(
-            "The model snapshot exceeds the synthetic mechanics boundary"
-        )
+    if scope.get("data_type") != "synthetic" or scope.get("operational_validity") != "not established":
+        raise PublicDataError("The model snapshot exceeds the synthetic mechanics boundary")
     source_commit = commit_for(BASELINE_METRICS)
     model = metrics["model"]
     decision = metrics["decision_control"]
@@ -484,10 +394,7 @@ def build_model_snapshot() -> dict[str, Any]:
         decision["expected_disposition_match_rate"],
         safety["post_action_verification_pass_rate"],
     ]
-    if not all(
-        isinstance(value, (int, float)) and math.isfinite(value)
-        for value in numeric_values
-    ):
+    if not all(isinstance(value, (int, float)) and math.isfinite(value) for value in numeric_values):
         raise PublicDataError("The model snapshot contains a non-finite metric")
     return {
         "label": "V0.1 synthetic mechanics baseline",
@@ -499,13 +406,9 @@ def build_model_snapshot() -> dict[str, Any]:
             "accuracy_at_0_5": model["accuracy_at_0_5"],
             "brier_score": model["brier_score"],
             "roc_auc": model["roc_auc"],
-            "expected_disposition_match_rate": decision[
-                "expected_disposition_match_rate"
-            ],
+            "expected_disposition_match_rate": decision["expected_disposition_match_rate"],
             "false_containment_count": decision["false_containment_count"],
-            "post_action_verification_pass_rate": safety[
-                "post_action_verification_pass_rate"
-            ],
+            "post_action_verification_pass_rate": safety["post_action_verification_pass_rate"],
         },
         "disposition_counts": decision["disposition_counts"],
         "interpretation": "These generator-consistent synthetic results validate POC mechanics, not operational detection accuracy, real-world error rates, or production safety.",
@@ -515,22 +418,21 @@ def build_model_snapshot() -> dict[str, Any]:
 
 def build_public_data() -> dict[str, Any]:
     records = load_claim_records()
-    latest_path, latest_record = max(
-        records, key=lambda item: claim_number(item[1]["claim_id"])
-    )
+    latest_path, latest_record = max(records, key=lambda item: claim_number(item[1]["claim_id"]))
     claims = build_claims(records)
     latest_publication_commit = commit_for(latest_path)
 
     plan = load_json(SOURCE_TO_DECISION_PLAN)
     plan_claim_id = plan["claim_id"]
     observed_claim_ids = {record["claim_id"] for _, record in records}
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        project_version = tomllib.load(handle)["project"]["version"]
     candidate = None
     if plan_claim_id not in observed_claim_ids:
-        design_commit = commit_for(SOURCE_TO_DECISION_PLAN)
         candidate = {
             "label": "Design candidate",
-            "version": project_version_at_commit(design_commit),
-            "design_commit": design_commit,
+            "version": normalize_version(project_version),
+            "design_commit": commit_for(SOURCE_TO_DECISION_PLAN),
             "claim_id": plan_claim_id,
             "evaluation": "NOT_EVALUATED",
         }
@@ -555,9 +457,7 @@ def build_public_data() -> dict[str, Any]:
         "site_status": {
             "evidence_baseline": {
                 "label": "Published evidence baseline",
-                "version": normalize_version(
-                    latest_record["system_under_test"]["release_version"]
-                ),
+                "version": normalize_version(latest_record["system_under_test"]["release_version"]),
                 "publication_commit": latest_publication_commit,
                 "latest_claim_id": latest_record["claim_id"],
                 "evaluated_at": latest_record["evaluated_at"],
@@ -585,47 +485,32 @@ def build_public_data() -> dict[str, Any]:
         ],
     }
     schema = load_json(SCHEMA_PATH.relative_to(ROOT))
-    jsonschema.Draft202012Validator(
-        schema, format_checker=jsonschema.FormatChecker()
-    ).validate(data)
+    jsonschema.Draft202012Validator(schema, format_checker=jsonschema.FormatChecker()).validate(data)
     return data
 
 
 def serialize(data: dict[str, Any]) -> str:
-    return (
-        json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False)
-        + "\n"
-    )
+    return json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument(
-        "--check", action="store_true", help="Fail if the checked-in bundle is stale"
-    )
+    parser.add_argument("--check", action="store_true", help="Fail if the checked-in bundle is stale")
     args = parser.parse_args()
     output = args.output if args.output.is_absolute() else ROOT / args.output
     try:
         rendered = serialize(build_public_data())
         if args.check:
             if not output.exists() or output.read_text(encoding="utf-8") != rendered:
-                raise PublicDataError(
-                    f"Public website data is stale: {output.relative_to(ROOT)}"
-                )
+                raise PublicDataError(f"Public website data is stale: {output.relative_to(ROOT)}")
             print(f"Public website data is current: {output.relative_to(ROOT)}")
             return 0
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(rendered, encoding="utf-8")
         print(f"Wrote sanitized public website data: {output.relative_to(ROOT)}")
         return 0
-    except (
-        PublicDataError,
-        KeyError,
-        TypeError,
-        subprocess.CalledProcessError,
-        jsonschema.ValidationError,
-    ) as exc:
+    except (PublicDataError, KeyError, TypeError, subprocess.CalledProcessError, jsonschema.ValidationError) as exc:
         print(f"Public website data build failed: {exc}", file=sys.stderr)
         return 1
 

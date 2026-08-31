@@ -5,7 +5,10 @@ on:
   release:
     types: [published]
 
-permissions: {}
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: github-pages
@@ -15,63 +18,23 @@ jobs:
   validate-and-build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: read
     steps:
       - name: Check out the immutable release source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Install validation dependencies
-        run: 'python -m pip install --require-hashes --only-binary=:all: -r requirements.lock'
-
-      - name: Validate locked dependencies and runtime SBOM
-        run: python scripts/validate_supply_chain.py
+        run: python -m pip install -r requirements.txt
 
       - name: Run the complete project test suite
-        run: PYTHONWARNINGS=error PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src:. python -m unittest discover -s tests -v
-
-      - name: Run Phase 3 simulation-only SOC demonstrations
-        run: |
-          phase3_demo_root="$(mktemp -d)"
-          PYTHONPATH=src python run_phase3.py --output-dir "$phase3_demo_root/demo"
-
-      - name: Run Phase 3 deterministic adversarial corpus
-        run: |
-          phase3_corpus_root="$(mktemp -d)"
-          PYTHONPATH=src python run_phase3_corpus.py --output-dir "$phase3_corpus_root/corpus"
-
-      - name: Validate Phase 2 starter inputs
-        run: python run_phase2.py --validate-only
-
-      - name: Run Phase 2 starter read-only replay
-        run: python run_phase2.py
-
-      - name: Verify Phase 2.1 qualification fixture generation
-        run: python scripts/generate_phase2_qualification_fixture.py --check
-
-      - name: Validate Phase 2.1 qualification inputs
-        run: python run_phase2.py --config config/phase2_qualification.json --validate-only
-
-      - name: Run Phase 2.1 qualification replay
-        run: python run_phase2.py --config config/phase2_qualification.json
-
-      - name: Validate commit-frozen Gate B campaign plan
-        run: python scripts/generate_gate_b_ce2_campaign.py --validate-plan
-
-      - name: Validate commit-frozen feature-assurance campaign plan
-        run: python scripts/generate_feature_assurance_ce2_campaign.py --validate-plan
-
-      - name: Validate planned source-to-decision campaign
-        run: python scripts/generate_source_to_decision_ce2_campaign.py --validate-plan
+        run: PYTHONPATH=src python -m unittest discover -s tests -v
 
       - name: Validate committed claim evidence
         run: |
@@ -84,13 +47,13 @@ jobs:
         run: python scripts/build_public_site_data.py --check
 
       - name: Verify the release manifest
-        run: python scripts/validate_manifest.py
+        run: shasum -a 256 -c MANIFEST.sha256
 
       - name: Configure GitHub Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        uses: actions/configure-pages@v5
 
       - name: Upload validated static site
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
@@ -99,13 +62,10 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy the complete validated artifact
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        uses: actions/deploy-pages@v4

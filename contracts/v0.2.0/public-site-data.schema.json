@@ -193,7 +193,7 @@
         "historical_case_count": { "const": 0 },
         "results": { "$ref": "#/$defs/claimResults" },
         "highlights": { "type": "array", "minItems": 2, "maxItems": 6, "items": { "type": "string", "minLength": 1, "maxLength": 120 } },
-        "limitation": { "type": "string", "minLength": 1, "maxLength": 700 },
+        "limitation": { "type": "string", "minLength": 1, "maxLength": 280 },
         "source_url": { "$ref": "#/$defs/url" }
       }
     },
