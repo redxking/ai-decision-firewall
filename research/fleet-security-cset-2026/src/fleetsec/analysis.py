@@ -2,8 +2,8 @@ from __future__ import annotations
 from collections import defaultdict
 import csv, math, statistics
 
-METRICS=["compromise_fraction","authorization_integrity_loss","weighted_blast_radius","containment_latency","security_qualified_ratio"]
-BOUNDED_01={"compromise_fraction","authorization_integrity_loss","weighted_blast_radius","security_qualified_ratio"}
+METRICS=["compromise_fraction","ever_compromise_fraction","peak_compromise_fraction","authorization_integrity_loss","weighted_blast_radius","containment_latency","security_qualified_ratio"]
+BOUNDED_01={"compromise_fraction","ever_compromise_fraction","peak_compromise_fraction","authorization_integrity_loss","weighted_blast_radius","security_qualified_ratio"}
 
 def _ci95(values,bounded_01=False):
     if not values: return (float("nan"),float("nan"),float("nan"))
