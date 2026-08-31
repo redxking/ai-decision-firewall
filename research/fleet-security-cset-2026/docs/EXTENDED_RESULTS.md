@@ -1,17 +1,17 @@
 # Extended synthetic validation results
 
-The extended experiment executed 720 deterministic synthetic trials: 6 populations (1, 4, 16, 64, 256, 1,024) x 6 communication topologies (isolated, ring, star, tree, bounded-degree random, dense) x 2 privilege configurations (least privilege, shared privilege) x 10 repetitions.
+The publication campaign executed 2,160 deterministic synthetic trials: 6 populations (1, 4, 16, 64, 256, 1,024) x 6 communication topologies (isolated, ring, star, tree, bounded-degree random, dense) x 2 privilege configurations (least privilege, shared privilege) x 30 repetitions.
 
 Frozen synthetic parameters: 20 steps, initial compromise probability 0.35, per-edge propagation probability 0.20, malicious-request probability 0.45, external-policy false-allow probability 0.01, high-privilege fraction 0.10, root seed 20260831.
 
-For N=1,024 under least privilege, mean ever-compromised fraction was 0.000390625 (isolated), 0.00224609375 (ring), 0.007421875 (tree), 0.25107421875 (bounded-degree random), 0.293359375 (star), and 0.5 (dense). Mean authorization-integrity loss at N=1,024 ranged from 0 in the isolated case to 0.0052312137252649975 in the dense least-privilege case.
+For N=1,024 under least privilege, mean ever-compromised fraction was 0.000423 (isolated), 0.001888 (ring), 0.004915 (tree), 0.163444 (star), 0.312467 (bounded-degree random), and 0.400000 (dense). Under shared privilege, corresponding values were 0.000456, 0.001074, 0.003971, 0.143652, 0.235547, and 0.400000.
 
-These are simulator results. They do not characterize a commercial or open-source LLM and the configured probabilities must not be presented as measured attack probabilities.
+At N=1,024, mean authorization-integrity loss across topology/privilege cells ranged from 0 to 0.011111; weighted blast radius remained below 0.00170. These are simulator results. They do not characterize a commercial or open-source LLM and the configured probabilities must not be presented as measured attack probabilities.
 
-Locally generated evidence hashes for the frozen run:
+Evidence hashes for the frozen 30-repetition publication run:
 
-- `extended_raw.csv` SHA-256: `3145ccb07654ff99e6762108bf920d41efaa9afd044c379850fc20ae82d3b6a9`
-- `extended_summary.csv` SHA-256: `3e83cb0db91ae7249274012d26b06c2d1401e961c7948ab45f834eca5601a781`
+- `extended_raw.csv` SHA-256: `59c8fced6ef2ae6c6a19611f31b89df98141202a373de82640ff9585eb831ead`
+- `extended_summary.csv` SHA-256: `49d56c6bc183b7f16bafd55d8704c638a2178c71427a6b44c9bf43e6351e0aec`
 
 Regenerate with:
 
