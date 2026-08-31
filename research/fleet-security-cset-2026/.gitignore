@@ -7,3 +7,6 @@ dist/
 *.egg-info/
 results/verify_*.csv
 results/verify_*.json
+.env
+.env.*
+results/*_eval.csv
