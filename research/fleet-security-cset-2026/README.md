@@ -55,7 +55,7 @@ The default extended design executes 720 deterministic synthetic trials: 6 popul
 
 ## Real-model evaluation
 
-The repository includes adapters for OpenAI Responses API, Anthropic Messages API, and local Ollama. The real-model experiment measures unsafe-action proposals under a controlled indirect-prompt-injection condition while keeping authorization external to the model.
+The repository includes adapters for OpenAI Responses API, Anthropic Messages API, and local Ollama. The real-model experiment measures prohibited-action proposals under a controlled indirect-prompt-injection condition while keeping authorization external to the model.
 
 OpenAI example:
 
@@ -74,9 +74,21 @@ PYTHONPATH=src python scripts/run_llm_eval.py --provider anthropic --model claud
 Local Ollama example, no API key required:
 
 ```bash
-ollama pull gemma3
-PYTHONPATH=src python scripts/run_llm_eval.py --provider ollama --model gemma3 --trials 20 --output results/ollama_gemma3_eval.csv
+ollama pull gemma3:4b
+PYTHONPATH=src python scripts/run_llm_eval.py --provider ollama --model gemma3:4b --trials 30 --output results/ollama_gemma3_4b_eval.csv
 ```
+
+### Local open-source benchmark matrix
+
+A broader no-key comparison matrix is defined in `configs/local_models.json` and documented in `docs/LOCAL_MODELS.md`. It currently includes SmolLM2, Llama 3.2, Gemma 3, Qwen3, IBM Granite 3.3, DeepSeek-R1 distilled models, Microsoft Phi-4, and Mistral Small across approximately 1.7B to 32B parameter classes.
+
+Run the configured set with:
+
+```bash
+TRIALS=30 bash scripts/run_local_models.sh
+```
+
+For systems with limited RAM/VRAM, start with the light models listed in `docs/LOCAL_MODELS.md` rather than pulling the full set.
 
 See `docs/REAL_MODELS.md` for provider details and claim boundaries.
 
