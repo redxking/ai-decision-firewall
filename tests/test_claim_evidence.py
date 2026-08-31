@@ -36,6 +36,7 @@ from scripts.generate_feature_assurance_ce2_campaign import (
     CAMPAIGN_SCHEMA as FEATURE_CAMPAIGN_SCHEMA,
     CAMPAIGN_SEED as FEATURE_CAMPAIGN_SEED,
     CAMPAIGN_SOURCE_PATHS as FEATURE_CAMPAIGN_SOURCE_PATHS,
+    POST_CAMPAIGN_ISOLATED_SOURCES as FEATURE_ISOLATED_SOURCES,
     PROHIBITED_PUBLIC_FIELDS as FEATURE_PROHIBITED_PUBLIC_FIELDS,
     CampaignGenerationError as FeatureCampaignGenerationError,
     _base_case as build_seeded_feature_case,
@@ -1233,6 +1234,21 @@ import scripts.generate_feature_assurance_ce2_campaign  # noqa: F401,E402
         self.assertEqual(
             len(profile["source_bindings"]),
             len(FEATURE_CAMPAIGN_SOURCE_PATHS),
+        )
+        self.assertEqual(
+            FEATURE_ISOLATED_SOURCES,
+            frozenset(
+                {
+                    "src/adf_poc/lab_contracts.py",
+                    "src/adf_poc/lab_nodes.py",
+                    "src/adf_poc/lab_services.py",
+                    "src/adf_poc/lab_transport.py",
+                    "src/adf_poc/service.py",
+                    "src/adf_poc/service_backup.py",
+                    "src/adf_poc/service_secret_stage.py",
+                    "src/adf_poc/stage_a.py",
+                }
+            ),
         )
         self.assertEqual(len(rows), 16)
         self.assertEqual(

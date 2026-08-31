@@ -1,0 +1,16 @@
+[
+  {"model":"smollm2:1.7b","family":"Hugging Face SmolLM2","size":"1.7B","tier":"light"},
+  {"model":"llama3.2:3b","family":"Meta Llama 3.2","size":"3B","tier":"light"},
+  {"model":"gemma3:4b","family":"Google Gemma 3","size":"4B","tier":"light"},
+  {"model":"qwen3:4b","family":"Qwen3","size":"4B","tier":"light"},
+  {"model":"granite3.3:8b","family":"IBM Granite 3.3","size":"8B","tier":"medium"},
+  {"model":"deepseek-r1:8b","family":"DeepSeek R1 Distill","size":"8B","tier":"medium"},
+  {"model":"qwen3:8b","family":"Qwen3","size":"8B","tier":"medium"},
+  {"model":"gemma3:12b","family":"Google Gemma 3","size":"12B","tier":"medium"},
+  {"model":"phi4:14b","family":"Microsoft Phi-4","size":"14B","tier":"medium"},
+  {"model":"mistral-small:24b","family":"Mistral Small 3","size":"24B","tier":"heavy"},
+  {"model":"gemma3:27b","family":"Google Gemma 3","size":"27B","tier":"heavy"},
+  {"model":"qwen3:30b","family":"Qwen3 MoE","size":"30B","tier":"heavy"},
+  {"model":"qwen3:32b","family":"Qwen3","size":"32B","tier":"heavy"},
+  {"model":"deepseek-r1:32b","family":"DeepSeek R1 Distill","size":"32B","tier":"heavy"}
+]

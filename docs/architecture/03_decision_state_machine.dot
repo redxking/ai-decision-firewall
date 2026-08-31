@@ -1,34 +1,49 @@
 digraph G {
-  graph [rankdir=LR, bgcolor="white", pad="0.35", nodesep="0.55", ranksep="0.7", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall POC — Decision State Machine"];
-  node [shape=ellipse, style="filled", fillcolor="#F5F7FA", color="#536B85", fontname="Arial", fontsize=11];
-  edge [color="#617286", fontname="Arial", fontsize=9, arrowsize=0.75];
+  graph [rankdir=TB, newrank=true, bgcolor="white", pad="0.30", nodesep="0.48", ranksep="0.50", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall - Phase 2 Run State Machine\nRemote alpha.6 design freeze @ 08ce203c; P2-CE-005 CE-0 NOT_EVALUATED", splines=polyline];
+  node [shape=box, style="rounded,filled", fillcolor="#F7F9FC", color="#536B85", fontname="Arial", fontsize=9.4, margin="0.16,0.10"];
+  edge [color="#617286", fontname="Arial", fontsize=8.2, arrowsize=0.70, penwidth=1.0];
 
-  start [shape=circle, label="", width=0.22, fillcolor="#243B5A"];
-  ingest [shape=box, style="rounded,filled", label="INGEST\nValidate schema"];
-  assess [shape=box, style="rounded,filled", label="ASSESS\nEvidence + risk"];
-  poison [shape=diamond, label="Poisoned, stale,\nmissing, or conflicting?"];
-  low [shape=diamond, label="Risk below\nclosure threshold?"];
-  contain [shape=diamond, label="Risk, evidence,\ncriticality permit\nreversible action?"];
-  verify [shape=box, style="rounded,filled", label="INDEPENDENT VERIFY"];
-  authorize [shape=box, style="rounded,filled", label="AUTHORIZE\nSigned scoped token", fillcolor="#E7F7ED"];
-  execute [shape=box, style="rounded,filled", label="SIMULATED EXECUTE"];
-  post [shape=box, style="rounded,filled", label="POST-ACTION VERIFY"];
-  noaction [shape=doublecircle, label="NO ACTION", fillcolor="#EAF2FF"];
-  investigate [shape=doublecircle, label="INVESTIGATE", fillcolor="#FFF4DD"];
-  escalate [shape=doublecircle, label="ESCALATE\nHUMAN", fillcolor="#FDE7E9"];
-  complete [shape=doublecircle, label="CONTAINED\n+ VERIFIED", fillcolor="#E7F7ED"];
+  start [shape=circle, label="", width=0.20, fillcolor="#243B5A"];
+  preflight [shape=diamond, label="MODE + ORIGIN PREFLIGHT\nSupported read-only mode?\nHistorical origin has exact Gate B?", fillcolor="#EAF2FF"];
+  qualify [shape=diamond, label="FREEZE + QUALIFY\nGovernance and record set valid?\nAccepted set exactly accounted?", fillcolor="#DCEBFA"];
+  decide [label="NORMALIZE + DECIDE\nEVIDENCE → MODEL → POLICY → VERIFIER", fillcolor="#E8F1FF"];
 
-  start -> ingest -> assess -> poison;
-  poison -> investigate [label="yes"];
-  poison -> low [label="no"];
-  low -> noaction [label="yes"];
-  low -> contain [label="no"];
-  contain -> escalate [label="critical / human-only"];
-  contain -> investigate [label="uncertain"];
-  contain -> verify [label="eligible"];
-  verify -> investigate [label="fail-safe failure"];
-  verify -> authorize [label="pass"];
-  authorize -> execute -> post;
-  post -> complete [label="verified"];
-  post -> escalate [label="execution failure"];
+  suppress [label="READ-ONLY FINAL SURFACE\nSUPPRESSED_READ_ONLY\n0 token • 0 broker • 0 effect\nPhase 1 action branch not constructed", fillcolor="#E7F5ED", penwidth=1.5];
+  audit [label="SERIALIZE + AUDIT\nExact eight-stage decision binding", fillcolor="#F0EAF7"];
+  feature [shape=diamond, label="PHASE 2.4 CHECK\nReference feature projection matches?", fillcolor="#F0EAF7"];
+  source [shape=diamond, label="PHASE 2.5 CHECK\nEVIDENCE→FINAL reference path matches?", fillcolor="#F7F2FA", color="#8064A2"];
+
+  receipts [label="WRITE BOTH REPLAY RECEIPTS\nOnly after both exact matches\nNot campaign evidence", fillcolor="#E7F5ED", color="#679B78"];
+  evaluate [label="DEFERRED EVALUATION\nDecode adjudications • compare • metrics", fillcolor="#E7F5ED"];
+  revalidate [shape=diamond, label="FINAL REVALIDATION\nAll inputs, outputs, counts, digests,\nand bindings unchanged?", fillcolor="#E7F5ED"];
+  complete [shape=doublecircle, label="COMPLETED\nREAD-ONLY REPLAY\nNot a P2-CE-005\ncampaign result", fillcolor="#DFF0E4", color="#4D8B63"];
+
+  intake_failure [label="INTAKE FAILURE\nUnsupported mode • Gate B mismatch\nDataset / accounting fatal", fillcolor="#FDEBEC", color="#B85450", fontcolor="#8B3A3A"];
+  assurance_failure [label="ASSURANCE FAILURE\nAudit • feature • source mismatch", fillcolor="#FDEBEC", color="#B85450", fontcolor="#8B3A3A"];
+  evaluation_failure [label="EVALUATION FAILURE\nInvalid adjudication • late mutation", fillcolor="#FDEBEC", color="#B85450", fontcolor="#8B3A3A"];
+  fail [shape=doublecircle, label="FAILED / INCOMPLETE\nNo result claim", fillcolor="#FDEBEC", color="#B85450"];
+  campaign_status [shape=note, style="filled,dashed", label="CAMPAIGN STATUS\nDesign freeze @ 08ce203c • CI succeeded • CE-1 implementation conformance only\nP2-CE-005 = CE-0 NOT_EVALUATED\nNo 40-attempt result or evidence-only release", fillcolor="#FFF4DD", color="#C79A45", fontcolor="#704F12"];
+
+  {rank=same; preflight; intake_failure;}
+  {rank=same; audit; assurance_failure;}
+  {rank=same; evaluate; evaluation_failure;}
+  {rank=same; campaign_status; fail;}
+
+  start -> preflight -> qualify -> decide -> suppress -> audit -> feature -> source;
+  source -> receipts [label="exact match"];
+  receipts -> evaluate -> revalidate;
+  revalidate -> complete [label="yes"];
+
+  preflight -> intake_failure [color="#B85450", fontcolor="#8B3A3A", label="no"];
+  qualify -> intake_failure [color="#B85450", fontcolor="#8B3A3A", label="fatal / incomplete", constraint=false];
+  audit -> assurance_failure [color="#B85450", fontcolor="#8B3A3A", label="mismatch"];
+  feature -> assurance_failure [color="#B85450", fontcolor="#8B3A3A", label="mismatch", constraint=false];
+  source -> assurance_failure [color="#B85450", fontcolor="#8B3A3A", label="mismatch", constraint=false];
+  evaluate -> evaluation_failure [color="#B85450", fontcolor="#8B3A3A", label="invalid"];
+  revalidate -> evaluation_failure [color="#B85450", fontcolor="#8B3A3A", label="no", constraint=false];
+
+  intake_failure -> fail [color="#B85450", label="fail closed"];
+  assurance_failure -> fail [color="#B85450", label="fail closed"];
+  evaluation_failure -> fail [color="#B85450", label="fail closed"];
+  complete -> campaign_status [style=invis, weight=10];
 }

@@ -1,5 +1,336 @@
 # Changelog
 
+## Unreleased — transaction and durability hardening
+
+- Added exact target-boot, ruleset-prestate, and management-reachability checks
+  before an executor can cross the effect boundary.
+- Added a default-off mutation port with closed result validation, durable exact
+  replay, explicit ambiguity handling, and a post-effect crash fence. Shipped
+  lab nodes do not enable or supply the port and continue to produce
+  `NO_EFFECT`; no kernel mutation is reachable.
+- Extended the real-process Phase 4 kill matrix through the default-off effect
+  seam. A durable code-owned marker proves a kill after mutation but before
+  completion leaves exactly one effect and a fenced reservation; a kill after
+  durable `APPLIED` completion replays the exact receipt without another read
+  or effect. This is transaction evidence, not a kernel-action claim.
+- Closed three Phase 4 transaction-boundary defects before enabling a kernel
+  driver: any unfinished reservation now fences all new command keys; failed or
+  malformed pre-effect reads return durable `TARGET_UNAVAILABLE_PRE_EFFECT`
+  without inventing a poststate; and invalid post-effect results close durable
+  `AMBIGUOUS` instead of leaving an accidentally retryable exception path.
+- Made the control client's executor, observer, and target-facts mounts
+  read-only in both the base and recovery container labs. Directional
+  signatures, distinct service identities, completion-state reconciliation,
+  and live kernel readback remain required before a real action is enabled.
+- Recorded the implementation-ready transaction architecture, failure states,
+  recovery rules, verification gates, and later distributed-fencing growth
+  path. Production and external target authority remain blocked.
+- Expanded the Stage A fault campaign with request-claim and authorization-
+  issuance process/container kills, making the response-loss meaning of the T3
+  boundary explicit. Added repeated short-write, partial-row-plus-write-`EIO`,
+  and transient read-`EIO` audit cases with exact no-duplicate-effect and
+  restart dispositions.
+- Added the first bounded Stage A load/resource campaign: 16 durable requests
+  and terminal lookups across four workers with exact receipt/outbox counts,
+  audit validation, reopen, deadline and artifact-growth bounds, and basic
+  thread/descriptor leak checks. This is regression-scale evidence, not an
+  operational capacity or SLO claim.
+- Added an explicitly selectable `dm-flakey error_writes` mode to the isolated
+  ext4 block-device campaign at the same five effect-adjacent boundaries. The
+  requested run fails if the kernel lacks the `flakey` target; current Docker
+  Desktop evidence remains limited to verified `dm-error`. Silent dropped
+  writes, lost flushes, physical power loss, and intended-filesystem behavior
+  remain open.
+- Added a manual-only, exact-SHA GitHub-hosted Linux carrier for the flakey
+  campaign. It uses read-only repository authority, validates the manifest and
+  ordinary suite before privilege, requires the kernel target, publishes no
+  image, and retains bounded diagnostic evidence. A committed carrier alone is
+  not a passing storage-fault result.
+- Made the four-worker bounded-load campaign's durable-lock budget explicit at
+  20 seconds, below its existing 30-second per-operation deadline, after an
+  exact-SHA Python 3.11 run exposed scheduler-dependent starvation at the
+  earlier 5-second test setting.
+- Corrected the manual storage-lab workflow so runner-scoped temporary storage
+  is resolved inside a step, where GitHub permits that context, and added a
+  regression excluding runner expressions from the job-level definition.
+- Extended the block-device failure oracle to recognize SQLite's bounded
+  `unable to open database file` result after an injected flakey write error;
+  the outer control-ledger error remains fail-closed and recovery still must
+  prove exact receipt count, correlated history, and no second effect.
+- Advanced the evidence upload action to immutable v7.0.1 after the hosted run
+  reported the v4 Node 20 runtime deprecation; the new official action uses
+  Node 24 and retains the same bounded artifact inputs.
+- Released failed-operation traceback references before block-device repair and
+  added a one-second bounded ordinary-unmount retry. The lab never uses lazy
+  unmount; persistent open handles still fail the campaign and are left to the
+  disposable container boundary for cleanup.
+- Recorded the successful exact-SHA hosted `dm-flakey error_writes` campaign:
+  five of five boundaries passed against candidate `662cb668`, with exact
+  receipt/disposition oracles, no duplicate effect, unpublished image identity,
+  and a bounded GitHub artifact digest. This is repository-controlled
+  development evidence, not independent or intended-environment validation.
+
+## Released 2026-08-20 — `v0.4.0-alpha.2` Stage A developer prerelease
+
+The [public prerelease](https://github.com/redxking/ai-decision-firewall/releases/tag/v0.4.0-alpha.2)
+and [evidence-gated project website](https://redxking.github.io/ai-decision-firewall/)
+were published on 2026-08-20 from exact release-main Commit
+[`d5c1571930a29d78b31210c219465ecc4d1a793a`](https://github.com/redxking/ai-decision-firewall/commit/d5c1571930a29d78b31210c219465ecc4d1a793a).
+The release remains offline and synthetic and does not authorize production
+integration or live action.
+
+The earlier exact implementation Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4)
+was published to `main` on 2026-08-16. Exact evidence and limitations are recorded in
+[`ADF-STAGE-A-ER-002`](docs/production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
+
+- Added a one-command, networkless Stage A developer preview that creates
+  owner-private disposable credentials and durable local state, runs the real
+  service boundary against workstation and Tier 0 domain-controller synthetic
+  scenarios, returns only sanitized terminal results, and verifies audit-chain
+  integrity. It supports restart/status, generated signed request inspection,
+  fail-closed tamper experiments, and an explicitly gated reset that refuses
+  unmarked or unexpectedly shaped directories. A restricted ephemeral
+  container wrapper and CI smoke path exercise the same runtime without adding
+  a listener, live connector, external target, or production-readiness claim.
+- Pinned every external GitHub Action in CI and Pages to a full commit SHA and
+  added a regression that rejects tags, branches, and short SHAs.
+- Advanced the official CI and Pages actions to immutable Node.js 24 releases
+  after GitHub reported that the earlier Node.js 20 actions were deprecated and
+  being force-run on Node.js 24.
+- Added a fail-closed cold backup/restore command for the correlated Stage A
+  audit, control, and synthetic-adapter artifacts. Backup uses the cooperative
+  durable/audit lock and atomic directory publication; restore requires the
+  exact configuration, policy, secret binding, store identities, file digests,
+  and empty state path before regenerating the audit-inode-bound service marker.
+  This is local self-custodied recoverability mechanics, not approved DR,
+  rollback resistance, trusted time, continuous backup, RPO, or RTO evidence.
+- Added a layered Stage A storage-fault campaign with uncatchable process loss
+  at T1, observation, T2, audit closure, and T3; ambiguous audit-`fsync` and
+  persistent `ENOSPC` controls; and a real Linux tmpfs-exhaustion container
+  case. A complete audit row with failed `fsync` now raises a distinct
+  durability error and cannot reach T3. A partial row caused by actual
+  exhaustion is preserved and forces quarantine. The container package now
+  includes both required Phase 3 schemas, and CI constructs the packaged policy
+  and runs the bounded fault layer under non-root, network-disabled,
+  read-only restrictions.
+- Extended the campaign through two additional system boundaries. A Docker
+  controller now terminates the whole non-root Stage A container from outside
+  at T1, observation, T2, audit closure, and T3, then verifies the persisted
+  volumes from a fresh container. A separate explicitly authorized privileged
+  lab derives from an inspected local image ID and switches an ext4 loopback
+  device to `dm-error` at the same five boundaries. Recovery preserved zero
+  receipts before effect, one receipt after effect, conservative nonterminal
+  disposition, and the durable T3 result without a duplicate effect. The lab
+  records raw pre/post-`e2fsck` image hashes and application-file changes;
+  filesystem repair is never treated as evidence authenticity. Physical power,
+  torn writes, lost flushes, intended CSI behavior, and operational acceptance
+  remain open.
+- Added exact-version, SHA-256 hash-locked runtime and documentation dependency
+  graphs, a reproducible CycloneDX 1.6 runtime SBOM, closed lock/SBOM
+  validation, and `--require-hashes` CI installation. A clean temporary runtime
+  environment installed the lock successfully and passed 23 representative
+  contract tests. This is project-controlled dependency integrity evidence,
+  not trusted-builder provenance, vulnerability disposition, or a signed
+  release.
+- Corrected the runtime lock after CI proved the original graph was not closed
+  across the supported interpreter matrix: NumPy `2.5.2` had no Python 3.11
+  wheel and `referencing` required conditional `typing-extensions` on Python
+  3.11/3.12. The runtime range now resolves to NumPy `2.4.6`, the conditional
+  package is hash locked, and the SBOM validator requires every reviewed
+  transitive edge rather than only root edges. Clean binary-only hash installs
+  and import smoke checks passed locally on Python 3.11 and 3.12.
+- Removed reliance on jsonschema's process-global optional date-time format
+  registry. Installing SBOM tooling registered an optional validator and
+  changed malformed timestamp classification from the code-owned stable reason
+  code to a generic schema error. Timestamp semantics now remain in the
+  offset-aware code-owned validation path regardless of unrelated installed
+  format extras.
+- Reproduced a critical restart replay on the published Phase 3.1 baseline:
+  two newly constructed firewall instances sharing the same valid audit path
+  accepted the same authenticated request and each reported one synthetic
+  operational effect. The hash-linked audit remained valid because it was not
+  the authority-state ledger.
+- Added an opt-in single-host SQLite transaction ledger for immutable request
+  claims, unique verified-decision issuance, atomic authorization consumption
+  plus attempt reservation, monotonic outcomes, digest-only audit outbox, and
+  conservative `UNKNOWN_EFFECT` reconciliation. WAL, `synchronous=FULL`, strict
+  schema/version checks, foreign keys, bounded lock waits, and unsafe-path
+  refusal fail closed.
+- Adopted the ADR-015 two-database offline boundary. A separate SQLite
+  synthetic-adapter store transactionally updates only synthetic target state
+  and inserts one immutable exact-bound receipt before returning. The authority
+  ledger stores a closed, sanitized terminal `RequestLookupResult` through a
+  separate authenticated read-only seam; `process_json` remains fail closed on
+  duplicates and never returns the lookup envelope as a fresh decision.
+- Added query-only existing-store preflight, exact closed schema and semantic
+  validation, path/link/type/mode refusal, and cross-store correlation over
+  overlapping principal, request, decision/context, authority, policy,
+  receipt, and terminal-target facts. All three authoritative artifact paths
+  are preflighted before a missing artifact is created. Bounded cooperative
+  same-host fencing serializes direct store initialization and durable request,
+  approval, lookup, and recovery operations without adding a lock sidecar.
+- Added explicit `ISSUED` / `CONSUMED` / `REVOKED` authority semantics,
+  receipt-scoped attempt states, and quiesced recovery rules. Exact `NO_EFFECT`
+  receipts may close as `FAILED_NO_EFFECT`; `APPLIED`, `PARTIAL`, `AMBIGUOUS`,
+  or absent receipt evidence without separately durable verification closes as
+  `UNKNOWN_EFFECT` with `recovery_required=true`. Receipt absence never proves
+  no effect or permits retry. Recovery never reissues a command, reopens
+  authority, or fabricates verification or rollback.
+- Required a valid read-back normal JSONL lifecycle closure before T3. Recovery
+  writes and reads back the exact contiguous `RECOVERY_STARTED`,
+  `RECOVERY_EVIDENCE_ASSESSED`, and `RECOVERY_FINALIZED` prefix before T3,
+  truthfully records the original lifecycle as `COMPLETE`, `INCOMPLETE`, or
+  `UNRESOLVED`, and resumes idempotently at any prefix. A pending recovery
+  commit fences request and approval writers; append/readback failure
+  suppresses T3; a post-T3 repeat returns the identical audit-inert result.
+- Added restart, conflict, multiprocess initialization/exact-once,
+  storage-lock, schema/path/sidecar, durable-outbox, cross-store substitution,
+  response-loss, recovery-prefix, audit-failure, chronology, and post-effect
+  outcome-write regressions. At exact implementation Commit `8818d5d2`, local
+  verification passed 43/43 focused Stage A tests in 8.248 seconds, 18/18
+  production-gate tests, the warning-fatal 360/360 repository suite in 48.995
+  seconds, 57/57 focused Phase 3 tests, and the deterministic 46/46 corpus; the
+  corpus reported `live_actions_possible=false`. The integrated exact-once race
+  passed 5/5 parallel repetitions. The 307-entry implementation manifest
+  verified 307/307. Exact-SHA CI run
+  [31953570779](https://github.com/redxking/ai-decision-firewall/actions/runs/31953570779)
+  succeeded on Python 3.11 and 3.12, and Dependency Graph run
+  [31953572482](https://github.com/redxking/ai-decision-firewall/actions/runs/31953572482)
+  succeeded. These are project-controlled mechanism observations, not independent
+  verification, production authorization, or operational effectiveness.
+  The boundary remains synthetic/offline and single-host, not cross-store
+  atomic, distributed, highly available, process isolated, or operationally
+  validated.
+- Added a strict 18-domain production-readiness matrix and validator whose
+  derived production gate remains `BLOCKED`, plus threat, failure/recovery,
+  operations, architecture, and evidence-boundary records.
+- Added successor evidence record `ADF-STAGE-A-ER-002` in a separate carrier
+  with a regenerated 308-entry manifest that verified 308/308. The carrier SHA
+  is necessarily reported after creation rather than self-claimed here.
+- No historical or live data, connector, operational credential, external
+  target, or model promotion was introduced. No deployment, tag, or GitHub
+  Release occurred; no exact-SHA Pages run was observed.
+
+## `0.3.1-alpha.1` — published Phase 3.1 governed model-evaluation baseline
+
+Exact Commit `bb6b8f28afba0961bb97b24e6050fccaa94d5702` was published to
+`main` on 2026-08-15. Exact-commit CI passed on Python 3.11 and 3.12, and the
+Dependency Graph workflow passed. No Phase 3.1 GitHub tag or Release was
+created; the commit is a published code baseline, not a packaged release.
+
+- Added closed v0.3.1 plan/result schemas and fixed plan `P3-1-MEV-001` for a
+  synthetic-only model-evaluation mechanism. The plan binds the four committed
+  source pools by SHA-256 and record count, prohibits historical/live access and
+  live action, and contains no owner-approved promotion thresholds.
+- Added a disjoint temporal 60/20/20 training/calibration/evaluation split that
+  moves equal timestamps forward so one timestamp cannot cross a boundary.
+- Added an interpretable logistic baseline and a deterministic Platt calibration
+  challenger. Both are evaluated once on the final temporal partition; the
+  challenger does not add authority or change the Phase 3 decision path.
+- Added ROC AUC, average precision, Brier score, log loss, expected calibration
+  error, threshold metrics, Wilson intervals, selective-risk curves, and
+  scenario/criticality/privilege strata. Results are aggregate only.
+- The fixed synthetic run used 720 training, 240 calibration and 240 evaluation
+  rows. The challenger preserved ranking and the threshold confusion matrix
+  while reducing synthetic Brier score by `0.00098425`, log loss by
+  `0.01113884`, and ten-bin expected calibration error by `0.00309615`. These
+  are mechanism observations, not practical-significance, superiority or
+  operational-performance claims.
+- Added 10 focused regressions for plan safety, source binding, temporal
+  separation, deterministic execution, metrics, calibration inputs, no-clobber
+  output, no action/historical imports, and structural refusal of promotion.
+  The focused module passed 11/11 and the then-current repository suite passed
+  299/299 locally and in exact-commit CI.
+- Added the Phase 3.1 architecture diagram, data-governance gate, model
+  evaluation plan, contracts, ADR 013, and traceability matrix. No historical
+  payload was accessed and no action credential, authorization, broker, target,
+  operational effect, model promotion or `P2-CE-005` execution occurred.
+
+## `0.3.0-alpha.1` — published Phase 3 simulation-only operational MVP baseline
+
+Exact Commit `423685d105be813056617db738297eba83d3d9d0` was published to `main`
+on 2026-08-15. Exact-commit CI passed on Python 3.11 and 3.12, and the Dependency
+Graph workflow passed. The release boundary retains 57/57 focused Phase 3 tests,
+both demonstration checks PASS, the 46/46 deterministic corpus, the then-current
+288/288 repository aggregate, a verified 269-entry manifest, and inspected
+seven-page DOCX/PDF artifacts. It remains simulation-only CE-1 implementation
+evidence, not operational validation.
+
+- Added a strict closed v0.3.0 raw decision-request contract and validated
+  external policy contract. Duplicate members, non-finite numbers, unsupported
+  versions, invalid time, unsafe bounds, and unknown/missing fields fail closed.
+- Added opaque invocation credentials, firewall-owned signed-principal/authority
+  resolution, and trust-material domain separation; policy-owned source, action,
+  and target registries; runtime HMAC source attestations with content,
+  semantics, time, provenance, and subject-target binding; evidence freshness,
+  corroboration, relevance, conflict, missing-source, and poisoning assessment;
+  and deterministic consequence evaluation.
+- Added exact `ALLOW`, `DENY`, `ESCALATE`, and `ALLOW_CONSTRAINED` outcomes with
+  stable reason codes, policy/context digests, deep-immutable records, canonical
+  constraints, and a functionally separate deterministic decision verifier.
+  Code-owned policy invariants preserve unique closed rule precedence,
+  conservative evidence/zero-conflict thresholds, severe-consequence approval
+  floors, and Tier-0 treatment for every domain controller. AI recommendation
+  and confidence remain non-authoritative.
+- Added short-lived HMAC authorizations binding issuer, request, decision,
+  agent, action, target, canonical parameters, time, policy, decision context,
+  target precondition, and nonce. The in-memory ledger enforces single use,
+  including sequential/concurrent replay, prior-instance replay, and failed
+  simulated attempts.
+- Added a mandatory simulation broker, a private-capability in-memory target,
+  state-precondition enforcement, and separate read-only target observation
+  with `VERIFIED`, `FAILED`, `PARTIAL`, `UNEXPECTED_EFFECT`, and
+  `ROLLBACK_REQUIRED` classifications. No live or generic target adapter exists.
+- Added exact-scope, expiring, single-use human approval through a separately
+  resolved opaque human credential. Receipt creation and audit registration are
+  atomic and retryable on precommit failure; the signed receipt permits
+  reevaluation only and cannot mint an action token or invoke the broker.
+- Added correlated lifecycle audit, runtime metrics, two raw-request SOC
+  demonstrations, and a deterministic 46-scenario adversarial corpus. The
+  published boundary passed 57/57 focused tests, both demonstration acceptance
+  checks reported PASS, the corpus reported 46/46, and the complete repository
+  suite passed 288/288 locally and in exact-commit CI.
+- Reconciled the living engineering, safety, test, traceability, and architecture
+  documentation; added the current Phase 3 DOT/PNG/SVG architecture view; and
+  generated an inspected paired 7-page Phase 3 candidate DOCX/PDF status
+  package. The separately named Phase 2.5 and v0.1 packages remain immutable
+  historical artifacts.
+- Regenerated and locally verified the candidate integrity manifest across all
+  269 other tracked files. This binds the local package bytes but does not
+  constitute publication, exact-commit CI, or Phase 2/Phase 3 evaluation
+  evidence.
+- Candidate review found and closed release blockers across cascading
+  consequence, evidence subject-target binding, identity/key-domain handling,
+  polymorphic and late-mutable security values, machine-policy safety floors,
+  request/token/verifier/approval replay and atomicity, dependency-failure
+  closure, and executed-path/post-effect audit correlation. Dedicated negative
+  regressions cover these classes; this is not exhaustive assurance.
+- Phase 3 remains synthetic and CE-1. Its private-capability controls are not
+  OS/process security; ledgers are not durable/distributed; fixture HMAC keys
+  are not enterprise provenance; and same-project verifiers are not external
+  independence. No live action, operational efficacy, production safety, or
+  external assurance is claimed.
+
+## 0.2.0-alpha.6 — published code/package baseline; no P2-CE-005 result
+
+Predecessor design-freeze Commit `08ce203c0965e8d43b7653454d4ea8315996021f` was published on 2026-08-15 and its GitHub CI/Dependency Graph passed. The complete Phase 2.5 package was subsequently published on `main` at exact Commit `854b15c56397a81de6326b719d3d7d1dc847608f`; exact-commit CI and Dependency Graph also passed. Its Phase 2.5 technical suite passed 222/222, the separate public-site module passed 9/9, and the then-current repository aggregate passed 231/231. The site and its tests are not Phase 2.5 or `P2-CE-005` evidence. The package adds bounded campaign/local-run guards, selected Gate B CE-1 scaffolding, documentation, visuals, and status artifacts; its campaign module passed 21/21; its chart check passed in the frozen renderer; and it includes a generated-and-verified integrity manifest plus paired final-source DOCX/PDF renders whose 15 pages were inspected. No tag or release/evidence package was created. The tracked data, model, and `outputs/baseline/` bytes remain at their committed baselines. `P2-CE-005` was not executed or published and remains CE-0 `NOT_EVALUATED`.
+
+- Added a separately implemented, standard-library-only source-to-decision reference path that recomputes the ordered `EVIDENCE`, `MODEL`, `POLICY`, `VERIFIER`, and read-only `FINAL_SURFACE` calculation surfaces from frozen normalized-case, model, and policy bytes.
+- Standardized provenance, integrity, freshness, and source-trust aggregation on ordered `math.fsum(values) / event_count`, and model-logit accumulation on ordered `math.fsum` before the intercept and clamped sigmoid, in both production and reference paths.
+- Added the closed, metadata-only `source_to_decision_assurance.jsonl` receipt and its schema. Successful rows bind the normalized case, exact model and policy bytes, read-only mode, five expected/observed stage digest pairs, and the ordered path digest; they contain no raw case or decision values.
+- Positioned Phase 2.5 after read-only decision validation, deterministic projection, complete eight-stage audit validation, and Phase 2.4 feature recomputation, but before qualification/rejection publication, adjudication decoding, comparison, metrics, and completed-run finalization. A source-to-decision mismatch leaves prior decision/audit files as incomplete diagnostic material and publishes neither reference-assurance artifact.
+- Extended exact-digest construction and late-mutation checks across normalized cases, normalization diagnostics, raw and deterministic decisions, audit, both reference receipts, adjudication comparison, replay metrics, and qualification/rejection artifacts when enabled. The complete set is revalidated before manifest construction, after construction, and after the manifest write; presence of an intermediate artifact or manifest file after an exception does not establish a completed run.
+- Added Phase 2.5 positive, stage-mutation, duplicate/non-finite input, numeric-summation, case-set, artifact-mutation, and harness-ordering tests. The predecessor design-freeze implementation passed **193/193 tests in a review-local run**, and CI succeeded for exact Commit `08ce203c` on 2026-08-15. The complete package subsequently passed the Phase 2.5 technical suite **222/222**. The separately inherited public-site module passed 9/9, producing a then-current repository aggregate of 231/231 without expanding the Phase 2.5 evidence boundary. Exact package Commit `854b15c` was published and its CI passed. These are narrow CE-1 implementation-conformance observations within their stated boundaries only; they are not `P2-CE-005` campaign evidence, a tagged release, or an alpha.6 evidence package.
+- Added a post-design-freeze campaign CLI destination preflight that rejects repository-root/outside/`.git` paths, existing symlink traversal, output/record overlap, nonempty output reuse, and existing record targets before ordinary CLI generation/check operations. Three focused CLI regressions passed 3/3. Check mode additionally rejects symbolic-link, directory, and multiply linked artifact leaves and a symbolic-link record before any artifact read or campaign rebuild. Added a separate negative sensitivity regression for reference-scope construction instrumentation; the campaign module passed 21/21 in an isolated clean clone, and all five campaign-delta tests are included in the 222/222 Phase 2.5 technical suite. Exact package Commit `854b15c` was published and its CI passed. These are operator-error and bounded Python-instrumentation controls, not an OS sandbox, TOCTOU/race guarantee, direct `generate_artifacts` confinement, or campaign evidence.
+- Instrumented every campaign reference attempt for construction of `AuthorizationGate`, `ActionBroker`, and `SimulatedIdentityProvider`. The sensitivity regression injects all three, observes nonzero counters, forces an expected-row mismatch, and confirms closed-schema rejection. This is not a general allocation monitor, target-side proof, or an observed `P2-CE-005` result.
+- Added a `run_poc.py` write interlock. Ordinary repository writes are limited to `data/local/**` and `outputs/local/**`; explicit external paths remain permitted; and the freeze flag expands scope only to `data/**` and `outputs/baseline/**`. Other repository paths, case-variant repository aliases, symlink redirects, data/output overlap, and existing symlink, nonregular, or multiply linked generated leaves—including `run_manifest.json`—are rejected before generation. The local run manifest SHA-256-binds its seven non-self-referential outputs. Fourteen focused tests passed. This is an operator interlock, not OS/mount containment, adversarial TOCTOU/race or comprehensive hard-link protection, or direct-writer confinement.
+- Added CE-1 Gate B causal/observation scaffolding: a validator-owned closed registry of 25 selected `(stage, control_id, reason_code)` identities, exact-match scoring that rejects unclassified failures, and bounded observation over six enumerated Python file APIs. Tests cover 24 selected pre-payload mutations with zero observed `cases` or `adjudications` roles through those APIs and one postqualification threshold identity. This is not a complete failure taxonomy, reference monitor, sandbox, OS-level nonaccess proof, or successor campaign result; no successor campaign has executed.
+- Added the fixed `P2-CE-005-SOURCE-TO-DECISION-SYNTHETIC` plan and closed campaign contract: ten clean/mutant pairs per run, two planned deterministic same-process repetitions, 40 planned attempt observations, zero retries/exclusions, and two expected blocks at each recomputation stage per run. Each run generates ten directly instrumented production baselines shared by the clean/mutant twins—ten calls to each of the engine, evidence, model, policy, and verifier components per run, 20 calls to each component across both runs—while the reference path is called once for each of 20 attempts per run, 40 total.
+- Separated the campaign's planned directly instrumented boundary counters from derived decision-output accounting. Authorization-gate, broker, target-effect, and scoped artifact-write calls are direct observations if the campaign runs; authorization tokens, action results, and operational effects are derived from serialized decisions. Their required zero values remain predeclared expectations, not observations, while `P2-CE-005` is CE-0.
+- `P2-CE-005` remains CE-0 `NOT_EVALUATED`. The plan, expected outcomes, predecessor design-freeze commit and CI result, 222/222 Phase 2.5 technical suite, separate 9/9 public-site module, 231/231 then-current repository aggregate, manifest, inspected renders, publication of exact Commit `854b15c`, and its green CI are not campaign observations. That commit was not executed or published as `P2-CE-005` evidence. CE-2 wording remains prohibited unless a governed Commit A is designated under the frozen protocol, its clean detached campaign runs without repair/retry, and a separate evidence-only Commit B is published and validated.
+- Preserved the read-only boundary: no live execution mode, authorization token, broker, target, action credential, or operational effect was added. This increment makes no historical/live performance, source-truth, outcome-correctness, policy-fitness, efficacy, calibration, privacy/authority, OS-isolation, organizational-independence, production-readiness, statistical-failure-bound, alignment, misalignment, sandbagging, or sabotage-robustness claim.
+
 ## 0.2.0-alpha.5 — 2026-08-15
 
 - Added a typed, source-authorized contract for all modeled event attributes. JSON Booleans are no longer interpreted through generic truthiness, `failed_logins` accepts only finite integral JSON numbers in the code-owned `0..1,000,000` range, and modeled keys asserted by an unauthorized source fail closed.

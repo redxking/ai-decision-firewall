@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/redxking/ai-decision-firewall/contracts/v0.3.1/model-evaluation-plan.schema.json",
+  "title": "Phase 3.1 Model Evaluation Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "status",
+    "evaluation_mode",
+    "data_classification",
+    "historical_payload_access_prohibited",
+    "live_action_prohibited",
+    "dataset_bindings",
+    "split",
+    "label",
+    "candidates",
+    "classification_threshold",
+    "calibration_bins",
+    "abstention_margins",
+    "metrics",
+    "strata",
+    "promotion",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.3.1"},
+    "plan_id": {"type": "string", "pattern": "^P3-1-MEV-[0-9]{3}$"},
+    "status": {"const": "DRAFT"},
+    "evaluation_mode": {"const": "SYNTHETIC_MECHANISM"},
+    "data_classification": {"const": "SYNTHETIC_REPOSITORY_FIXTURE"},
+    "historical_payload_access_prohibited": {"const": true},
+    "live_action_prohibited": {"const": true},
+    "dataset_bindings": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "path", "sha256", "records"],
+        "properties": {
+          "role": {
+            "enum": [
+              "source_pool_cases_a",
+              "source_pool_cases_b",
+              "source_pool_labels_a",
+              "source_pool_labels_b"
+            ]
+          },
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "records": {"type": "integer", "minimum": 1, "maximum": 1000000}
+        }
+      }
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "strategy",
+        "timestamp_field",
+        "train_fraction",
+        "calibration_fraction",
+        "evaluation_fraction",
+        "equal_timestamp_policy"
+      ],
+      "properties": {
+        "strategy": {"const": "TEMPORAL"},
+        "timestamp_field": {"const": "opened_at"},
+        "train_fraction": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "calibration_fraction": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "evaluation_fraction": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "equal_timestamp_policy": {"const": "MOVE_FORWARD_TO_NEXT_TIMESTAMP"}
+      }
+    },
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "positive_value", "adjudication_independence"],
+      "properties": {
+        "field": {"const": "compromised"},
+        "positive_value": {"const": true},
+        "adjudication_independence": {"const": "NOT_ESTABLISHED_SYNTHETIC"}
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["role", "model_id", "family", "fit"],
+          "properties": {
+            "role": {"const": "BASELINE"},
+            "model_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{3,80}$"},
+            "family": {"const": "logistic_regression"},
+            "fit": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["epochs"],
+              "properties": {"epochs": {"type": "integer", "minimum": 100, "maximum": 10000}}
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["role", "model_id", "family", "fit"],
+          "properties": {
+            "role": {"const": "CHALLENGER"},
+            "model_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{3,80}$"},
+            "family": {"const": "platt_calibrated_logistic_regression"},
+            "fit": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["epochs"],
+              "properties": {"epochs": {"type": "integer", "minimum": 100, "maximum": 10000}}
+            }
+          }
+        }
+      ],
+      "items": false
+    },
+    "classification_threshold": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+    "calibration_bins": {"type": "integer", "minimum": 2, "maximum": 100},
+    "abstention_margins": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {"type": "number", "minimum": 0, "exclusiveMaximum": 0.5}
+    },
+    "metrics": {
+      "type": "array",
+      "minItems": 9,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "roc_auc",
+          "average_precision",
+          "brier_score",
+          "log_loss",
+          "expected_calibration_error",
+          "precision",
+          "recall",
+          "false_positive_rate",
+          "selective_risk"
+        ]
+      }
+    },
+    "strata": {
+      "const": ["scenario", "asset_criticality_band", "privilege_level"]
+    },
+    "promotion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate_status", "performance_thresholds"],
+      "properties": {
+        "gate_status": {"const": "OWNER_THRESHOLDS_REQUIRED"},
+        "performance_thresholds": {"const": []}
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 10}
+    }
+  }
+}

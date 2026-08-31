@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adf-stage-a-config-v1
+  labels:
+    app.kubernetes.io/name: ai-decision-firewall
+    app.kubernetes.io/component: stage-a-runtime
+immutable: true
+data:
+  service.json: |
+    {
+      "schema_version": "1.0",
+      "runtime_profile": "STAGE_A_SYNTHETIC_ONLY",
+      "policy_path": "/opt/adf/config/phase3_policy.json",
+      "state_directory": "/var/lib/adf-volume/state",
+      "signing_key_file": "/var/run/adf/staged/secrets/authorization-signing.key",
+      "evidence_key_files": {
+        "CMDB_PRIMARY": "/var/run/adf/staged/secrets/CMDB_PRIMARY.key",
+        "CTI_PRIMARY": "/var/run/adf/staged/secrets/CTI_PRIMARY.key",
+        "EDR_PRIMARY": "/var/run/adf/staged/secrets/EDR_PRIMARY.key",
+        "IDP_PRIMARY": "/var/run/adf/staged/secrets/IDP_PRIMARY.key",
+        "NETWORK_PRIMARY": "/var/run/adf/staged/secrets/NETWORK_PRIMARY.key"
+      },
+      "principals": [
+        {
+          "credential_file": "/var/run/adf/staged/secrets/SOC_AGENT_01.credential",
+          "principal": {
+            "id": "SOC_AGENT_01",
+            "type": "SOC_AUTOMATION",
+            "authenticated": true,
+            "roles": ["SOC_ANALYST"],
+            "authority": ["endpoint_containment"],
+            "security_status": "TRUSTED",
+            "identity_source": "synthetic_kubernetes_secret_fixture",
+            "human_session": false
+          }
+        }
+      ],
+      "store_busy_timeout_ms": 1000
+    }

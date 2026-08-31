@@ -309,10 +309,15 @@ class ReferenceDecisionPathTests(unittest.TestCase):
             b'{"case_id":"a","case_id":"b"}\n',
             self.starter_decisions,
         )
-        duplicate_model = MODEL_BYTES.replace(
-            b'"intercept": 0.2208073648859561,',
-            b'"intercept": 0.2208073648859561,"intercept": 0.0,',
+        intercept_marker = b'"intercept": '
+        intercept_start = MODEL_BYTES.index(intercept_marker) + len(intercept_marker)
+        intercept_end = MODEL_BYTES.index(b",", intercept_start)
+        duplicate_model = (
+            MODEL_BYTES[: intercept_end + 1]
+            + b'\n  "intercept": 0.0,'
+            + MODEL_BYTES[intercept_end + 1 :]
         )
+        self.assertNotEqual(duplicate_model, MODEL_BYTES)
         self.assert_code(
             "REFERENCE_DECISION_DUPLICATE_KEY",
             self.verify,
@@ -322,7 +327,12 @@ class ReferenceDecisionPathTests(unittest.TestCase):
         )
         for token in (b"NaN", b"Infinity", b"-Infinity", b"1e400"):
             with self.subTest(token=token):
-                model = MODEL_BYTES.replace(b"0.2208073648859561", token, 1)
+                model = (
+                    MODEL_BYTES[:intercept_start]
+                    + token
+                    + MODEL_BYTES[intercept_end:]
+                )
+                self.assertNotEqual(model, MODEL_BYTES)
                 self.assert_code(
                     "REFERENCE_DECISION_NONFINITE",
                     self.verify,

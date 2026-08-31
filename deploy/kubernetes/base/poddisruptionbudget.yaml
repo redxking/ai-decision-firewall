@@ -1,0 +1,13 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: adf-stage-a
+  labels:
+    app.kubernetes.io/name: ai-decision-firewall
+    app.kubernetes.io/component: stage-a-runtime
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-decision-firewall
+      app.kubernetes.io/component: stage-a-runtime

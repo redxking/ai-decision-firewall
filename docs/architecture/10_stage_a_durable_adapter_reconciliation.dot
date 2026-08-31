@@ -1,0 +1,70 @@
+digraph stage_a_durable_adapter_reconciliation {
+  graph [
+    label="AI Decision Firewall — Stage A Durable Synthetic Receipt and Result Lookup\nSingle host • offline synthetic only • production gate BLOCKED",
+    labelloc=t,
+    fontsize=20,
+    fontname="Helvetica",
+    rankdir=LR,
+    bgcolor="white",
+    pad=0.3,
+    nodesep=0.4,
+    ranksep=0.65
+  ];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10, color="#334155", fillcolor="#F8FAFC"];
+  edge [fontname="Helvetica", fontsize=9, color="#475569"];
+
+  request [label="Authenticated request\nExact principal + request ID + digest", fillcolor="#E0F2FE"];
+  firewall [label="Phase 3 firewall\nPolicy + decision + authorization\nprocess_json remains fail-closed", fillcolor="#E0F2FE"];
+  request -> firewall;
+
+  subgraph cluster_control {
+    label="Control SQLite DB — schema v2";
+    color="#7C3AED";
+    style="rounded";
+    t1 [label="T1: authority reservation\nClaim request\nISSUED → CONSUMED\nReserve exact-bound attempt\nOutbox transition", fillcolor="#EDE9FE"];
+    t3 [label="T3: verified terminal record\nAttempt + request state\nSanitized RequestLookupResult\nOutbox transition", fillcolor="#EDE9FE"];
+    unknown [label="UNKNOWN_EFFECT\nTerminal quarantine\nNo token reopen • no retry", fillcolor="#FEE2E2", color="#991B1B", fontcolor="#7F1D1D"];
+  }
+
+  firewall -> t1 [label="one control transaction"];
+
+  subgraph cluster_adapter {
+    label="Synthetic adapter SQLite DB — schema v1";
+    color="#0F766E";
+    style="rounded";
+    t2 [label="T2: execute_once(idempotency key)\nValidate exact binding + prestate\nAtomic synthetic state mutation\n+ immutable adapter receipt", fillcolor="#CCFBF1"];
+    state [label="Durable synthetic target state", fillcolor="#D1FAE5"];
+    receipt [label="SyntheticAdapterReceipt\nNO_EFFECT • APPLIED • PARTIAL • AMBIGUOUS\nAdapter-reported only", fillcolor="#D1FAE5"];
+    t2 -> state;
+    t2 -> receipt;
+  }
+
+  t1 -> t2 [label="no control transaction held"];
+
+  observer [label="Read-only durable observer\nSeparate API; same-store custody\nNot independent target evidence", fillcolor="#FEF3C7"];
+  state -> observer [label="readback"];
+  receipt -> t3 [label="receipt digest + disposition"];
+  observer -> t3 [label="verification summary"];
+
+  lookup [label="Authenticated lookup_request_result\nExact principal + request ID + digest\nreplayed=true • no new work", fillcolor="#DBEAFE"];
+  t3 -> lookup;
+
+  duplicate [label="Exact duplicate through process_json\nFail-closed duplicate decision\nNo authorization • no adapter call", fillcolor="#F1F5F9"];
+  request -> duplicate [style=dashed, label="after prior claim"];
+  duplicate -> lookup [style=dashed, label="separate read-only lookup"];
+
+  reconcile [shape=diamond, label="Explicit quiesced\nreconcile_request", fillcolor="#FFF7ED", color="#C2410C"];
+  t1 -> reconcile [style=dashed, label="restart finds unresolved attempt"];
+  receipt -> reconcile [style=dashed, label="read only; never execute"];
+  reconcile -> t3 [label="exact NO_EFFECT only\n→ FAILED_NO_EFFECT"];
+  reconcile -> unknown [label="APPLIED / PARTIAL / AMBIGUOUS\nor no receipt"];
+  reconcile -> halt [label="corrupt / mismatch / unavailable"];
+
+  halt [label="HALT RECONCILIATION\nNo state transition\nPreserve both DBs + audit", fillcolor="#FEE2E2", color="#991B1B", fontcolor="#7F1D1D"];
+  unknown -> lookup [label="recovery-required envelope"];
+
+  no_atomicity [shape=note, label="NO CROSS-STORE ATOMICITY\nT1, T2, observation, T3 and JSONL audit\nare separate failure boundaries", fillcolor="#FFF7ED", color="#C2410C"];
+  no_retry [shape=note, label="PROHIBITED\nAutomatic command retry\nReplacement authorization\nReceipt ⇒ VERIFIED inference\nStage B/C or live connector", fillcolor="#F8FAFC", color="#64748B"];
+  t2 -> no_atomicity [style=dotted, arrowhead=none];
+  unknown -> no_retry [style=dashed, color="#991B1B", arrowhead=none];
+}

@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 from .contracts import (
@@ -66,6 +67,124 @@ GATE_B_SNAPSHOT_ROLE_BY_ARTIFACT = {
     "PILOT_PROTOCOL": "gate_b_pilot_protocol",
 }
 
+GateBFailureIdentity = tuple[str, str, str]
+UNCLASSIFIED_GATE_B_FAILURE_IDENTITY: GateBFailureIdentity = (
+    "UNCLASSIFIED",
+    "GB.UNCLASSIFIED",
+    "UNCLASSIFIED",
+)
+AUTHORIZATION_STATUS_FAILURE: GateBFailureIdentity = (
+    "AUTHORIZATION_METADATA",
+    "GB.AUTH.STATUS_APPROVED",
+    "NOT_APPROVED",
+)
+AUTHORIZATION_NOT_YET_VALID_FAILURE: GateBFailureIdentity = (
+    "AUTHORIZATION_VALIDITY",
+    "GB.AUTH.CURRENT_INTERVAL",
+    "NOT_YET_VALID",
+)
+AUTHORIZATION_EXPIRED_FAILURE: GateBFailureIdentity = (
+    "AUTHORIZATION_VALIDITY",
+    "GB.AUTH.CURRENT_INTERVAL",
+    "EXPIRED",
+)
+APPROVAL_ROLE_COUNT_FAILURE: GateBFailureIdentity = (
+    "APPROVAL_SET",
+    "GB.APPROVAL.REQUIRED_ROLE_COUNT",
+    "CARDINALITY_MISMATCH",
+)
+APPROVAL_ROLE_MEMBERSHIP_FAILURE: GateBFailureIdentity = (
+    "APPROVAL_SET",
+    "GB.APPROVAL.ROLE_MEMBERSHIP",
+    "UNSUPPORTED_VALUE",
+)
+APPROVAL_ROLE_UNIQUENESS_FAILURE: GateBFailureIdentity = (
+    "APPROVAL_SET",
+    "GB.APPROVAL.ROLE_UNIQUENESS",
+    "DUPLICATE_VALUE",
+)
+ARTIFACT_DIGEST_FAILURE_BY_ROLE: Mapping[str, GateBFailureIdentity] = MappingProxyType({
+    role: (
+        "ARTIFACT_BINDING",
+        f"GB.BINDING.{role}_SHA256",
+        "DIGEST_MISMATCH",
+    )
+    for role in (
+        "MANIFEST",
+        "MODEL",
+        "POLICY",
+        *sorted(REQUIRED_ARTIFACT_ROLES),
+    )
+})
+REQUIRED_TRUE_CONTROL_FAILURE_BY_FIELD: Mapping[
+    str, GateBFailureIdentity
+] = MappingProxyType({
+    field: (
+        "DECLARED_RUNTIME_CONTROLS",
+        f"GB.CONTROL.{field.upper()}",
+        "REQUIRED_TRUE_MISSING",
+    )
+    for field in (
+        "direct_identifiers_removed",
+        "reidentification_risk_reviewed",
+        "offline_only",
+        "network_egress_disabled",
+        "runtime_labels_separated",
+        "complete_intake_reporting",
+        "restricted_hash_handling",
+    )
+})
+REQUIRED_FALSE_CONTROL_FAILURE_BY_FIELD: Mapping[
+    str, GateBFailureIdentity
+] = MappingProxyType({
+    "action_credentials_present": (
+        "DECLARED_RUNTIME_CONTROLS",
+        "GB.CONTROL.ACTION_CREDENTIALS_ABSENT",
+        "PROHIBITED_TRUE",
+    ),
+    "live_feed_connected": (
+        "DECLARED_RUNTIME_CONTROLS",
+        "GB.CONTROL.LIVE_FEED_ABSENT",
+        "PROHIBITED_TRUE",
+    ),
+    "write_capable_connectors_present": (
+        "DECLARED_RUNTIME_CONTROLS",
+        "GB.CONTROL.WRITE_CONNECTOR_ABSENT",
+        "PROHIBITED_TRUE",
+    ),
+})
+CUSTODY_FREEZE_FAILURE: GateBFailureIdentity = (
+    "CUSTODY",
+    "GB.CUSTODY.FROZEN_AFTER_WINDOW",
+    "FREEZE_BEFORE_WINDOW_END",
+)
+INDEPENDENT_REVIEW_IDENTITY_FAILURE: GateBFailureIdentity = (
+    "INDEPENDENT_REVIEW",
+    "GB.REVIEW.INDEPENDENT_IDENTITY",
+    "IDENTITY_COLLISION",
+)
+OVERALL_QUARANTINE_RATE_FAILURE: GateBFailureIdentity = (
+    "POSTQUALIFICATION_STOP",
+    "GB.STOP.OVERALL_QUARANTINE_RATE",
+    "THRESHOLD_EXCEEDED",
+)
+CLASSIFIED_GATE_B_FAILURE_IDENTITIES = frozenset(
+    {
+        AUTHORIZATION_STATUS_FAILURE,
+        AUTHORIZATION_NOT_YET_VALID_FAILURE,
+        AUTHORIZATION_EXPIRED_FAILURE,
+        APPROVAL_ROLE_COUNT_FAILURE,
+        APPROVAL_ROLE_MEMBERSHIP_FAILURE,
+        APPROVAL_ROLE_UNIQUENESS_FAILURE,
+        CUSTODY_FREEZE_FAILURE,
+        INDEPENDENT_REVIEW_IDENTITY_FAILURE,
+        OVERALL_QUARANTINE_RATE_FAILURE,
+        *ARTIFACT_DIGEST_FAILURE_BY_ROLE.values(),
+        *REQUIRED_TRUE_CONTROL_FAILURE_BY_FIELD.values(),
+        *REQUIRED_FALSE_CONTROL_FAILURE_BY_FIELD.values(),
+    }
+)
+
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 _PATH_COMPONENT_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -77,6 +196,42 @@ MAX_GATE_B_MODEL_POLICY_BYTES = 64 * 1024 * 1024
 
 class GateBValidationError(ContractValidationError):
     """A bounded Gate B control-document or binding failure."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        stage: str = UNCLASSIFIED_GATE_B_FAILURE_IDENTITY[0],
+        control_id: str = UNCLASSIFIED_GATE_B_FAILURE_IDENTITY[1],
+        reason_code: str = UNCLASSIFIED_GATE_B_FAILURE_IDENTITY[2],
+    ) -> None:
+        super().__init__(message)
+        self.stage = stage
+        self.control_id = control_id
+        self.reason_code = reason_code
+
+    @classmethod
+    def classified(
+        cls,
+        message: str,
+        identity: GateBFailureIdentity,
+    ) -> GateBValidationError:
+        """Construct a failure from the code-owned closed identity registry."""
+
+        if identity not in CLASSIFIED_GATE_B_FAILURE_IDENTITIES:
+            raise ValueError("Gate B classified failures require a registered identity.")
+        return cls(
+            message,
+            stage=identity[0],
+            control_id=identity[1],
+            reason_code=identity[2],
+        )
+
+    @property
+    def failure_identity(self) -> tuple[str, str, str]:
+        """Return the closed causal identity used by post-P2-CE-003 campaigns."""
+
+        return self.stage, self.control_id, self.reason_code
 
 
 class GateBStopConditionViolation(GateBValidationError):
@@ -161,8 +316,16 @@ def validate_gate_b_current(
     """Require a Gate B authorization to be current at an execution stage."""
 
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    if current < authorization.valid_from or current >= authorization.expires_at:
-        raise GateBValidationError("Gate B authorization is not currently valid.")
+    if current < authorization.valid_from:
+        raise GateBValidationError.classified(
+            "Gate B authorization is not currently valid.",
+            AUTHORIZATION_NOT_YET_VALID_FAILURE,
+        )
+    if current >= authorization.expires_at:
+        raise GateBValidationError.classified(
+            "Gate B authorization is not currently valid.",
+            AUTHORIZATION_EXPIRED_FAILURE,
+        )
 
 
 def _read_bounded_regular_file(path: Path, *, label: str, maximum: int) -> bytes:
@@ -579,7 +742,10 @@ def load_gate_b_authorization(
             "Gate B authorization.schema_version is unsupported."
         )
     if value.get("status") != "APPROVED":
-        raise GateBValidationError("Gate B authorization status is not APPROVED.")
+        raise GateBValidationError.classified(
+            "Gate B authorization status is not APPROVED.",
+            AUTHORIZATION_STATUS_FAILURE,
+        )
     if manifest.data_origin != "HISTORICAL_DEIDENTIFIED":
         raise GateBValidationError(
             "Gate B authorization is only valid for historical origin."
@@ -599,7 +765,10 @@ def load_gate_b_authorization(
         value.get("dataset_manifest_sha256"), "dataset_manifest_sha256"
     )
     if manifest_digest != manifest.source_sha256:
-        raise GateBValidationError("Gate B manifest digest binding does not match.")
+        raise GateBValidationError.classified(
+            "Gate B manifest digest binding does not match.",
+            ARTIFACT_DIGEST_FAILURE_BY_ROLE["MANIFEST"],
+        )
     _nonempty(value.get("approved_purpose"), "approved_purpose")
     _nonempty(value.get("population_scope"), "population_scope")
 
@@ -612,14 +781,25 @@ def load_gate_b_authorization(
     if not valid_from < expires_at:
         raise GateBValidationError("Gate B validity interval must be non-empty.")
     current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
-    if current < valid_from or current >= expires_at:
-        raise GateBValidationError("Gate B authorization is not currently valid.")
+    if current < valid_from:
+        raise GateBValidationError.classified(
+            "Gate B authorization is not currently valid.",
+            AUTHORIZATION_NOT_YET_VALID_FAILURE,
+        )
+    if current >= expires_at:
+        raise GateBValidationError.classified(
+            "Gate B authorization is not currently valid.",
+            AUTHORIZATION_EXPIRED_FAILURE,
+        )
 
     approvals = value.get("approvals")
     if not isinstance(approvals, list) or len(approvals) != len(
         REQUIRED_APPROVAL_ROLES
     ):
-        raise GateBValidationError("Gate B requires exactly five approval roles.")
+        raise GateBValidationError.classified(
+            "Gate B requires exactly five approval roles.",
+            APPROVAL_ROLE_COUNT_FAILURE,
+        )
     approval_roles: set[str] = set()
     approval_identities: set[str] = set()
     for index, raw_approval in enumerate(approvals):
@@ -629,9 +809,15 @@ def load_gate_b_authorization(
             f"approvals[{index}]",
         )
         role = approval.get("role")
-        if role not in REQUIRED_APPROVAL_ROLES or role in approval_roles:
-            raise GateBValidationError(
-                "Gate B approval roles are incomplete or duplicated."
+        if role not in REQUIRED_APPROVAL_ROLES:
+            raise GateBValidationError.classified(
+                "Gate B approval roles are incomplete or duplicated.",
+                APPROVAL_ROLE_MEMBERSHIP_FAILURE,
+            )
+        if role in approval_roles:
+            raise GateBValidationError.classified(
+                "Gate B approval roles are incomplete or duplicated.",
+                APPROVAL_ROLE_UNIQUENESS_FAILURE,
             )
         approval_roles.add(str(role))
         if approval.get("status") != "APPROVED":
@@ -679,9 +865,15 @@ def load_gate_b_authorization(
         Path(policy_path), "policy", maximum=MAX_GATE_B_MODEL_POLICY_BYTES
     )
     if model_digest != expected_model_digest:
-        raise GateBValidationError("Gate B model digest binding does not match.")
+        raise GateBValidationError.classified(
+            "Gate B model digest binding does not match.",
+            ARTIFACT_DIGEST_FAILURE_BY_ROLE["MODEL"],
+        )
     if policy_digest != expected_policy_digest:
-        raise GateBValidationError("Gate B policy digest binding does not match.")
+        raise GateBValidationError.classified(
+            "Gate B policy digest binding does not match.",
+            ARTIFACT_DIGEST_FAILURE_BY_ROLE["POLICY"],
+        )
     raw_artifacts = bindings.get("artifacts")
     if not isinstance(raw_artifacts, list) or len(raw_artifacts) != len(
         REQUIRED_ARTIFACT_ROLES
@@ -721,7 +913,10 @@ def load_gate_b_authorization(
             maximum=MAX_GATE_B_ARTIFACT_BYTES,
         )
         if actual_digest != expected_digest:
-            raise GateBValidationError(f"Gate B {role} digest binding does not match.")
+            raise GateBValidationError.classified(
+                f"Gate B {role} digest binding does not match.",
+                ARTIFACT_DIGEST_FAILURE_BY_ROLE[str(role)],
+            )
         parsed_artifacts.append(
             GateBArtifactBinding(
                 role=str(role),
@@ -764,26 +959,18 @@ def load_gate_b_authorization(
         "kill_switch_reference",
     ):
         _nonempty(controls.get(reference), f"controls.{reference}")
-    required_true = {
-        "direct_identifiers_removed",
-        "reidentification_risk_reviewed",
-        "offline_only",
-        "network_egress_disabled",
-        "runtime_labels_separated",
-        "complete_intake_reporting",
-        "restricted_hash_handling",
-    }
-    required_false = {
-        "live_feed_connected",
-        "action_credentials_present",
-        "write_capable_connectors_present",
-    }
-    for field in sorted(required_true):
+    for field in sorted(REQUIRED_TRUE_CONTROL_FAILURE_BY_FIELD):
         if _boolean(controls.get(field), f"controls.{field}") is not True:
-            raise GateBValidationError(f"Gate B requires controls.{field}=true.")
-    for field in sorted(required_false):
+            raise GateBValidationError.classified(
+                f"Gate B requires controls.{field}=true.",
+                REQUIRED_TRUE_CONTROL_FAILURE_BY_FIELD[field],
+            )
+    for field in sorted(REQUIRED_FALSE_CONTROL_FAILURE_BY_FIELD):
         if _boolean(controls.get(field), f"controls.{field}") is not False:
-            raise GateBValidationError(f"Gate B requires controls.{field}=false.")
+            raise GateBValidationError.classified(
+                f"Gate B requires controls.{field}=false.",
+                REQUIRED_FALSE_CONTROL_FAILURE_BY_FIELD[field],
+            )
 
     custody = _exact_fields(
         value.get("custody"),
@@ -805,7 +992,10 @@ def load_gate_b_authorization(
         _nonempty(custody.get(field), f"custody.{field}")
     frozen_at = _timestamp(custody.get("frozen_at"), "custody.frozen_at")
     if frozen_at < window_end:
-        raise GateBValidationError("Gate B custody freeze predates window_end.")
+        raise GateBValidationError.classified(
+            "Gate B custody freeze predates window_end.",
+            CUSTODY_FREEZE_FAILURE,
+        )
     if frozen_at > valid_from:
         raise GateBValidationError("Gate B custody freeze postdates valid_from.")
 
@@ -945,8 +1135,9 @@ def load_gate_b_authorization(
         raise GateBValidationError("Gate B independent review is not APPROVED.")
     reviewer_id = _nonempty(review.get("reviewer_id"), "independent_review.reviewer_id")
     if reviewer_id in approval_identities:
-        raise GateBValidationError(
-            "Gate B independent reviewer must differ from approval identities."
+        raise GateBValidationError.classified(
+            "Gate B independent reviewer must differ from approval identities.",
+            INDEPENDENT_REVIEW_IDENTITY_FAILURE,
         )
     _nonempty(review.get("review_reference"), "independent_review.review_reference")
     if (
@@ -1052,8 +1243,9 @@ def evaluate_qualification_stop_conditions(
     denominator = Decimal(input_count)
     overall = Decimal(rejected_count) / denominator
     if overall > authorization.max_overall_quarantine_rate:
-        raise GateBStopConditionViolation(
-            "The overall quarantine rate exceeds the approved Gate B threshold."
+        raise GateBStopConditionViolation.classified(
+            "The overall quarantine rate exceeds the approved Gate B threshold.",
+            OVERALL_QUARANTINE_RATE_FAILURE,
         )
     thresholds = authorization.category_thresholds
     observed: dict[str, Decimal] = {}
@@ -1092,12 +1284,14 @@ def evaluate_qualification_stop_conditions(
 
 
 __all__ = [
+    "CLASSIFIED_GATE_B_FAILURE_IDENTITIES",
     "GATE_B_SNAPSHOT_ROLE_BY_ARTIFACT",
     "ALLOWED_QUALIFICATION_THRESHOLD_CATEGORIES",
     "REQUIRED_APPROVAL_ROLES",
     "REQUIRED_ARTIFACT_ROLES",
     "GateBArtifactBinding",
     "GateBAuthorization",
+    "GateBFailureIdentity",
     "GateBStopConditionViolation",
     "GateBValidationError",
     "ManifestControl",

@@ -3,6 +3,15 @@
 > **NOT APPROVED — TEMPLATE ONLY — NO HISTORICAL DATA**
 >
 > This file is not an authorization, approval record, custody record, signature, or completed protocol. Do not place real names, signatures, endpoints, source-system identifiers, approval-system identifiers, historical digests, record samples, or historical data in the public repository. Complete and retain an operational copy only in the approved restricted evidence system.
+>
+> Repository status at template review: exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main` and its
+> exact-commit CI/Dependency Graph checks passed. Its package boundary includes
+> 222/222 technical tests and separate 9/9 site tests; site tests are outside
+> Phase 2.5/pilot evidence. Publication does not make the commit an approved
+> pilot baseline. No Gate B package or tag/evidence package exists.
+> `P2-CE-005` was not executed and remains CE-0 `NOT_EVALUATED`; it supplies no
+> pilot evidence or authority.
 
 ## Document control
 
@@ -21,7 +30,8 @@
 | Manifest origin | `HISTORICAL_DEIDENTIFIED` |
 | Record-failure policy | `QUARANTINE_RECORD` |
 | Live actions | `false` |
-| Repository release/commit | `[FROZEN-RELEASE-AND-COMMIT]` |
+| Approved repository release/commit | `[EXACT-CLEAN-PUBLISHED-RELEASE-AND-40-HEX-COMMIT — NOT SET]` |
+| Release-required assurance profile | `[ALPHA.5: REFERENCE_FEATURE / FINAL ALPHA.6: REFERENCE_FEATURE + SOURCE_TO_DECISION / OTHER RELEASE-SPECIFIC PROFILE — NOT APPROVED]` |
 | Contract version and adapter | `0.2.0 / [FROZEN-ADAPTER]` |
 | Model SHA-256 | `[64-HEX-DIGEST-RESTRICTED-NOT-SET]` |
 | Policy SHA-256 | `[64-HEX-DIGEST-RESTRICTED-NOT-SET]` |
@@ -106,6 +116,8 @@ De-identification must be tested; removal of obvious names is not sufficient. Ha
 | `runtime_labels_separated` | `true` | `[NOT-VERIFIED]` |
 | `complete_intake_reporting` | `true` | `[NOT-VERIFIED]` |
 | `restricted_hash_handling` | `true` | `[NOT-VERIFIED]` |
+| release-required reference checks enabled | `true` | `[NOT-VERIFIED]` |
+| successful final harness return required | `true` | `[NOT-VERIFIED]` |
 
 - Isolation boundary and test reference: `[NOT-SET]`
 - Read-only identity and permission review: `[NOT-COMPLETED]`
@@ -163,7 +175,7 @@ Overall maximum quarantine rate: `[0.0–1.0 / NOT FROZEN]`
 - Pause authority ID: `[NOT-ASSIGNED]`
 - Required response to threshold breach: `[STOP; preserve evidence; do not relax threshold or filter denominator; investigate; independently review; reauthorize before resumption]`
 - Required response to an unlisted observed quarantine category or an accepted case outside the approved half-open window: `[STOP; preserve evidence; investigate; reauthorize before resumption]`
-- Additional stops: `[authority expiry/revocation, binding mismatch, custody break, source drift, egress/isolation failure, label leakage, incident, evidence-accounting failure]`
+- Additional stops: `[authority expiry/revocation, binding mismatch, custody break, source drift, egress/isolation failure, label leakage, incident, evidence-accounting failure, reference-assurance mismatch/incompleteness, late artifact mutation, failed finalization, unsuccessful harness return]`
 
 ## Adjudication plan
 
@@ -185,6 +197,8 @@ For historical, de-identified origin, the runtime may read only configuration, m
 
 Restricted authorization and control artifacts must reside under ignored `local/gate_b/`; historical output must use an ignored run-specific `outputs/replay/<run>/` directory with owner-only access. Gate B control JSON is limited to one MiB and 128 nesting levels, each mapping/protocol artifact to two MiB, and each bound model/policy file to 64 MiB. After authorized qualification, but before normalization or engine invocation, accepted-case window and observed quarantine-rate/category gates must pass.
 
+After read-only decision and exact eight-stage audit validation, execute every reference-assurance check required by the frozen release before adjudication decoding or result finalization. A replay against the prior alpha.5 baseline requires the Phase 2.4 feature-assurance receipt. A replay against published Phase 2.5 Commit `854b15c` requires both feature and source-to-decision assurance; neither receipt may be published when the latter check fails. Publication does not itself approve this template or a historical pilot. Any receipt mismatch, incomplete case set, malformed binding, or late artifact mutation stops the run. A metrics or manifest file left by a failed return is incomplete diagnostic material, not completion evidence.
+
 ## Evidence and claim plan
 
 - Claim owner ID: `[NOT-ASSIGNED]`
@@ -196,9 +210,12 @@ Restricted authorization and control artifacts must reside under ignored `local/
 - Required uncertainty and denominator statements: `[NOT-DEFINED]`
 - Representative failure disclosure review: `[NOT-DEFINED]`
 - Public-summary sanitization owner and review reference: `[NOT-ASSIGNED / NOT-SET]`
+- Release-required assurance artifacts and expected case counts: `[NOT-DEFINED / RELEASE-SPECIFIC]`
+- Evidence of successful harness return after final binding checks: `[NOT-DEFINED]`
+- Incomplete-run quarantine and non-reuse procedure: `[NOT-DEFINED]`
 
 The authorization snapshot and approval/reference fields may be sensitive and must be excluded from public evidence summaries. A bounded opaque `authorization_id` may appear in a restricted aggregate trace summary only when it encodes no person, source, incident, system, or other sensitive fact. Machine validation proves internal structure and binding only; it does not prove legal authority, identity, signature authenticity, effective de-identification, custody truth, or historical efficacy.
 
 ## Final preflight declaration
 
-This template remains `NOT APPROVED`. A restricted operational copy may be marked ready only after every placeholder is replaced, every control is evidenced, the exact package is frozen and hashed, all five roles and the independent reviewer approve it in authenticated external systems, semantic cross-checks pass, and the runtime rejects all non-`APPROVED` states before historical payload access.
+This template remains `NOT APPROVED`. A restricted operational copy may be marked ready only after every placeholder is replaced, every control is evidenced, an exact clean released commit and its required assurance profile are frozen, the complete package is hashed, all five roles and the independent reviewer approve it in authenticated external systems, semantic cross-checks pass, and the runtime rejects all non-`APPROVED` states before historical payload access. Approval to begin processing does not predetermine a successful run: completion additionally requires every release-specific reference check, final binding check, and a successful harness return. Published Phase 2.5 Commit `854b15c`, published simulation-only Phase 3 Commit `423685d`, the Phase 3.1 synthetic model-evaluation candidate, and the `P2-CE-005` plan do not satisfy those external approval conditions.

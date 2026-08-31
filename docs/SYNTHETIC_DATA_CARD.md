@@ -1,5 +1,14 @@
 # Synthetic Data Card
 
+> **Version boundary.** The dataset below remains the v0.1.0 generated
+> training/test baseline. Exact Phase 2.5 Commit
+> `854b15c56397a81de6326b719d3d7d1dc847608f` is published on `main`, and its
+> exact-commit CI/Dependency Graph checks passed. Tracked data and baseline
+> outputs remain at their committed bytes. Phase 2 fixtures/campaigns and Phase
+> 3 runtime scenarios are separate synthetic controls; they do not create a new
+> historical dataset. `P2-CE-005` was not executed and remains CE-0
+> `NOT_EVALUATED`.
+
 ## Dataset identity
 
 **Name:** ADF Synthetic Privileged Identity Dataset  
@@ -36,6 +45,89 @@ Malicious scenarios include stolen privileged tokens, password spray followed by
 
 The generator encodes the engineering team's current assumptions. Feature relationships, base rates, event correlations, source reliability, attack timing, and contextual evidence are simplified. The model is trained and tested on partitions from the same generator family, so apparent discrimination is optimistic. Real data will exhibit unmodeled vendor differences, missing fields, semantic drift, adversarial adaptation, human process variation, and class imbalance.
 
-## Required evolution
+## Additional Phase 2 synthetic fixtures
 
-Version 0.2 should add de-identified historical replay cases, vendor-specific schema adapters, analyst disagreement labels, uncertain ground truth, delayed evidence arrival, duplicate and out-of-order events, multi-identity campaigns, and sector-specific mission criticality.
+These versioned controls are distinct from the v0.1 train/test partitions:
+
+| Fixture or campaign | Synthetic scope | Evidence status |
+|---|---|---|
+| Phase 2 starter | Three read-only cases | Published version-bound `P2-CE-001`; zero historical cases |
+| Phase 2.1 qualification | Seven nonblank records: three accepted and four deliberately quarantined | Published version-bound `P2-CE-002`; designed accounting result, not a data-quality estimate |
+| Phase 2.3 Gate B campaign | Ephemeral test-only authorization and fixed positive/negative scenarios | Published `P2-CE-003` SELF synthetic result; not an actual approval or historical pilot |
+| Phase 2.4 feature-assurance campaign | Fixed clean/mutant feature-contract and projection controls | Published `P2-CE-004` SELF synthetic result; not model or operational validation |
+| Phase 2.5 source-to-decision campaign | Ten planned clean/mutant pairs per run and two planned runs | CE-0 `NOT_EVALUATED`; expected outcomes are not observations |
+
+All committed observed results declare `historical_case_count: 0`. Synthetic campaign inputs are designed controls and are not representative samples of an operational identity environment.
+
+## Phase 3 synthetic runtime fixtures
+
+Phase 3 does not use the v0.1 training/test partitions. It constructs raw
+v0.3.0 requests at runtime for two policy-inventory targets:
+
+| Fixture | Synthetic scope | Current observation boundary |
+|---|---|---|
+| `DOMAIN_CONTROLLER_01` | Tier-0 authentication dependency, stale/conflicting evidence, insufficient Tier-0 agent authority, high consequence | Published raw-request demo returns `ESCALATE`; no authorization/effect |
+| `WORKSTATION_042` | Low-criticality endpoint, fresh corroborated evidence, exact workstation-containment authority | Published raw-request demo returns `ALLOW`; one in-memory isolation; same-project readback `VERIFIED` |
+| Phase 3 adversarial corpus | 46 declarative canonical, evidence, identity, consequence, authorization, bypass, broker/verifier, metamorphic, and combined cases | 46/46 project-controlled matches at exact Commit `423685d`; exact-commit CI passed |
+| Phase 3 focused controls | Contract, credential identity, evidence, policy/consequence, decision, authorization, broker, approval, verifier/fault, audit/metrics, and runner boundaries | 57/57 focused and then-current 288/288 repository tests at exact Commit `423685d` |
+
+Phase 3.1 reuses the 1,200 committed v0.1 synthetic case/label records only to
+exercise a temporal training/calibration/evaluation mechanism. The logical
+trainer receives training labels only; the project-controlled evaluator holds
+all fixture labels to calculate final aggregate metrics. This same-process
+separation is not independent custody, and the results are not representative
+of operational performance.
+
+The unreleased Stage A `0.4.0-alpha.2` durability implementation is published on
+`main` at exact Commit
+[`8818d5d2d40faebced66a254d58b1f0d04c9f8b4`](https://github.com/redxking/ai-decision-firewall/commit/8818d5d2d40faebced66a254d58b1f0d04c9f8b4)
+and creates
+only synthetic requests and local state during tests. Its three authoritative
+artifacts are one control SQLite database, one separately pathed offline
+synthetic-adapter SQLite database containing generated target state and
+adapter-reported receipts, and the JSONL lifecycle audit. Its sanitized
+request-result projection contains bounded identifiers, digests, timestamps,
+decision/verification summaries, terminal disposition, and replay facts rather
+than a reusable token, nonce, signature, credential, raw audit history, or
+executable authority. Recovery adds only a correlated metadata lifecycle
+(`RECOVERY_STARTED`, `RECOVERY_EVIDENCE_ASSESSED`, `RECOVERY_FINALIZED`) and
+classifies the original audit status as `COMPLETE`, `INCOMPLETE`, or
+`UNRESOLVED`; it does not create new command or verification data. These
+artifacts are records produced by the software, not a new model dataset,
+historical record, representative sample, external source, or permission to
+process one. Their persistence still creates future retention, capacity,
+minimization, backup/restore, and records-management obligations before any
+non-synthetic use.
+
+Against that exact commit, local verification passed 43/43 focused Stage A in
+8.248 seconds, 18/18 readiness-gate, the warning-fatal 360/360 repository suite
+in 48.995 seconds, 57/57 focused Phase 3, and 46/46 deterministic corpus checks;
+the corpus reported `live_actions_possible=false`. Its 307-entry manifest
+verified 307/307; exact-SHA CI run 31953570779 succeeded on Python 3.11/3.12 and
+Dependency Graph run 31953572482 succeeded. These are project-controlled
+mechanism observations, not data representativeness, historical/live
+performance, privacy effectiveness, independent verification, or production
+authorization. No tag or GitHub Release was created, no deployment occurred,
+and no exact-SHA Pages run was observed. The production gate remains `BLOCKED`; see
+[`ADF-STAGE-A-ER-002`](production/STAGE_A_RECEIPT_RESULT_EVIDENCE_RECORD.md).
+
+Each synthetic evidence item has a canonical content digest and a runtime HMAC
+attestation binding source identity/type, provenance, observation time,
+support/contradiction semantics, relevance, and subject target. Source keys are
+supplied at runtime and are not serialized into the demo/corpus output or
+policy. Deterministic corpus key material exists only to reproduce synthetic
+tests. This is not enterprise provenance, device identity, PKI/HSM custody,
+nonrepudiation, rotation/revocation evidence, or proof that a source assertion
+is true.
+
+The Phase 3 targets, evidence, principals, timing, policy, dependencies,
+consequences, and injected failures are engineering fixtures. They are not a
+representative SOC population and cannot support detection efficacy, action
+safety, efficacy, calibration, prevalence, workload, false-containment,
+recovery, or mission-impact estimates.
+
+## Required dataset evolution
+
+A future dataset release—not merely a code version bump—would require approved de-identified historical replay under Gate B, vendor-specific schema mappings, analyst disagreement and indeterminate adjudications, uncertain outcome treatment, delayed and duplicate evidence, multi-identity campaigns, and sector-specific mission consequence. The current code already tests some delayed/out-of-order, duplicate-identifier, malformed-record, and source-conflict mechanics with synthetic controls; that does not satisfy the historical-data, vendor-semantic, representativeness, privacy, or adjudication obligations.
+
+Historical data must not be added to the public repository. Any future restricted dataset requires authenticated authority, tested de-identification, protected custody, complete-intake accounting, predeclared sampling and stop conditions, and evidence lifecycle controls described in [`phase2/GATE_B_HISTORICAL_PILOT.md`](phase2/GATE_B_HISTORICAL_PILOT.md).

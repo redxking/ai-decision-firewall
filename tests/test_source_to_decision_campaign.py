@@ -4,13 +4,24 @@ import copy
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from jsonschema import Draft202012Validator
 
+from adf_poc.actions import (
+    ActionBroker,
+    AuthorizationGate,
+    SimulatedIdentityProvider,
+)
+from adf_poc.policy import PolicyConfig
+import scripts.generate_source_to_decision_ce2_campaign as campaign_module
 from scripts.generate_source_to_decision_ce2_campaign import (
     CAMPAIGN_PLAN,
     CAMPAIGN_SCHEMA,
@@ -18,7 +29,13 @@ from scripts.generate_source_to_decision_ce2_campaign import (
     EXPECTED_ATTEMPTS,
     PROHIBITED_PUBLIC_FIELDS,
     CampaignGenerationError,
+    MODEL_PATH,
+    POLICY_PATH,
+    _production_baseline,
+    _run_attempt,
+    build_seeded_case,
     _jsonl_bytes,
+    _prepare_cli_destinations,
     _strict_json_bytes,
     build_campaign_artifacts,
     build_evidence_record,
@@ -44,6 +61,78 @@ def _sha256(path: Path) -> str:
 def _write_json(path: Path, value: object) -> None:
     path.write_text(
         json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def _copy_campaign_cli_fixture(destination: Path, *, initialize_git: bool) -> Path:
+    """Create an isolated repository-shaped CLI fixture without evidence reuse."""
+
+    repository = destination / "repository"
+    source_paths = set(CAMPAIGN_SOURCE_PATHS.values())
+    source_paths.add(".gitignore")
+    for relative_path in sorted(source_paths):
+        source = ROOT / relative_path
+        if not source.is_file():
+            continue
+        target = repository / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    if initialize_git:
+        subprocess.run(
+            ["git", "init", "-q", "-b", "main"],
+            cwd=repository,
+            check=True,
+            timeout=20,
+        )
+        subprocess.run(
+            ["git", "add", "."],
+            cwd=repository,
+            check=True,
+            timeout=20,
+        )
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=ADF Test",
+                "-c",
+                "user.email=adf-test@example.invalid",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-q",
+                "--no-verify",
+                "-m",
+                "isolated campaign CLI fixture",
+            ],
+            cwd=repository,
+            check=True,
+            timeout=20,
+        )
+    return repository
+
+
+def _run_campaign_cli(
+    repository: Path,
+    arguments: list[str],
+    *,
+    cwd: Path,
+) -> subprocess.CompletedProcess[str]:
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    return subprocess.run(
+        [
+            sys.executable,
+            str(repository / "scripts/generate_source_to_decision_ce2_campaign.py"),
+            *arguments,
+        ],
+        cwd=cwd,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=120,
     )
 
 
@@ -259,6 +348,48 @@ class SourceToDecisionCampaignTests(unittest.TestCase):
         forged_summary["call_accounting"]["engine_calls"] = 40
         self.assertTrue(list(validator.iter_errors(forged_summary)))
 
+    def test_reference_scope_constructor_instrumentation_is_sensitive(self) -> None:
+        case = build_seeded_case("P01")
+        decision, audit_rows, measurements = _production_baseline(case, "P01")
+        policy = PolicyConfig.load(POLICY_PATH)
+        original_reference = campaign_module.verify_reference_decision_path
+
+        def constructing_reference(*args: object, **kwargs: object) -> object:
+            gate = AuthorizationGate(policy)
+            target = SimulatedIdentityProvider()
+            ActionBroker(gate, target)
+            return original_reference(*args, **kwargs)
+
+        with (
+            patch.object(
+                campaign_module,
+                "verify_reference_decision_path",
+                side_effect=constructing_reference,
+            ),
+            patch.object(
+                campaign_module,
+                "_validate_campaign_artifact",
+            ) as artifact_validator,
+        ):
+            result = _run_attempt(
+                EXPECTED_ATTEMPTS[0],
+                case=copy.deepcopy(case),
+                baseline_decision=copy.deepcopy(decision),
+                baseline_audit=copy.deepcopy(audit_rows),
+                baseline_measurements=copy.deepcopy(measurements),
+                policy=policy,
+                model_bytes=MODEL_PATH.read_bytes(),
+                policy_bytes=POLICY_PATH.read_bytes(),
+            )
+
+        self.assertEqual(result["authorization_gate_instantiations"], 1)
+        self.assertEqual(result["broker_instantiations"], 1)
+        self.assertEqual(result["target_instantiations"], 1)
+        self.assertFalse(result["matched"])
+        artifact_validator.assert_called_once_with(result)
+        with self.assertRaises(CampaignGenerationError):
+            campaign_module._validate_campaign_artifact(result)
+
     def test_public_artifacts_are_metadata_only(self) -> None:
         payloads = build_campaign_artifacts(self.commit, self.evaluated_at)
         public = b"\n".join(payloads)
@@ -307,6 +438,204 @@ class SourceToDecisionCampaignTests(unittest.TestCase):
                 if line.strip()
             ]
             self.assertEqual(paths[1].read_bytes(), _jsonl_bytes(rows))
+
+    def test_check_rejects_unsafe_leaf_aliases_before_read_or_rebuild(self) -> None:
+        artifact_names = (
+            "campaign_profile.json",
+            "campaign_results_run1.jsonl",
+            "campaign_results_run2.jsonl",
+            "campaign_summary.json",
+        )
+        for mutation in ("symlink", "directory", "hardlink", "record_symlink"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as root:
+                temporary_root = Path(root)
+                output_dir = temporary_root / "campaign"
+                output_dir.mkdir()
+                for name in artifact_names:
+                    (output_dir / name).write_bytes(b"placeholder")
+                record_path = temporary_root / "record.json"
+                record_path.write_bytes(b"placeholder")
+                outside = temporary_root / "outside.bin"
+                outside.write_bytes(b"must-not-be-read")
+                target = output_dir / artifact_names[0]
+
+                if mutation == "record_symlink":
+                    record_path.unlink()
+                    record_path.symlink_to(outside)
+                else:
+                    target.unlink()
+                    if mutation == "symlink":
+                        target.symlink_to(outside)
+                    elif mutation == "directory":
+                        target.mkdir()
+                    else:
+                        os.link(outside, target)
+
+                read_targets: list[Path] = []
+                original_read_bytes = Path.read_bytes
+
+                def monitored_read_bytes(path: Path) -> bytes:
+                    read_targets.append(path)
+                    return original_read_bytes(path)
+
+                with (
+                    patch.object(Path, "read_bytes", new=monitored_read_bytes),
+                    patch.object(
+                        campaign_module,
+                        "build_campaign_artifacts",
+                    ) as build_spy,
+                    self.assertRaisesRegex(
+                        CampaignGenerationError,
+                        "singly linked regular file",
+                    ),
+                ):
+                    check_artifacts(
+                        output_dir,
+                        implementation_commit=self.commit,
+                        evaluated_at=self.evaluated_at,
+                        record_path=record_path,
+                    )
+
+                build_spy.assert_not_called()
+                self.assertEqual(read_targets, [])
+
+    def test_cli_destination_preflight_accepts_only_repo_confined_fresh_paths(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix=".source-to-decision-cli-paths-", dir=ROOT
+        ) as directory:
+            temporary_root = Path(directory)
+            output_dir = temporary_root / "campaign"
+            record_path = temporary_root / "record.json"
+            relative_output = output_dir.relative_to(ROOT)
+            relative_record = record_path.relative_to(ROOT)
+
+            normalized_output, normalized_record, display_paths = (
+                _prepare_cli_destinations(
+                    relative_output,
+                    relative_record,
+                    for_generation=True,
+                )
+            )
+            self.assertEqual(normalized_output, output_dir.resolve())
+            self.assertEqual(normalized_record, record_path.resolve())
+            self.assertEqual(len(display_paths), 5)
+            self.assertTrue(
+                all(not Path(path).is_absolute() for path in display_paths)
+            )
+
+            output_dir.mkdir()
+            existing_output = output_dir / "existing.txt"
+            existing_output.write_text("preserve", encoding="utf-8")
+            with self.assertRaisesRegex(
+                CampaignGenerationError,
+                "must be absent or empty",
+            ):
+                _prepare_cli_destinations(
+                    relative_output,
+                    relative_record,
+                    for_generation=True,
+                )
+            self.assertEqual(existing_output.read_text(encoding="utf-8"), "preserve")
+
+            existing_output.unlink()
+            record_path.write_text("preserve", encoding="utf-8")
+            with self.assertRaisesRegex(
+                CampaignGenerationError,
+                "must not already exist",
+            ):
+                _prepare_cli_destinations(
+                    relative_output,
+                    relative_record,
+                    for_generation=True,
+                )
+            self.assertEqual(record_path.read_text(encoding="utf-8"), "preserve")
+
+    def test_cli_destination_preflight_rejects_escape_symlink_and_overlap(
+        self,
+    ) -> None:
+        with (
+            tempfile.TemporaryDirectory(
+                prefix=".source-to-decision-cli-negative-", dir=ROOT
+            ) as directory,
+            tempfile.TemporaryDirectory(
+                prefix="source-to-decision-outside-"
+            ) as outside_directory,
+        ):
+            temporary_root = Path(directory)
+            outside_root = Path(outside_directory)
+            relative_root = temporary_root.relative_to(ROOT)
+            linked = temporary_root / "linked"
+            linked.symlink_to(outside_root, target_is_directory=True)
+
+            invalid_pairs = (
+                (ROOT, None, "non-root path"),
+                (Path(".git/campaign"), None, "control metadata"),
+                (Path(".GIT/campaign"), None, "control metadata"),
+                (outside_root / "campaign", None, "confined to the repository"),
+                (Path("../campaign-outside"), None, "confined to the repository"),
+                (relative_root / "linked/campaign", None, "symbolic link"),
+                (
+                    relative_root / "overlap",
+                    relative_root / "overlap/record.json",
+                    "must not overlap",
+                ),
+                (
+                    relative_root / "record-parent/campaign",
+                    relative_root / "record-parent",
+                    "must not overlap",
+                ),
+            )
+            for output_dir, record_path, message in invalid_pairs:
+                with self.subTest(
+                    output_dir=output_dir,
+                    record_path=record_path,
+                ):
+                    with self.assertRaisesRegex(CampaignGenerationError, message):
+                        _prepare_cli_destinations(
+                            output_dir,
+                            record_path,
+                            for_generation=True,
+                        )
+            self.assertEqual(list(outside_root.iterdir()), [])
+
+            with self.assertRaisesRegex(
+                CampaignGenerationError,
+                "unavailable for verification",
+            ):
+                _prepare_cli_destinations(
+                    relative_root / "missing",
+                    None,
+                    for_generation=False,
+                )
+
+    def test_cli_rejects_outside_destination_before_campaign_execution(self) -> None:
+        with tempfile.TemporaryDirectory(
+            prefix="source-to-decision-cli-process-"
+        ) as directory:
+            temporary_root = Path(directory)
+            repository = _copy_campaign_cli_fixture(
+                temporary_root,
+                initialize_git=False,
+            )
+            outside_destination = temporary_root / "outside-campaign"
+            completed = _run_campaign_cli(
+                repository,
+                [
+                    "--check",
+                    "--output-dir",
+                    str(outside_destination),
+                    "--implementation-commit",
+                    "0" * 40,
+                    "--evaluated-at",
+                    "2026-08-15T00:00:00Z",
+                ],
+                cwd=temporary_root,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("confined to the repository", completed.stderr)
+            self.assertFalse(outside_destination.exists())
 
     def test_evidence_profile_validates_exact_ce2_boundary(self) -> None:
         with tempfile.TemporaryDirectory(

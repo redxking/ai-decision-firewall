@@ -1,21 +1,78 @@
 digraph G {
-  graph [rankdir=LR, bgcolor="white", pad="0.35", nodesep="0.55", ranksep="0.8", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall POC — System Context"];
-  node [shape=box, style="rounded,filled", fillcolor="#F4F7FB", color="#49627F", fontname="Arial", fontsize=12, margin="0.18,0.12"];
-  edge [color="#5F6F82", fontname="Arial", fontsize=10, arrowsize=0.8];
+  graph [rankdir=TB, bgcolor="white", pad="0.28", nodesep="0.48", ranksep="0.58", fontname="Arial", fontsize=18, labelloc="t", label="AI Decision Firewall - Phase 2 System Context\nEvidence-bearing release: alpha.5  |  Remote Phase 2.5 design freeze: alpha.6 @ 08ce203c (not released)", splines=polyline];
+  node [shape=plain, fontname="Arial", fontsize=10];
+  edge [color="#5F6F82", fontname="Arial", fontsize=8.5, arrowsize=0.72, penwidth=1.05];
 
-  sources [label="Synthetic Evidence Sources\nIdentity • EDR • Network • CTI\nCMDB • Change • Travel • Tickets", fillcolor="#EAF2FF"];
-  firewall [label="AI Decision Firewall\nEvidence assessment • Risk model\nPolicy • Verifier • Authorization", fillcolor="#DDEBFF", penwidth=2.2];
-  human [label="Human Decision Authority\nSOC lead • Identity owner\nIncident commander", fillcolor="#FFF5E1"];
-  simulator [label="In-Memory Identity Simulator\nRevoke sessions • Step-up auth\nIncrease monitoring", fillcolor="#E7F7ED"];
-  audit [label="Tamper-Evident Audit Chain\nDecisions • Evidence • Tokens\nActions • Verification", fillcolor="#F2EAFE"];
-  evaluator [label="Independent Evaluator\nGround truth • Metrics\nScenario analysis", fillcolor="#F9EEF0"];
+  inputs [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#9AA8B6">
+      <TR><TD COLSPAN="2" BGCOLOR="#EEF2F6"><B>Input and governance boundary</B></TD></TR>
+      <TR>
+        <TD PORT="synthetic" BGCOLOR="#EAF2FF"><B>Committed synthetic fixtures</B><BR/>Current repository input<BR/>0 historical cases</TD>
+        <TD PORT="owner" BGCOLOR="#FFF4DD"><B>Data owner and approvers</B><BR/>Legal/privacy • security • model risk<BR/>Independent review required for a pilot</TD>
+      </TR>
+      <TR>
+        <TD PORT="historical" COLSPAN="2" BGCOLOR="#F5F5F5"><B>Historical snapshot</B><BR/>Future owner-controlled input • <FONT COLOR="#666666">not present or approved here</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
 
-  sources -> firewall [label="structured events + provenance"];
-  firewall -> human [label="escalation / approval request"];
-  firewall -> simulator [label="signed, scoped action token"];
-  simulator -> firewall [label="action outcome + state"];
-  firewall -> audit [label="append-only records"];
-  simulator -> audit [label="execution evidence"];
-  firewall -> evaluator [label="decision records"];
-  sources -> evaluator [style=dashed, label="labels stored separately"];
+  phase2 [label=<
+    <TABLE BORDER="1" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" COLOR="#4F81BD">
+      <TR><TD COLSPAN="6" BGCOLOR="#DCEBFA"><B>Phase 2 read-only control and decision boundary</B></TD></TR>
+      <TR>
+        <TD PORT="preflight" COLSPAN="2" BGCOLOR="#EAF2FF"><B>Origin-aware preflight</B><BR/>Gate B for historical origin<BR/>Manifest, path, and byte binding</TD>
+        <TD PORT="qualify" COLSPAN="2" BGCOLOR="#EAF2FF"><B>Contract and qualification</B><BR/>Fail dataset or bounded quarantine</TD>
+        <TD PORT="pipeline" COLSPAN="2" BGCOLOR="#E8F1FF"><B>Decision calculation</B><BR/>EVIDENCE → MODEL → POLICY → VERIFIER</TD>
+      </TR>
+      <TR>
+        <TD PORT="final" COLSPAN="3" BGCOLOR="#E7F5ED"><B>Read-only final surface</B><BR/>SUPPRESSED_READ_ONLY • counterfactual action only</TD>
+        <TD PORT="audit" COLSPAN="3" BGCOLOR="#EEE6FA"><B>Integrity closure</B><BR/>Exact eight-stage audit • frozen artifact bindings</TD>
+      </TR>
+      <TR>
+        <TD COLSPAN="6" BGCOLOR="#F4F4F4"><FONT COLOR="#555555"><B>Operational action plane excluded</B> - no live connector, credential, token, broker, target, or effect</FONT></TD>
+      </TR>
+    </TABLE>
+  >];
+
+  subgraph cluster_assurance {
+    label="Same-process project-controlled assurance and evaluation";
+    color="#8064A2";
+    fontcolor="#49335F";
+    fontname="Arial";
+    fontsize=10;
+    style="rounded";
+    margin=14;
+
+    feature [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#8064A2">
+        <TR><TD BGCOLOR="#F0EAF7"><B>Phase 2.4 reference feature projection</B><BR/>Evidence-bearing alpha.5 implementation<BR/>P2-CE-004 = CE-2 SELF; version-bound</TD></TR>
+      </TABLE>
+    >];
+
+    source [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#8064A2">
+        <TR><TD BGCOLOR="#F7F2FA"><B>Phase 2.5 source-to-decision reference</B><BR/>Design-frozen implementation @ 08ce203c<BR/>CI succeeded • CE-1 conformance only<BR/><FONT COLOR="#6B4A8C">P2-CE-005 = CE-0 NOT_EVALUATED</FONT><BR/><FONT COLOR="#8B3A3A">No result ledger, evidence record, or evidence-only Commit B</FONT></TD></TR>
+      </TABLE>
+    >];
+
+    evaluate [label=<
+      <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" COLOR="#8064A2">
+        <TR><TD BGCOLOR="#F0EAF7"><B>Deferred campaign evaluation</B><BR/>Adjudication • comparison • metrics<BR/>Manifest / claim validation<BR/><FONT COLOR="#8B3A3A">P2-CE-005 path not executed</FONT></TD></TR>
+      </TABLE>
+    >];
+
+    incomplete [shape=box, style="rounded,filled", fillcolor="#FDEBEC", color="#B85450", fontcolor="#8B3A3A", label="FAILED / INCOMPLETE\nNo result claim"];
+
+    {rank=same; feature; source;}
+    {rank=same; evaluate; incomplete;}
+    feature -> source [label="exact feature match"];
+    source -> evaluate [style=dashed, label="future P2-CE-005 campaign only"];
+    feature:s -> incomplete:n [style=dashed, color="#B85450", fontcolor="#8B3A3A", label="mismatch"];
+    source:s -> incomplete:n [style=dashed, color="#B85450", fontcolor="#8B3A3A", label="mismatch"];
+  }
+
+  inputs:synthetic:s -> phase2:preflight:n [label="synthetic manifest"];
+  inputs:owner:s -> phase2:preflight:n [style=dashed, label="approved Gate B package required"];
+  inputs:historical:s -> phase2:preflight:n [style=dashed, label="payload inaccessible until pass"];
+  phase2:audit:s -> feature:n [label="serialized decision + bound inputs"];
 }

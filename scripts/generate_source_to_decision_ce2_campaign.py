@@ -21,9 +21,11 @@ import hashlib
 import importlib.metadata
 import json
 import math
+import os
 from pathlib import Path
 import platform
 import re
+import stat
 import subprocess
 import sys
 from typing import Any
@@ -400,9 +402,22 @@ def build_profile(implementation_commit: str, evaluated_at: str) -> dict[str, An
     return profile
 
 
-EXPECTED_ATTEMPTS: tuple[dict[str, Any], ...] = tuple(
-    copy.deepcopy(load_and_validate_plan()["expected_attempts"])
-)
+def _load_declared_attempts_for_import() -> tuple[dict[str, Any], ...]:
+    """Expose plan rows to unit tests without asserting mutable artifact bindings.
+
+    Binding validation belongs at an explicit CLI, profile-build, or campaign-run
+    boundary. Performing it at module import turns expected development drift into
+    test-discovery loss and hides otherwise runnable regression tests.
+    """
+
+    plan = _load_json(CAMPAIGN_PLAN)
+    attempts = plan.get("expected_attempts")
+    if not isinstance(attempts, list):
+        raise CampaignGenerationError("Campaign plan has no expected-attempt registry.")
+    return tuple(copy.deepcopy(attempts))
+
+
+EXPECTED_ATTEMPTS: tuple[dict[str, Any], ...] = _load_declared_attempts_for_import()
 
 
 def _event(
@@ -1093,8 +1108,29 @@ def _run_attempt(
         return original_path_open(target, mode, *args, **kwargs)
 
     reference_function = verify_reference_decision_path
+    authorization_gate_init = AuthorizationGate.__init__
+    action_broker_init = ActionBroker.__init__
+    simulated_target_init = SimulatedIdentityProvider.__init__
     with (
         patch.object(Path, "open", new=monitored_path_open),
+        patch.object(
+            AuthorizationGate,
+            "__init__",
+            autospec=True,
+            side_effect=authorization_gate_init,
+        ) as gate_construction_spy,
+        patch.object(
+            ActionBroker,
+            "__init__",
+            autospec=True,
+            side_effect=action_broker_init,
+        ) as broker_construction_spy,
+        patch.object(
+            SimulatedIdentityProvider,
+            "__init__",
+            autospec=True,
+            side_effect=simulated_target_init,
+        ) as target_construction_spy,
         patch.object(
             AuthorizationGate,
             "authorize",
@@ -1202,12 +1238,15 @@ def _run_attempt(
         "reference_path_calls": reference_spy.call_count,
         "authorization_gate_instantiations": (
             baseline_measurements["authorization_gate_instantiations"] * baseline_factor
+            + gate_construction_spy.call_count
         ),
         "broker_instantiations": (
             baseline_measurements["broker_instantiations"] * baseline_factor
+            + broker_construction_spy.call_count
         ),
         "target_instantiations": (
             baseline_measurements["target_instantiations"] * baseline_factor
+            + target_construction_spy.call_count
         ),
         "authorization_attempts": (
             baseline_measurements["authorization_attempts"] * baseline_factor
@@ -2028,6 +2067,24 @@ def generate_artifacts(
     return paths
 
 
+def _require_safe_check_leaf(path: Path, *, label: str) -> os.stat_result:
+    """Reject aliases and special files before verification reads a leaf.
+
+    This is a bounded clean-checkout/operator-error guard. It deliberately does
+    not claim descriptor-held race resistance or OS-level containment.
+    """
+
+    try:
+        leaf_stat = path.lstat()
+    except OSError:
+        raise CampaignGenerationError(f"{label} is unavailable.") from None
+    if not stat.S_ISREG(leaf_stat.st_mode) or leaf_stat.st_nlink != 1:
+        raise CampaignGenerationError(
+            f"{label} must be a singly linked regular file."
+        )
+    return leaf_stat
+
+
 def check_artifacts(
     output_dir: Path,
     *,
@@ -2041,10 +2098,24 @@ def check_artifacts(
         output_dir / "campaign_results_run2.jsonl",
         output_dir / "campaign_summary.json",
     ]
-    if any(not path.is_file() for path in paths):
-        raise CampaignGenerationError("Committed campaign artifacts are incomplete.")
+    leaf_stats = [
+        _require_safe_check_leaf(path, label="Committed campaign artifact")
+        for path in paths
+    ]
+    record_stat = (
+        _require_safe_check_leaf(
+            record_path,
+            label="Committed campaign evidence record",
+        )
+        if record_path is not None
+        else None
+    )
     expected = build_campaign_artifacts(implementation_commit, evaluated_at)
-    for path, payload in zip(paths, expected, strict=True):
+    for path, payload, leaf_stat in zip(paths, expected, leaf_stats, strict=True):
+        if leaf_stat.st_size != len(payload):
+            raise CampaignGenerationError(
+                f"Committed campaign artifact is stale: {path.name}"
+            )
         if path.read_bytes() != payload:
             raise CampaignGenerationError(
                 f"Committed campaign artifact is stale: {path.name}"
@@ -2057,7 +2128,11 @@ def check_artifacts(
                 output_dir=output_dir,
             )
         )
-        if not record_path.is_file() or record_path.read_bytes() != expected_record:
+        if (
+            record_stat is None
+            or record_stat.st_size != len(expected_record)
+            or record_path.read_bytes() != expected_record
+        ):
             raise CampaignGenerationError(
                 "Committed campaign evidence record is stale."
             )
@@ -2125,6 +2200,125 @@ def _require_clean_generation_commit(
         )
 
 
+def _repo_confined_cli_path(value: Path, *, label: str) -> Path:
+    """Resolve a CLI destination against ROOT without following it outside ROOT."""
+
+    repository_root = ROOT.resolve()
+    candidate = value if value.is_absolute() else repository_root / value
+    lexical = Path(os.path.abspath(candidate))
+    try:
+        lexical_relative = lexical.relative_to(repository_root)
+    except ValueError:
+        raise CampaignGenerationError(
+            f"{label} must be a non-root path confined to the repository."
+        ) from None
+    if not lexical_relative.parts or any(
+        part.casefold() == ".git" for part in lexical_relative.parts
+    ):
+        raise CampaignGenerationError(
+            f"{label} must be a non-root path outside repository control metadata."
+        )
+
+    current = repository_root
+    for part in lexical_relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise CampaignGenerationError(
+                f"{label} must not traverse a symbolic link."
+            )
+    try:
+        resolved = lexical.resolve(strict=False)
+        resolved_relative = resolved.relative_to(repository_root)
+    except (OSError, RuntimeError, ValueError):
+        raise CampaignGenerationError(
+            f"{label} must be a non-root path confined to the repository."
+        ) from None
+    if not resolved_relative.parts or any(
+        part.casefold() == ".git" for part in resolved_relative.parts
+    ):
+        raise CampaignGenerationError(
+            f"{label} must be a non-root path outside repository control metadata."
+        )
+    return resolved
+
+
+def _is_within(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def _prepare_cli_destinations(
+    output_dir: Path,
+    record_path: Path | None,
+    *,
+    for_generation: bool,
+) -> tuple[Path, Path | None, list[str]]:
+    """Apply bounded operator-error guards to command-line destinations.
+
+    These checks constrain the supported CLI workflow in a clean, detached
+    checkout. They are not an OS sandbox, do not make local path mutation
+    race-free, and do not constrain direct programmatic calls to
+    ``generate_artifacts``.
+    """
+
+    normalized_output = _repo_confined_cli_path(
+        output_dir,
+        label="Campaign output directory",
+    )
+    normalized_record = (
+        _repo_confined_cli_path(record_path, label="Campaign record path")
+        if record_path is not None
+        else None
+    )
+    if normalized_record is not None and (
+        _is_within(normalized_record, normalized_output)
+        or _is_within(normalized_output, normalized_record)
+    ):
+        raise CampaignGenerationError(
+            "Campaign output and record destinations must not overlap."
+        )
+
+    if for_generation:
+        if normalized_output.exists() and (
+            not normalized_output.is_dir() or any(normalized_output.iterdir())
+        ):
+            raise CampaignGenerationError(
+                "Campaign output directory must be absent or empty."
+            )
+        if normalized_record is not None and (
+            normalized_record.exists() or normalized_record.is_symlink()
+        ):
+            raise CampaignGenerationError(
+                "Campaign record path must not already exist."
+            )
+    else:
+        if not normalized_output.is_dir():
+            raise CampaignGenerationError(
+                "Campaign output directory is unavailable for verification."
+            )
+        if normalized_record is not None and not normalized_record.is_file():
+            raise CampaignGenerationError(
+                "Campaign record is unavailable for verification."
+            )
+
+    expected_paths = [
+        normalized_output / "campaign_profile.json",
+        normalized_output / "campaign_results_run1.jsonl",
+        normalized_output / "campaign_results_run2.jsonl",
+        normalized_output / "campaign_summary.json",
+    ]
+    if normalized_record is not None:
+        expected_paths.append(normalized_record)
+    repository_root = ROOT.resolve()
+    display_paths = [
+        str(path.relative_to(repository_root)) for path in expected_paths
+    ]
+    return normalized_output, normalized_record, display_paths
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate or verify the fixed P2-CE-005 synthetic campaign."
@@ -2144,22 +2338,30 @@ def main() -> None:
         return
     if not args.implementation_commit or not args.evaluated_at:
         parser.error("--implementation-commit and --evaluated-at are required")
+    try:
+        output_dir, record_path, display_paths = _prepare_cli_destinations(
+            args.output_dir,
+            args.record,
+            for_generation=args.generate,
+        )
+    except CampaignGenerationError as exc:
+        parser.error(str(exc))
     if args.generate:
         _require_clean_generation_commit(args.implementation_commit, args.evaluated_at)
-        paths = generate_artifacts(
-            args.output_dir,
+        generate_artifacts(
+            output_dir,
             implementation_commit=args.implementation_commit,
             evaluated_at=args.evaluated_at,
-            record_path=args.record,
+            record_path=record_path,
         )
-        for path in paths:
-            print(path.relative_to(ROOT))
+        for display_path in display_paths:
+            print(display_path)
         return
     check_artifacts(
-        args.output_dir,
+        output_dir,
         implementation_commit=args.implementation_commit,
         evaluated_at=args.evaluated_at,
-        record_path=args.record,
+        record_path=record_path,
     )
     print("P2-CE-005 campaign artifacts are current.")
 

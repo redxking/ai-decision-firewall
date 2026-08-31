@@ -1,4 +1,5 @@
 Requirement ID,Type,Requirement,Implementation,Verification Method,Baseline Result
+META-001,Document Control,"Preserve this matrix as the v0.1 synthetic-simulation baseline and direct later requirements to their versioned matrices.","docs/REQUIREMENTS_TRACEABILITY_MATRIX.csv; docs/phase2/REQUIREMENTS_TRACEABILITY.csv; docs/phase3/REQUIREMENTS_TRACEABILITY.csv; docs/phase31/REQUIREMENTS_TRACEABILITY.csv","Document and release-state review","V0.1 results below remain historical. Exact Phase 2.5 Commit 854b15c56397a81de6326b719d3d7d1dc847608f is published on main and its exact-commit CI/Dependency Graph checks passed; the recorded package boundary includes 222/222 Phase 2.5 technical tests, separate 9/9 site tests, and the then-current 231/231 aggregate. Site tests are outside Phase 2.5 evidence. P2-CE-005 was not executed and remains CE-0 NOT_EVALUATED. Phase 3 0.3.0-alpha.1 is published at exact Commit 423685d105be813056617db738297eba83d3d9d0; exact-commit CI and Dependency Graph passed with 57/57 focused tests, both demos PASS, a 46/46 corpus, and the then-current 288/288 repository aggregate. Use the versioned Phase 3 and Phase 3.1 matrices for their distinct boundaries."
 OBJ-001,Objective,"Demonstrate a defensible decision-control layer for privileged-identity containment using synthetic data.",Entire POC package,End-to-end baseline run,Pass
 FR-001,Functional,"Ingest case records containing multi-source evidence events.",schemas.py and engine.py,Pipeline test,Pass
 FR-002,Functional,"Store ground truth separately from runtime case inputs.",synthetic.py,Dataset unit test,Pass
@@ -7,10 +8,10 @@ FR-004,Functional,"Exclude untrusted free text from model features.",features.py
 FR-005,Functional,"Estimate compromise probability using a replaceable model.",model.py,Model training and test metrics,Pass
 FR-006,Functional,"Produce one of four bounded dispositions.",policy.py,Decision summary and scenario metrics,Pass
 FR-007,Functional,"Perform independent non-model verification.",verifier.py,Unit test and audit records,Pass
-FR-008,Functional,"Issue case-bound action-scoped short-lived authorization tokens.",actions.py,Pipeline test and decision records,Pass
-FR-009,Functional,"Execute only allow-listed simulated reversible actions.",actions.py,Unit tests and action results,Pass
-FR-010,Functional,"Verify target state after action execution.",actions.py and engine.py,Post-action metrics,Pass
-FR-011,Functional,"Generate tamper-evident audit records.",audit.py,Audit verification and tamper test,Pass
+FR-008,Functional,"In v0.1 synthetic-simulation mode issue case-bound action-scoped short-lived authorization tokens.",actions.py,Pipeline test and decision records,"Pass for v0.1 simulator; Phase 2 read-only modes issue no token"
+FR-009,Functional,"In v0.1 synthetic-simulation mode execute only allow-listed simulated reversible actions.",actions.py,Unit tests and action results,"Pass for v0.1 simulator; Phase 2 read-only modes have no broker or target"
+FR-010,Functional,"In v0.1 synthetic-simulation mode verify simulator state after action execution.",actions.py and engine.py,Post-action metrics,"Pass for v0.1 simulator; no operational or independent target readback claim"
+FR-011,Functional,"Generate SHA-256 hash-linked audit records for internal consistency checking.",audit.py,Audit verification and presented-record mutation test,"Pass for v0.1 self-custodied chain; not external anchoring or wholesale-replacement resistance"
 SAF-001,Safety,"The model shall have no direct action authority.",Module separation and token gate,Architecture inspection,Pass
 SAF-002,Safety,"Poisoned evidence shall block autonomous action.",evidence.py and policy.py,Prompt-injection unit test,Pass
 SAF-003,Safety,"Break-glass identities shall require human authority.",policy.py and verifier.py,Break-glass unit test,Pass
@@ -20,13 +21,13 @@ SAF-006,Safety,"No action shall execute without a valid token.",ActionBroker,Mis
 SAF-007,Safety,"No token shall be issued without independent-verifier approval.",AuthorizationGate,Metrics and audit inspection,Pass
 SAF-008,Safety,"No success shall be declared without post-action state verification.",PostActionVerifier,Injected execution failures,Pass
 SEC-001,Security,"Authorization tokens shall be integrity protected.",HMAC SHA-256 signatures,Code inspection and validation path,Pass for POC
-SEC-002,Security,"Audit records shall be hash chained.",AuditLogger,Audit-chain verifier and tamper test,Pass
-SEC-003,Security,"Feature and evidence claims shall trace to source event identifiers.",features.py and decision record,Traceability metric,Pass at 100 percent
+SEC-002,Security,"Audit records shall be SHA-256 hash linked.",AuditLogger,Audit-chain verifier and presented-record mutation test,"Pass for internal consistency; no independent signature or custody"
+SEC-003,Security,"Feature and evidence claims shall trace to source event identifiers.",features.py and decision record,Traceability metric,"Pass at 100 percent identifier coverage; not semantic or cryptographic provenance validation"
 SEC-004,Security,"The POC shall not contain a production connector or production credentials.",In-memory simulator only,Code and repository inspection,Pass
-NFR-001,Nonfunctional,"A baseline run shall be reproducible from a documented seed.",run_poc.py and dataset manifest,Repeat run with seed,Pass
-NFR-002,Nonfunctional,"The POC shall run offline after dependencies are installed.",Local Python and NumPy implementation,Execution test,Pass
+NFR-001,Nonfunctional,"Seeded dataset generation and frozen-artifact replay shall be repeatable in the recorded runtime.",run_poc.py and dataset manifest,"Repeat generation and replay in the recorded runtime","Pass for the recorded boundary; byte-identical cross-runtime model retraining is not established"
+NFR-002,Nonfunctional,"The v0.1 POC shall run offline after dependencies are installed.",Local Python and NumPy implementation,Execution test,"Pass for v0.1 baseline; current dependency declarations are release specific"
 NFR-003,Nonfunctional,"The system shall emit machine-readable and human-readable outputs.",JSONL JSON CSV and HTML reports,Artifact inspection,Pass
-NFR-004,Nonfunctional,"The design shall be model agnostic.",Model adapter boundary and policy separation,Architecture review,Pass
-VV-001,Verification,"Automated tests shall cover core safety invariants.",tests directory,Unit test execution,7 of 7 pass
+NFR-004,Nonfunctional,"The design shall separate the model boundary and support future adapters.",Model adapter boundary and policy separation,Architecture review,"Partially met: one deterministic logistic model and one canonical adapter are implemented; model portability is not validated"
+VV-001,Verification,"Automated tests shall cover core v0.1 safety invariants.",tests directory,Unit test execution,"7 of 7 pass in the delivered v0.1 baseline; not the current repository test count"
 VV-002,Verification,"Scenario metrics shall identify behavior by benign malicious ambiguous and adversarial scenario.",metrics.py,per_scenario_metrics.csv,Pass
 VV-003,Verification,"Baseline limitations shall be stated with the results.",README docs and HTML report,Document review,Pass

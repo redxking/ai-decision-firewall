@@ -1,0 +1,51 @@
+digraph phase31_model_evaluation {
+  graph [
+    label="AI Decision Firewall — Phase 3.1 Governed Model Evaluation\nPublished Phase 3.1 @ bb6b8f28 • synthetic mechanism only • promotion NOT_AUTHORIZED",
+    labelloc=t,
+    fontsize=20,
+    fontname="Helvetica",
+    rankdir=TB,
+    bgcolor="white",
+    pad=0.25,
+    nodesep=0.35,
+    ranksep=0.55
+  ];
+  node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#334155", fillcolor="#F8FAFC"];
+  edge [fontname="Helvetica", fontsize=9, color="#475569"];
+
+  subgraph cluster_sources {
+    label="Closed synthetic source boundary";
+    color="#94A3B8";
+    cases [label="1,200 synthetic cases\nSHA-256 + count bound", fillcolor="#E0F2FE"];
+    labels [label="1,200 synthetic labels\nEvaluator use only", fillcolor="#E0F2FE"];
+    gate [label="Strict plan/schema\nPath • digest • count\nDRAFT • synthetic only", fillcolor="#FEF3C7"];
+    prohibited [shape=note, label="ABSENT BY DESIGN\nHistorical/live adapter\nAction credential\nAuthorization • broker • target\nOperational effect", fillcolor="#F8FAFC", color="#64748B"];
+    { rank=same; gate; prohibited; }
+    cases -> gate;
+    labels -> gate;
+    prohibited -> gate [style=dotted, arrowhead=none, constraint=false];
+  }
+
+  split [label="Temporal split by opened_at\n720 train • 240 calibration • 240 evaluation\nNo equal timestamp crosses a boundary", fillcolor="#DCFCE7"];
+  gate -> split;
+
+  train [label="TRAIN\nFit logistic baseline\nNo calibration/evaluation labels", fillcolor="#F0FDF4"];
+  calibrate [label="CALIBRATE\nFit Platt map\nNo evaluation labels", fillcolor="#F0FDF4"];
+  evaluate [label="EVALUATE ONCE\nBaseline + challenger\nFinal temporal partition", fillcolor="#F0FDF4"];
+  { rank=same; train; calibrate; evaluate; }
+  split -> train;
+  split -> calibrate;
+  split -> evaluate;
+  train -> calibrate [label="baseline scores"];
+  train -> evaluate [label="baseline"];
+  calibrate -> evaluate [label="calibrated challenger"];
+
+  metrics [label="Aggregate evaluation\nROC AUC • average precision\nBrier • log loss • ECE\nthreshold + Wilson intervals\nselective risk + strata", fillcolor="#EDE9FE"];
+  evaluate -> metrics;
+
+  no_promotion [label="PROMOTION: NOT_AUTHORIZED\nSynthetic data only\nOwner thresholds absent\nHistorical validation absent", fillcolor="#FEE2E2", color="#991B1B", fontcolor="#7F1D1D"];
+  metrics -> no_promotion;
+
+  future [label="Future separate Gate B\nApproved historical read-only package\nCustody • labels • thresholds • stop conditions", style="rounded,dashed,filled", fillcolor="#FFF7ED", color="#C2410C"];
+  no_promotion -> future [style=dashed, label="new authority required"];
+}

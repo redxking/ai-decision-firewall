@@ -1,0 +1,101 @@
+{
+  "abstention_margins": [
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4
+  ],
+  "calibration_bins": 10,
+  "candidates": [
+    {
+      "family": "logistic_regression",
+      "fit": {
+        "epochs": 2000
+      },
+      "model_id": "phase31-temporal-logistic-baseline-v1",
+      "role": "BASELINE"
+    },
+    {
+      "family": "platt_calibrated_logistic_regression",
+      "fit": {
+        "epochs": 2000
+      },
+      "model_id": "phase31-platt-calibrated-challenger-v1",
+      "role": "CHALLENGER"
+    }
+  ],
+  "classification_threshold": 0.5,
+  "data_classification": "SYNTHETIC_REPOSITORY_FIXTURE",
+  "dataset_bindings": [
+    {
+      "path": "data/train_cases.jsonl",
+      "records": 800,
+      "role": "source_pool_cases_a",
+      "sha256": "a498dd1c05a067319a97561dff9c88b8720c53a529abf1b68a6b0b08383daf1d"
+    },
+    {
+      "path": "data/train_labels.jsonl",
+      "records": 800,
+      "role": "source_pool_labels_a",
+      "sha256": "41f67804d3bf97c9c8d501e0be9efd641b153dca5a60a60d0ee7cfdd65e38978"
+    },
+    {
+      "path": "data/test_cases.jsonl",
+      "records": 400,
+      "role": "source_pool_cases_b",
+      "sha256": "ed09593fdbadeadd783f03e1895a2ca878caf11385e213a4f8f69ec93bb78db5"
+    },
+    {
+      "path": "data/test_labels.jsonl",
+      "records": 400,
+      "role": "source_pool_labels_b",
+      "sha256": "416eb9a382c09662052856a9221b09136c08085db7ddac83f9bca3ca7af24192"
+    }
+  ],
+  "evaluation_mode": "SYNTHETIC_MECHANISM",
+  "historical_payload_access_prohibited": true,
+  "label": {
+    "adjudication_independence": "NOT_ESTABLISHED_SYNTHETIC",
+    "field": "compromised",
+    "positive_value": true
+  },
+  "limitations": [
+    "All source rows come from the repository synthetic generator family.",
+    "Temporal re-partitioning prevents case overlap but does not establish operational representativeness.",
+    "The challenger tests calibration mechanics only and is not an operational model candidate.",
+    "No owner-approved performance threshold or model-promotion authority exists."
+  ],
+  "live_action_prohibited": true,
+  "metrics": [
+    "roc_auc",
+    "average_precision",
+    "brier_score",
+    "log_loss",
+    "expected_calibration_error",
+    "precision",
+    "recall",
+    "false_positive_rate",
+    "selective_risk"
+  ],
+  "plan_id": "P3-1-MEV-001",
+  "promotion": {
+    "gate_status": "OWNER_THRESHOLDS_REQUIRED",
+    "performance_thresholds": []
+  },
+  "schema_version": "0.3.1",
+  "split": {
+    "calibration_fraction": 0.2,
+    "equal_timestamp_policy": "MOVE_FORWARD_TO_NEXT_TIMESTAMP",
+    "evaluation_fraction": 0.2,
+    "strategy": "TEMPORAL",
+    "timestamp_field": "opened_at",
+    "train_fraction": 0.6
+  },
+  "status": "DRAFT",
+  "strata": [
+    "scenario",
+    "asset_criticality_band",
+    "privilege_level"
+  ]
+}
