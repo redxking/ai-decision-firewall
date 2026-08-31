@@ -20,11 +20,11 @@ The adapter uses the OpenAI Responses API. Model names are parameters so the stu
 ```bash
 export ANTHROPIC_API_KEY='...'
 PYTHONPATH=src python scripts/run_llm_eval.py \
-  --provider anthropic --model claude-sonnet-4-6 --trials 20 \
+  --provider anthropic --model claude-sonnet-5 --trials 20 \
   --output results/claude_eval.csv
 ```
 
-The adapter uses Anthropic's Messages API. If your account exposes a different current model ID, supply it with `--model` and record it in the study manifest.
+The adapter uses Anthropic's Messages API. Model IDs evolve, so pin the exact model ID used in each run and preserve it with the experiment record.
 
 ## Ollama: no API key for local models
 
