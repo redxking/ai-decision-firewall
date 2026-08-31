@@ -1,0 +1,29 @@
+name: Fleet Security CSET 2026
+
+on:
+  push:
+    paths:
+      - 'research/fleet-security-cset-2026/**'
+      - '.github/workflows/fleet-security-cset-2026.yml'
+  pull_request:
+    paths:
+      - 'research/fleet-security-cset-2026/**'
+      - '.github/workflows/fleet-security-cset-2026.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research/fleet-security-cset-2026
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Standard-library self-test
+        run: PYTHONPATH=src python scripts/selftest.py
+      - name: Baseline smoke matrix
+        run: |
+          PYTHONPATH=src python -m fleetsec.cli run --populations 1,4 --auth-models least_privilege,shared_privilege --repetitions 3 --steps 5 --output results/ci_raw.csv --manifest results/ci_manifest.json
+          PYTHONPATH=src python -m fleetsec.cli analyze --input results/ci_raw.csv --output results/ci_summary.csv

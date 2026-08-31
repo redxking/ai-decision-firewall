@@ -1,0 +1,22 @@
+{
+  "generated_utc": "2026-08-31T13:11:57.180587+00:00",
+  "runtime": "Python 3.13.5 on Linux 6.18.35 x86_64",
+  "config": {
+    "populations": [1,4,16,64],
+    "auth_models": ["least_privilege","shared_privilege"],
+    "repetitions": 30,
+    "topology": "ring",
+    "steps": 20,
+    "compromise_probability": 0.35,
+    "propagation_probability": 0.20,
+    "malicious_request_probability": 0.45,
+    "policy_false_allow_rate": 0.01,
+    "high_privilege_fraction": 0.10,
+    "shared_credential_fraction_for_shared_privilege": 0.50,
+    "root_seed": 20260831
+  },
+  "validated_raw_result_sha256": "947cfc961c8cc928185240ba28124bb328266eb273273dbdbe87e1b90cd3105a",
+  "validated_run_count": 240,
+  "claim_boundary": "Synthetic methodology and pipeline validation only. This is not vendor-agent empirical evidence.",
+  "reproduction": "Run scripts/run_baseline.sh. A byte-identical raw.csv is expected for the same source semantics, Python random implementation, parameters, and root seed; compare SHA-256 before citing as the validated baseline."
+}
